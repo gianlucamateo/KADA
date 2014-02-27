@@ -17,6 +17,9 @@ using System.IO;
 using Microsoft.Kinect;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Drawing;
+using System.Drawing.Imaging;
+
 
 
 namespace KADA
@@ -26,21 +29,22 @@ namespace KADA
     /// </summary>
     public partial class MainWindow : Window
     {
-
-
         private KinectSensor kinect;
 
 
         private WriteableBitmap imageBitmap;
         private WriteableBitmap depthBitmap;
-        private WriteableBitmap combinedBitmap;
-        //private DepthColorPixel[,] cdMap;
+        private Bitmap image = new Bitmap(640, 480);
 
         private byte[] colorPixels;
-        private byte[] combinedPixels;
+
 
         private DepthImagePixel[] depthPixels;
+        private DepthImagePoint[] depthPoints;
 
+        private bool readyForWrite = true;
+        private Thread bitmapFiller;
+        private PointCloudViewer pcv;
 
 
         public MainWindow()
@@ -48,8 +52,24 @@ namespace KADA
             InitializeComponent();
         }
 
+        private void FillBitmap()
+        {
+            if (readyForWrite)
+            {
+                System.Drawing.Color c;
+                for (int i = 0; i < this.depthPoints.Length; i++)
+                {
+                    c = System.Drawing.Color.FromArgb(150, (byte)this.depthPoints[i].Depth, 0, 0);
+                    this.image.SetPixel(i % 640, i / 640, c);
+                }
+            }
+        }
+
+
+
         private void WindowLoaded(object sender, RoutedEventArgs e)
         {
+            this.pcv = new PointCloudViewer(pointCloudViewerFrame);
             foreach (var potentialKinect in KinectSensor.KinectSensors)
             {
                 if (potentialKinect.Status == KinectStatus.Connected)
@@ -68,17 +88,24 @@ namespace KADA
 
                 this.colorPixels = new byte[this.kinect.ColorStream.FramePixelDataLength];
                 this.depthPixels = new DepthImagePixel[this.kinect.DepthStream.FramePixelDataLength];
-                this.combinedPixels = new byte[this.kinect.ColorStream.FramePixelDataLength];
+
+
 
                 this.imageBitmap = new WriteableBitmap(this.kinect.ColorStream.FrameWidth, this.kinect.ColorStream.FrameHeight, 96.0, 96.0, PixelFormats.Bgr32, null);
                 this.depthBitmap = new WriteableBitmap(this.kinect.DepthStream.FrameWidth, this.kinect.DepthStream.FrameHeight, 96.0, 96.0, PixelFormats.Bgr32, null);
-                this.combinedBitmap = new WriteableBitmap(this.kinect.DepthStream.FrameWidth, this.kinect.DepthStream.FrameHeight, 96.0, 96.0, PixelFormats.Bgr32, null);
 
-               // this.cdMap = new DepthColorPixel[640, 480];
+
+
+
+
+                this.depthPoints = new DepthImagePoint[640 * 480];
+                bitmapFiller = new Thread(new ThreadStart(FillBitmap));
+                // this.cdMap = new DepthColorPixel[640, 480];
 
                 this.Image.Source = this.imageBitmap;
                 this.Depth.Source = this.depthBitmap;
-                this.Combined.Source = this.combinedBitmap;
+
+                this.KeyDown += new KeyEventHandler(OnButtonKeyDown);
 
                 this.kinect.ColorFrameReady += this.KinectColorFrameReady;
                 this.kinect.DepthFrameReady += this.KinectDepthFrameReady;
@@ -94,6 +121,8 @@ namespace KADA
 
                 this.kinect.ElevationAngle = 10;
 
+                bitmapFiller.Start();
+
             }
 
 
@@ -101,10 +130,24 @@ namespace KADA
 
         private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            this.bitmapFiller.Abort();
             if (null != this.kinect)
             {
                 this.kinect.Stop();
             }
+            int x = this.image.Height;
+            Bitmap temp = new Bitmap(this.image);
+            temp.Save("file.png");
+        }
+
+        private void OnButtonKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key.Equals(Key.Left))
+                this.pcv.Rotate(-15);
+
+            if (e.Key.Equals(Key.Right))
+                this.pcv.Rotate(15);
+            System.Diagnostics.Debug.WriteLine(e.Key.ToString());
         }
 
         private void KinectColorFrameReady(object sender, ColorImageFrameReadyEventArgs e)
@@ -114,37 +157,25 @@ namespace KADA
             {
                 if (colorFrame != null)
                 {
-
                     colorFrame.CopyPixelDataTo(this.colorPixels);
-
-
                     this.imageBitmap.WritePixels(
                         new Int32Rect(0, 0, this.imageBitmap.PixelWidth, this.imageBitmap.PixelHeight),
                         this.colorPixels,
                         this.imageBitmap.PixelWidth * sizeof(int),
                         0);
 
-                    Parallel.ForEach(combinedPixels, pixel =>
-                     {
-                         //pixel = colorPixels[467];
-                     }
-                     );
-                    /*for (int i = 0; i < combinedPixels.Length; i++)
+                    //Creates Bitmap
+                    /*using (MemoryStream stream = new MemoryStream())
                     {
-                        combinedPixels[i] = (byte)((double)1 / (double)this.depthPixels[i%16].Depth * colorPixels[i]);
+                        BitmapEncoder encoder = new BmpBitmapEncoder();
+                        encoder.Frames.Add(BitmapFrame.Create((BitmapSource)imageBitmap));
+                        encoder.Save(stream);
+                        this.image.Dispose();
+                        this.image = new System.Drawing.Bitmap(stream);
                     }*/
 
-                    this.combinedBitmap.WritePixels(
-                        new Int32Rect(0, 0, this.combinedBitmap.PixelWidth, this.combinedBitmap.PixelHeight),
-                        this.combinedPixels,
-                        this.combinedBitmap.PixelWidth * sizeof(int),
-                        0);
 
-                    /*ColorDepthMerger.mergeFillBuffer(colorPixels, cdMap, combinedPixels);
-                    
-                    Task t = new Task(()=> ColorDepthMerger.mergeFillBuffer(colorPixels,cdMap, combinedPixels));
-                    t.Start();*/
-                    
+
                 }
 
             }
@@ -163,7 +194,12 @@ namespace KADA
                         this.depthPixels,
                         this.imageBitmap.PixelWidth * sizeof(int),
                         0);
+
                 }
+                this.kinect.CoordinateMapper.MapColorFrameToDepthFrame(ColorImageFormat.RgbResolution640x480Fps30, DepthImageFormat.Resolution640x480Fps30, this.depthPixels, this.depthPoints);
+
+                //this.fillBitmap();
+
             }
         }
 
