@@ -22,6 +22,7 @@ using System.Drawing.Imaging;
 
 
 
+
 namespace KADA
 {
     /// <summary>
@@ -44,12 +45,16 @@ namespace KADA
 
         private bool readyForWrite = true;
         private Thread bitmapFiller;
+        System.Windows.Threading.DispatcherOperation viewer;
         private PointCloudViewer pcv;
+
+        PCViewer g;
 
 
         public MainWindow()
         {
             InitializeComponent();
+                       
         }
 
         private void FillBitmap()
@@ -69,6 +74,7 @@ namespace KADA
 
         private void WindowLoaded(object sender, RoutedEventArgs e)
         {
+            
             this.pcv = new PointCloudViewer(pointCloudViewerFrame);
             foreach (var potentialKinect in KinectSensor.KinectSensors)
             {
@@ -123,6 +129,16 @@ namespace KADA
 
                 bitmapFiller.Start();
 
+
+                g= new PCViewer();
+                viewer = Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    g.Run();
+                }));
+                //g.Run();
+                //pcViewer = new Thread(new ThreadStart(g.Run));
+                //pcViewer.Start();
+
             }
 
 
@@ -138,6 +154,7 @@ namespace KADA
             int x = this.image.Height;
             Bitmap temp = new Bitmap(this.image);
             temp.Save("file.png");
+            g.Exit();
         }
 
         private void OnButtonKeyDown(object sender, KeyEventArgs e)

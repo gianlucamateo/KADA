@@ -18,7 +18,7 @@
 	              UpDirection="0,1,0"
 	              NearPlaneDistance="1" 
 	              Position="0,0,5"
-                  FieldOfView="70"  
+                  FieldOfView="57"  
 	              />
             </Viewport3D.Camera>
             <ModelVisual3D>

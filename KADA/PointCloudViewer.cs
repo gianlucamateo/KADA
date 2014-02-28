@@ -19,10 +19,18 @@ namespace KADA
     {
         private Viewport3D pcvFrame;
         MeshGeometry3D cubeMesh;
-        private double cameraRot = 0;
+        private double cameraRotAngle = 0;
+
+        private Transform3DGroup cameraTransform;
+        private Transform3DCollection children = new Transform3DCollection();
+        private ScaleTransform3D cameraScale = new ScaleTransform3D(1, 1, 1);
+        private RotateTransform3D cameraRot = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 0), new Point3D(0, 0, 0));
+        private static ModelVisual3D[,] pixelGrid;
 
         public PointCloudViewer(Viewport3D pcvFrame)
         {
+            pixelGrid = new ModelVisual3D[640, 480];
+
             this.pcvFrame = pcvFrame;
             cubeMesh= new MeshGeometry3D();
             cubeMesh.Positions.Add(new Point3D(0, 0, 0));
@@ -56,13 +64,46 @@ namespace KADA
                 cubeMesh, material);
             ModelVisual3D model = new ModelVisual3D();
             model.Content = triangleModel;
-            this.pcvFrame.Children.Add(model);
+
+            ModelVisual3D PCRoot = new ModelVisual3D();
+            this.pcvFrame.Children.Add(PCRoot);
+/*
+            for (int x = 0; x < 640; x++)
+            {
+                for (int y = 0; y < 480; y++)
+                {
+                    pixelGrid[x, y] = new ModelVisual3D();
+                    pixelGrid[x, y].Content = triangleModel;//.Clone();
+                    PCRoot.Children.Add(pixelGrid[x,y]);
+                }
+            }
+
+*/            
+
+            PCRoot.Children.Add(model);
+            PCRoot.Transform = new ScaleTransform3D(new Vector3D(1, 1, 8), new Point3D(0, 0, 1));
+            this.cameraTransform = new Transform3DGroup();
+            this.children.Add(cameraScale);
+            this.children.Add(cameraRot);
+            this.cameraTransform.Children = this.children;
+            this.pcvFrame.Camera.Transform = this.cameraTransform;
+            
+
+
+            
         }
 
         public void Rotate(double angle)
+        {            
+            this.cameraRotAngle += angle;
+            this.cameraRot = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), cameraRotAngle), new Point3D(0, 0, 0));
+            this.Update();
+        }
+        public void Update()
         {
-            cameraRot += angle;
-            this.pcvFrame.Camera.Transform = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), cameraRot), new Point3D(0, 0, 0));
+            this.children.Clear();
+            this.children.Add(cameraScale);
+            this.children.Add(cameraRot);
         }
     }
 }
