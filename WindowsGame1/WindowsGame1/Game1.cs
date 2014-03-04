@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.GamerServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
+using System.Threading.Tasks;
 
 namespace KADA
 {
@@ -27,6 +28,9 @@ namespace KADA
         VertexBuffer Square;
         VertexBuffer Transformations;
         Effect effect;
+        Matrix[] Trans;
+        int counter;
+        Task transformationUpdater;
 
         VertexDeclaration Transformation = new VertexDeclaration
         (
@@ -43,7 +47,7 @@ namespace KADA
             graphics.IsFullScreen = false;
             graphics.PreferredBackBufferWidth = 640;
             graphics.PreferredBackBufferHeight = 480;
-            
+
 
             graphics.ApplyChanges();
 
@@ -60,8 +64,8 @@ namespace KADA
         {
             // TODO: Add your initialization logic here
             World = Matrix.Identity;
-            View = Matrix.CreateLookAt(new Vector3(4, 5, 10), new Vector3(4, 0, 4), Vector3.Up);
-            Projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4, GraphicsDevice.Viewport.AspectRatio, 1, 100);
+            View = Matrix.CreateLookAt(new Vector3(0, 0, 1000), new Vector3(0, 0, 0), Vector3.Up);
+            Projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4, GraphicsDevice.Viewport.AspectRatio, 1, 100000);
             base.Initialize();
         }
 
@@ -82,6 +86,8 @@ namespace KADA
             effect.Parameters["Projection"].SetValue(Projection);
 
             this.SetUpTransformations();
+
+
 
             // TODO: use this.Content to load your game content here
         }
@@ -107,6 +113,10 @@ namespace KADA
                 this.Exit();
 
             // TODO: Add your update logic here
+            transformationUpdater = new Task(() => this.UpdateTransformations());
+            transformationUpdater.Start();
+
+
 
             base.Update(gameTime);
         }
@@ -117,27 +127,37 @@ namespace KADA
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
-            GraphicsDevice.SetVertexBuffers(new VertexBufferBinding(Square, 0, 0), new VertexBufferBinding(Transformations, 0, 1));
-            GraphicsDevice.Indices = Indices;
-
-            foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+            lock (this.GraphicsDevice)
             {
-                pass.Apply();
+                GraphicsDevice.Clear(Color.CornflowerBlue);
+                GraphicsDevice.SetVertexBuffers(new VertexBufferBinding(Square, 0, 0), new VertexBufferBinding(Transformations, 0, 1));
+                GraphicsDevice.Indices = Indices;
 
-                GraphicsDevice.DrawInstancedPrimitives(PrimitiveType.TriangleStrip, 0, 0, 4, 0, 2, Transformations.VertexCount);
+                foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+
+                    if (Transformations != null)
+                    {
+                        GraphicsDevice.DrawInstancedPrimitives(PrimitiveType.TriangleStrip, 0, 0, 4, 0, 2, Transformations.VertexCount);
+                    }
+                }
+
+                base.Draw(gameTime);
             }
-
-            base.Draw(gameTime);
         }
 
         private void SetUpVertexBuffer()
         {
             VertexPositionColor[] Vertices = new VertexPositionColor[4];
             Vertices[0].Position = new Vector3(0, 0, 0);
+            Vertices[0].Color = new Color(0, 255, 0, 1);
             Vertices[1].Position = new Vector3(1, 0, 0);
-            Vertices[2].Position = new Vector3(0, 0, 1);
-            Vertices[3].Position = new Vector3(1, 0, 1);
+            Vertices[1].Color = new Color(0, 1, 255, 1);
+            Vertices[2].Position = new Vector3(0, 1, 0);
+            Vertices[2].Color = new Color(255, 1, 0, 1);
+            Vertices[3].Position = new Vector3(1, 1, 0);
+            Vertices[3].Color = new Color(255, 255, 0, 1);
             Square = new VertexBuffer(GraphicsDevice, VertexPositionColor.VertexDeclaration, 4, BufferUsage.WriteOnly);
             Square.SetData(Vertices);
         }
@@ -145,19 +165,51 @@ namespace KADA
         private void SetUpIndexBuffer()
         {
             Indices = new IndexBuffer(GraphicsDevice, typeof(uint), 4, BufferUsage.WriteOnly);
-            Indices.SetData(new uint[] { 0, 1, 2, 3 });
+            Indices.SetData(new uint[] { 0, 2, 1, 3 });
+        }
+
+        private void UpdateTransformations()
+        {
+            counter++;
+            int xMax = 640;
+            int yMax = 480;
+            int i = 0;
+            for (int x = 0; x < xMax; x++)
+            {
+                for (int y = 0; y < yMax; y++)
+                {
+                    Trans[i] = Matrix.CreateTranslation(x - (xMax / 2), y - (yMax / 2), (float)counter * (x+y) / 1000f);
+                    i++;
+                }
+            }
+            lock (this.GraphicsDevice)
+            {
+                GraphicsDevice.SetVertexBuffer(null);
+                Transformations.SetData(Trans);
+            }
+
         }
 
         private void SetUpTransformations()
         {
-            Matrix[] Trans = new Matrix[2];
-            Trans[0] = Matrix.CreateTranslation(0, 0, 0);
-            Trans[1] = Matrix.CreateTranslation(2, 0, 0);
+            int xMax = 640;
+            int yMax = 480;
+            Trans = new Matrix[640 * 480];
+            int i = 0;
+            for (int x = 0; x < xMax; x++)
+            {
+                for (int y = 0; y < yMax; y++)
+                {
+                    Trans[i] = Matrix.CreateTranslation(x - (xMax / 2), y - (yMax / 2), 0);
+                    i++;
+                }
+
+            }
 
             Transformations = new VertexBuffer(GraphicsDevice, Transformation, Trans.Length, BufferUsage.WriteOnly);
             Transformations.SetData(Trans);
         }
 
-       
+
     }
 }

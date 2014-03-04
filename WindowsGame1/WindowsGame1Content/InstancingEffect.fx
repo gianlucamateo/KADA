@@ -7,6 +7,7 @@ float4x4 Projection;
 struct VertexShaderInput
 {
     float4 Position : POSITION0;
+	float4 Color : COLOR0;
 
     // TODO: add input channels such as texture
     // coordinates and vertex colors here.
@@ -15,6 +16,7 @@ struct VertexShaderInput
 struct VertexShaderOutput
 {
     float4 Position : POSITION0;
+	float4 Color : COLOR0;
 
     // TODO: add vertex shader outputs such as colors and texture
     // coordinates here. These values will automatically be interpolated
@@ -28,15 +30,15 @@ VertexShaderOutput VertexShaderFunction(VertexShaderInput input, float4x4 Transf
     float4 worldPosition = mul(transPosition, World);
     float4 viewPosition = mul(worldPosition, View);
     output.Position = mul(viewPosition, Projection);
-
+	output.Color = input.Color;
     return output;
 }
 
 float4 PixelShaderFunction(VertexShaderOutput input) : COLOR0
 {
     // TODO: add your pixel shader code here.
-
-    return float4(1, 0, 0, 1);
+	
+    return input.Color;
 }
 
 technique Technique1

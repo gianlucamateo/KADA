@@ -46,7 +46,7 @@ namespace KADA
         private bool readyForWrite = true;
         private Thread bitmapFiller;
         System.Windows.Threading.DispatcherOperation viewer;
-        private PointCloudViewer pcv;
+        
 
         PCViewer g;
 
@@ -75,7 +75,7 @@ namespace KADA
         private void WindowLoaded(object sender, RoutedEventArgs e)
         {
             
-            this.pcv = new PointCloudViewer(pointCloudViewerFrame);
+            
             foreach (var potentialKinect in KinectSensor.KinectSensors)
             {
                 if (potentialKinect.Status == KinectStatus.Connected)
@@ -159,11 +159,7 @@ namespace KADA
 
         private void OnButtonKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key.Equals(Key.Left))
-                this.pcv.Rotate(-15);
-
-            if (e.Key.Equals(Key.Right))
-                this.pcv.Rotate(15);
+           
             System.Diagnostics.Debug.WriteLine(e.Key.ToString());
         }
 
