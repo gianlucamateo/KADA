@@ -10,10 +10,10 @@ namespace KADA
         /// </summary>
         static void Main(string[] args)
         {
-            using (PCViewer game = new PCViewer())
+            /*using (PCViewer game = new PCViewer())
             {
                 game.Run();
-            }
+            }*/
         }
     }
 #endif

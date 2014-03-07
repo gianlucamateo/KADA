@@ -1,51 +1,41 @@
-float4x4 World;
-float4x4 View;
-float4x4 Projection;
+float4x4 WVP;
 
-// TODO: add effect parameters here.
-
-struct VertexShaderInput
+ 
+struct InstancingVSinput
 {
-    float4 Position : POSITION0;
-	float4 Color : COLOR0;
-
-    // TODO: add input channels such as texture
-    // coordinates and vertex colors here.
+ float4 Position : POSITION0;
+ float2 TexCoord : TEXCOORD0;
 };
-
-struct VertexShaderOutput
+ 
+struct InstancingVSoutput
 {
-    float4 Position : POSITION0;
-	float4 Color : COLOR0;
-
-    // TODO: add vertex shader outputs such as colors and texture
-    // coordinates here. These values will automatically be interpolated
-    // over the triangle, and provided as input to your pixel shader.
+ float4 Position : POSITION0;
+ float2 TexCoord : TEXCOORD0;
+ float3 Color	 : COLOR0;
 };
-
-VertexShaderOutput VertexShaderFunction(VertexShaderInput input, float4x4 Transformation : TEXCOORD0)
+ 
+InstancingVSoutput InstancingVS(InstancingVSinput input, float4x4 instanceTransform : TEXCOORD1, float3 Color : COLOR0)
 {
-    VertexShaderOutput output;
-    float4 transPosition = mul(input.Position, transpose(Transformation));
-    float4 worldPosition = mul(transPosition, World);
-    float4 viewPosition = mul(worldPosition, View);
-    output.Position = mul(viewPosition, Projection);
-	output.Color = input.Color;
-    return output;
+ InstancingVSoutput output;
+ float4 pos = input.Position;
+ pos = mul(pos, transpose(instanceTransform));
+ pos = mul(pos, WVP);
+ output.Position = pos;
+ output.TexCoord = input.TexCoord;
+ output.Color = Color;
+ return output;
 }
-
-float4 PixelShaderFunction(VertexShaderOutput input) : COLOR0
+ 
+float4 InstancingPS(InstancingVSoutput input) : COLOR0
 {
-    // TODO: add your pixel shader code here.
-	
-    return input.Color;
+ return float4(input.Color,0);
 }
-
-technique Technique1
+ 
+technique Instancing
 {
-    pass Pass1
-    {
-        VertexShader = compile vs_3_0 VertexShaderFunction();
-        PixelShader = compile ps_3_0 PixelShaderFunction();
-    }
+ pass Pass0
+ {
+ VertexShader = compile vs_3_0 InstancingVS();
+ PixelShader = compile ps_3_0 InstancingPS();
+ }
 }

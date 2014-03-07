@@ -5,7 +5,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KADA", "KADA.csproj", "{754
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PCViewer", "..\WindowsGame1\WindowsGame1\PCViewer.csproj", "{6A838C9A-1D01-40B4-99B5-6A21B40EA33A}"
 EndProject
-Project("{96E2B04D-8817-42C6-938A-82C39BA4D311}") = "WindowsGame1Content", "..\WindowsGame1\WindowsGame1Content\WindowsGame1Content.contentproj", "{EA165050-09D9-41FF-BE9B-7F6E4276DF8C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PCViewer_Content", "..\WindowsGame1\WindowsGame1Content\PCViewer_Content.contentproj", "{EA165050-09D9-41FF-BE9B-7F6E4276DF8C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
