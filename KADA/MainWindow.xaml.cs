@@ -32,13 +32,14 @@ namespace KADA
     {
         private KinectSensor kinect;
 
-
         private WriteableBitmap imageBitmap;
         private WriteableBitmap depthBitmap;
         private Bitmap image = new Bitmap(640, 480);
 
         private byte[] colorPixels;
-        private short[] depths = new short[640 * 480];
+
+
+        private Queue<DepthColor[,]> depthQueue = new Queue<DepthColor[,]>(), depthPool = new Queue<DepthColor[,]>();
 
         private DepthImagePixel[] depthPixels;
         private DepthImagePoint[] depthPoints;
@@ -49,6 +50,7 @@ namespace KADA
 
 
         PCViewer g;
+
 
 
         public MainWindow()
@@ -93,14 +95,8 @@ namespace KADA
                 this.colorPixels = new byte[this.kinect.ColorStream.FramePixelDataLength];
                 this.depthPixels = new DepthImagePixel[this.kinect.DepthStream.FramePixelDataLength];
 
-
-
                 this.imageBitmap = new WriteableBitmap(this.kinect.ColorStream.FrameWidth, this.kinect.ColorStream.FrameHeight, 96.0, 96.0, PixelFormats.Bgr32, null);
                 this.depthBitmap = new WriteableBitmap(this.kinect.DepthStream.FrameWidth, this.kinect.DepthStream.FrameHeight, 96.0, 96.0, PixelFormats.Bgr32, null);
-
-
-
-
 
                 this.depthPoints = new DepthImagePoint[640 * 480];
                 bitmapFiller = new Thread(new ThreadStart(FillBitmap));
@@ -112,8 +108,9 @@ namespace KADA
 
                 this.KeyDown += new KeyEventHandler(OnButtonKeyDown);
 
-                this.kinect.ColorFrameReady += this.KinectColorFrameReady;
-                this.kinect.DepthFrameReady += this.KinectDepthFrameReady;
+                //this.kinect.ColorFrameReady += this.KinectColorFrameReady;
+                //this.kinect.DepthFrameReady += this.KinectDepthFrameReady;
+                this.kinect.AllFramesReady += this.KinectAllFramesReady;
                 try
                 {
                     this.kinect.Start();
@@ -129,8 +126,12 @@ namespace KADA
                 bitmapFiller.Start();
                 depthUpdater.Start();
 
+                for (int i = 0; i < 10; i++)
+                {
+                    depthPool.Enqueue(new DepthColor[640, 480]);
+                }
 
-                g = new PCViewer(image, depths);
+                g = new PCViewer(image, depthQueue, depthPool);
                 viewer = Dispatcher.BeginInvoke(new Action(() =>
                 {
                     g.Run();
@@ -149,27 +150,38 @@ namespace KADA
                 this.kinect.Stop();
             }
             int x = this.image.Height;
-           // Bitmap temp = new Bitmap(this.image);
+            // Bitmap temp = new Bitmap(this.image);
             //temp.Save("file.png");
             g.Exit();
         }
 
         private void UpdateDepthData()
         {
-            lock (this.depths)
+            if (this.depthPool.Count>0)
             {
-                for (int i = 0; i < 640 * 480; i++)
+                DepthColor[,] depth;
+                lock (this.depthPool)
                 {
-                    this.depths[i] = 0;
+                     depth = this.depthPool.Dequeue();
                 }
-
                 foreach (DepthImagePoint p in depthPoints)
                 {
                     if (p.X >= 0 && p.X < 640 && p.Y >= 0 && p.Y < 480)
                     {
-                        this.depths[p.Y * 640 + p.X] = (short)p.Depth;
+                        depth[p.X, p.Y].Depth = p.Depth;
+                        depth[p.X, p.Y].Color= System.Drawing.Color.FromArgb(255, 0, 250);
+                        depth[p.X, p.Y].UpToDate = true;
                     }
                 }
+
+                lock (this.depthQueue)
+                {
+                    this.depthQueue.Enqueue(depth);
+                }
+            }
+            else
+            {
+                //Thread.Sleep(100);
             }
         }
 
@@ -210,6 +222,7 @@ namespace KADA
             }
         }
 
+
         private void KinectDepthFrameReady(object sender, DepthImageFrameReadyEventArgs e)
         {
             using (DepthImageFrame depthFrame = e.OpenDepthImageFrame())
@@ -231,10 +244,46 @@ namespace KADA
                 depthUpdater.Start();
                 //this.UpdateDepthData();
                 //this.fillBitmap();
-
-
             }
         }
+
+        private void KinectAllFramesReady(object sender, AllFramesReadyEventArgs e)
+        {
+            using (ColorImageFrame colorFrame = e.OpenColorImageFrame())
+            {
+                if (colorFrame != null)
+                {
+                    colorFrame.CopyPixelDataTo(this.colorPixels);
+                    this.imageBitmap.WritePixels(
+                        new Int32Rect(0, 0, this.imageBitmap.PixelWidth, this.imageBitmap.PixelHeight),
+                        this.colorPixels,
+                        this.imageBitmap.PixelWidth * sizeof(int),
+                        0);
+                }
+
+            }
+            using (DepthImageFrame depthFrame = e.OpenDepthImageFrame())
+            {
+                if (depthFrame != null)
+                {
+                    depthFrame.CopyDepthImagePixelDataTo(this.depthPixels);
+
+                    this.depthBitmap.WritePixels(
+                        new Int32Rect(0, 0, this.depthBitmap.PixelWidth, this.depthBitmap.PixelHeight),
+                        this.depthPixels,
+                        this.imageBitmap.PixelWidth * sizeof(int),
+                        0);
+
+                }
+                this.kinect.CoordinateMapper.MapColorFrameToDepthFrame(ColorImageFormat.RgbResolution640x480Fps30, DepthImageFormat.Resolution640x480Fps30, this.depthPixels, this.depthPoints);
+
+                depthUpdater = new Thread(new ThreadStart(UpdateDepthData));
+                depthUpdater.Start();
+
+            }
+
+        }
+
 
     }
 }

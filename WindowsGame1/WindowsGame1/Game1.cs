@@ -8,15 +8,33 @@ using Microsoft.Xna.Framework.GamerServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Diagnostics;
+
 
 namespace KADA
 {
     /// <summary>
     /// This is the main type for your game
     /// </summary>
+    /// 
+    public struct DepthColor
+    {
+        public System.Drawing.Color Color;
+        public int Depth;
+        public bool UpToDate;
+
+        public DepthColor(int Depth, System.Drawing.Color Color)
+        {
+            this.Depth = Depth;
+            this.Color = Color;
+            this.UpToDate = true;
+        }
+    }
+
     public class PCViewer : Microsoft.Xna.Framework.Game
     {
         GraphicsDeviceManager graphics;
@@ -30,39 +48,33 @@ namespace KADA
 
         VertexDeclaration instanceVertexDeclaration;
 
-        Texture2D texture;
+        
         Effect effect;
-
-        private Vector3 CameraPosition = new Vector3(0, 0, 600);
-
+        private Vector3 CameraPosition = new Vector3(0, 0, 500);
 
         private Matrix World;
         private Matrix View;
         private Matrix Projection;
 
         private Bitmap colors;
-        private short[] depths;
-        VertexBuffer Square;
-        VertexBuffer Transformations;
-
-        Matrix[] Trans;
-        int counter;
+        private Queue<DepthColor[,]> depths, depthsPool;
+       
         Task transformationUpdater;
+        Task cleanUpBufferTask;
 
         struct InstanceInfo
         {
-            public Matrix World;
+            public Vector3 ScreenPos;
+            public float Scale;
             public Vector3 Color;
         };
 
         private void GenerateInstanceVertexDeclaration()
         {
-            VertexElement[] instanceStreamElements = new VertexElement[5];
-            instanceStreamElements[0] = new VertexElement(0, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 1);
-            instanceStreamElements[1] = new VertexElement(sizeof(float) * 4, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 2);
-            instanceStreamElements[2] = new VertexElement(sizeof(float) * 8, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 3);
-            instanceStreamElements[3] = new VertexElement(sizeof(float) * 12, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 4);
-            instanceStreamElements[4] = new VertexElement(sizeof(float) * 16, VertexElementFormat.Vector3, VertexElementUsage.Color, 0);
+            VertexElement[] instanceStreamElements = new VertexElement[3];
+            instanceStreamElements[0] = new VertexElement(0, VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1);
+            instanceStreamElements[1] = new VertexElement(sizeof(float) * 3, VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 2);
+            instanceStreamElements[2] = new VertexElement(sizeof(float) * 4, VertexElementFormat.Vector3, VertexElementUsage.Color, 0);
             instanceVertexDeclaration = new VertexDeclaration(instanceStreamElements);
         }
 
@@ -75,9 +87,10 @@ namespace KADA
             Random rnd = new Random();
             for (int i = 0; i < count; i++)
             {
-                instances[i].World =
-                Matrix.CreateTranslation(new Vector3(-rnd.Next(300), -rnd.Next(250), -rnd.Next(400)));
-                instances[i].Color = new Vector3((float)rnd.Next(0, 1000) / 1000, (float)rnd.Next(0, 1000) / 1000, (float)rnd.Next(0, 1000) / 1000);
+                instances[i].ScreenPos =
+                new Vector3(0,0,0);
+                instances[i].Scale = 1;
+                instances[i].Color = new Vector3(0,0,0);
             }
             instanceBuffer = new VertexBuffer(GraphicsDevice, instanceVertexDeclaration, count, BufferUsage.WriteOnly);
             instanceBuffer.SetData(instances);
@@ -86,40 +99,80 @@ namespace KADA
         private void UpdateInstanceInformation()
         {
             Random rnd = new Random();
-            int x = 0;
-            int y = -1;
-
+            
+            DepthColor[,] depth = null;
+            bool frameLoaded = false;
             lock (this.depths)
             {
-                for (int i = 0; i < count; i++)
+                
+                if (this.depths.Count > 1)
                 {
-                    if (x % 640 == 0)
+                    depth = this.depths.Dequeue();
+                    frameLoaded = true;
+                }
+
+            }
+
+            if (frameLoaded)
+            {
+                int i = 0;
+                for (int x = 0; x < depth.GetLength(0); x++)
+                {
+                    for (int y = 0; y < depth.GetLength(1); y++)
                     {
-                        x = 0;
-                        y++;
+                        DepthColor d = depth[x, y];
+                        if (d.UpToDate)
+                        {
+                            instances[i].ScreenPos =
+                            new Vector3(x - 320, -(y - 240),-590); //-d.Depth
+                            instances[i].Scale = (float)d.Depth/500f;
+                            instances[i].Color = new Vector3(d.Color.R, d.Color.G, d.Color.B);
+                        }
+                        else
+                        {
+                            instances[i].ScreenPos =
+                            new Vector3(0,0,float.MaxValue);
+                            instances[i].Scale = 1;
+                        }
+                        i++;
                     }
 
-                    instances[i].World =
-                    Matrix.CreateTranslation(x - 320, -(y - 240), -this.depths[i]);
-
-                    instances[i].Color = new Vector3(0, 1, 0);//new Vector3(this.colors.GetPixel(x, y).R,this.colors.GetPixel(x, y).G,this.colors.GetPixel(x, y).B);////new Vector3((float)rnd.Next(0, 1000) / 1000, (float)rnd.Next(0, 1000) / 1000, (float)rnd.Next(0, 1000) / 1000);
-                    x++;
                 }
+                lock (GraphicsDevice)
+                {
+                    GraphicsDevice.SetVertexBuffers(null);
+                    instanceBuffer.SetData(instances);
+                }
+
+                cleanUpBufferTask = new Task(() => this.CleanUpBuffer(depth));
+                cleanUpBufferTask.Start();
+                
             }
             
-            lock (GraphicsDevice)
-            {
-                GraphicsDevice.SetVertexBuffers(null);
-                instanceBuffer.SetData(instances);
-            }
 
         }
+        private void CleanUpBuffer(DepthColor[,] depth)
+        {
+            for (int x = 0; x < depth.GetLength(0); x++)
+            {
+                for (int y = 0; y < depth.GetLength(1); y++)
+                {
+                    depth[x, y].UpToDate = false;
+                }
 
-        public PCViewer(Bitmap colors, short[] depths)
+            }
+            lock (this.depthsPool)
+            {
+                this.depthsPool.Enqueue(depth);
+            }
+        }
+
+        public PCViewer(Bitmap colors, Queue<DepthColor[,]> depths, Queue<DepthColor[,]> depthsPool)
         {
 
             this.colors = colors;
             this.depths = depths;
+            this.depthsPool = depthsPool;
             graphics = new GraphicsDeviceManager(this);
             graphics.IsFullScreen = false;
             graphics.PreferredBackBufferWidth = 640;
@@ -212,11 +265,11 @@ namespace KADA
             bindings[1] = new VertexBufferBinding(instanceBuffer, 0, 1);
 
             effect = Content.Load<Effect>("InstancingEffect");
-            
+
 
             effect.CurrentTechnique = effect.Techniques["Instancing"];
             effect.Parameters["WVP"].SetValue(View * Projection);
-            
+
 
             // TODO: use this.Content to load your game content here
         }

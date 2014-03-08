@@ -14,15 +14,19 @@ struct InstancingVSoutput
  float3 Color	 : COLOR0;
 };
  
-InstancingVSoutput InstancingVS(InstancingVSinput input, float4x4 instanceTransform : TEXCOORD1, float3 Color : COLOR0)
+InstancingVSoutput InstancingVS(InstancingVSinput input, float3 instanceTransform : TEXCOORD1, float scale : TEXCOORD2, float3 color : COLOR0)
 {
  InstancingVSoutput output;
  float4 pos = input.Position;
- pos = mul(pos, transpose(instanceTransform));
+ pos = pos+float4(instanceTransform,0);
+ float4x4 Scale = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1/scale};
+ pos = mul(pos, Scale);
  pos = mul(pos, WVP);
+ 
+ 
  output.Position = pos;
  output.TexCoord = input.TexCoord;
- output.Color = Color;
+ output.Color = color/pos.z;
  return output;
 }
  
