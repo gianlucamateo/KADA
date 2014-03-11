@@ -26,7 +26,7 @@ InstancingVSoutput InstancingVS(InstancingVSinput input, float3 instanceTransfor
  
  output.Position = pos;
  output.TexCoord = input.TexCoord;
- output.Color = color/pos.z;
+ output.Color = color;
  return output;
 }
  

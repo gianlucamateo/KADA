@@ -23,11 +23,11 @@ namespace KADA
     /// 
     public struct DepthColor
     {
-        public System.Drawing.Color Color;
+        public Vector3 Color;
         public int Depth;
         public bool UpToDate;
 
-        public DepthColor(int Depth, System.Drawing.Color Color)
+        public DepthColor(int Depth, Vector3 Color)
         {
             this.Depth = Depth;
             this.Color = Color;
@@ -50,17 +50,22 @@ namespace KADA
 
         
         Effect effect;
-        private Vector3 CameraPosition = new Vector3(0, 0, 500);
+        private Vector3 CameraPosition = new Vector3(0, 0, -200);
+        private Vector3 CameraLookAt = new Vector3(0, 0, -400);
 
         private Matrix World;
         private Matrix View;
         private Matrix Projection;
 
-        private Bitmap colors;
         private Queue<DepthColor[,]> depths, depthsPool;
+        SpriteFont spriteFont;
+        int totalFrames = 0;
+        int elapsedTime = 0;
+        float fps = 0;
+        Random rnd = new Random();
        
         Task transformationUpdater;
-        Task cleanUpBufferTask;
+        //Task cleanUpBufferTask;
 
         struct InstanceInfo
         {
@@ -98,19 +103,17 @@ namespace KADA
 
         private void UpdateInstanceInformation()
         {
-            Random rnd = new Random();
+            
             
             DepthColor[,] depth = null;
             bool frameLoaded = false;
             lock (this.depths)
-            {
-                
+            {                
                 if (this.depths.Count > 1)
                 {
                     depth = this.depths.Dequeue();
                     frameLoaded = true;
                 }
-
             }
 
             if (frameLoaded)
@@ -123,15 +126,19 @@ namespace KADA
                         DepthColor d = depth[x, y];
                         if (d.UpToDate)
                         {
-                            instances[i].ScreenPos =
-                            new Vector3(x - 320, -(y - 240),-590); //-d.Depth
-                            instances[i].Scale = (float)d.Depth/500f;
-                            instances[i].Color = new Vector3(d.Color.R, d.Color.G, d.Color.B);
+                            //instances[i].ScreenPos =
+                            //new Vector3(x - 320, -(y - 240),-1000); //-d.Depth
+                            Vector3 pos = instances[i].ScreenPos;
+                            pos.X = x - 320;
+                            pos.Y = -(y - 240);
+                            pos.Z = -1000;
+                            instances[i].ScreenPos = pos;
+                            instances[i].Scale = (float)d.Depth/1000f;
+                            instances[i].Color = d.Color;
                         }
                         else
                         {
-                            instances[i].ScreenPos =
-                            new Vector3(0,0,float.MaxValue);
+                            instances[i].ScreenPos.Z = float.MaxValue;
                             instances[i].Scale = 1;
                         }
                         i++;
@@ -144,8 +151,13 @@ namespace KADA
                     instanceBuffer.SetData(instances);
                 }
 
-                cleanUpBufferTask = new Task(() => this.CleanUpBuffer(depth));
-                cleanUpBufferTask.Start();
+
+                lock (this.depthsPool)
+                {
+                    this.depthsPool.Enqueue(depth);
+                }
+                //cleanUpBufferTask = new Task(() => this.CleanUpBuffer(depth));
+                //cleanUpBufferTask.Start();
                 
             }
             
@@ -153,24 +165,26 @@ namespace KADA
         }
         private void CleanUpBuffer(DepthColor[,] depth)
         {
-            for (int x = 0; x < depth.GetLength(0); x++)
+           /* for (int x = 0; x < depth.GetLength(0); x++)
             {
                 for (int y = 0; y < depth.GetLength(1); y++)
                 {
                     depth[x, y].UpToDate = false;
                 }
 
-            }
+            }*/
+
             lock (this.depthsPool)
             {
                 this.depthsPool.Enqueue(depth);
             }
+            
         }
 
-        public PCViewer(Bitmap colors, Queue<DepthColor[,]> depths, Queue<DepthColor[,]> depthsPool)
+        public PCViewer(Queue<DepthColor[,]> depths, Queue<DepthColor[,]> depthsPool)
         {
 
-            this.colors = colors;
+            
             this.depths = depths;
             this.depthsPool = depthsPool;
             graphics = new GraphicsDeviceManager(this);
@@ -203,7 +217,7 @@ namespace KADA
 
         protected void UpdateView()
         {
-            View = Matrix.CreateLookAt(CameraPosition, new Vector3(0, 0, -1000), Vector3.Up);
+            View = Matrix.CreateLookAt(CameraPosition, CameraLookAt, Vector3.Up);
         }
 
         /// <summary>
@@ -216,6 +230,14 @@ namespace KADA
             // Allows the game to exit
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
                 this.Exit();
+
+            elapsedTime += (int)gameTime.ElapsedGameTime.TotalMilliseconds;
+            if (elapsedTime > 1000)
+            {
+                fps = totalFrames;
+                totalFrames = 0;
+                elapsedTime = 0;
+            }
 
             // TODO: Add your update logic here
             transformationUpdater = new Task(() => this.UpdateInstanceInformation());
@@ -231,19 +253,44 @@ namespace KADA
             if (kS.IsKeyDown(Keys.A))
             {
                 Matrix rotY = new Matrix();
-                rotY = Matrix.CreateRotationY(0.05f);
-                CameraPosition = Vector3.Transform(CameraPosition, rotY);
-                UpdateView();
+                rotY = Matrix.CreateRotationY(0.02f);
+                Vector3 CameraLookAtNew = CameraLookAt - CameraPosition;
+                CameraLookAtNew = Vector3.Transform(CameraLookAtNew, rotY);
+                CameraLookAtNew += CameraPosition;
+                CameraLookAt = CameraLookAtNew;
+
+                
 
             }
             if (kS.IsKeyDown(Keys.D))
             {
                 Matrix rotY = new Matrix();
-                rotY = Matrix.CreateRotationY(-0.05f);
-                CameraPosition = Vector3.Transform(CameraPosition, rotY);
-                UpdateView();
+                rotY = Matrix.CreateRotationY(-0.02f);
+                Vector3 CameraLookAtNew = CameraLookAt - CameraPosition;
+                CameraLookAtNew = Vector3.Transform(CameraLookAtNew, rotY);
+                CameraLookAtNew += CameraPosition;
+                CameraLookAt = CameraLookAtNew;
+
+                
 
             }
+            if(kS.IsKeyDown(Keys.W)){
+                Vector3 direction = CameraLookAt-CameraPosition;
+                direction.Normalize();
+                direction *= 10;
+                CameraPosition += direction;
+                CameraLookAt += direction;
+            }
+            if (kS.IsKeyDown(Keys.S))
+            {
+                Vector3 direction = CameraLookAt - CameraPosition;
+                direction.Normalize();
+                direction *= 10;
+                CameraPosition -= direction;
+                CameraLookAt -= direction;
+            }
+
+            UpdateView();
         }
 
 
@@ -259,6 +306,7 @@ namespace KADA
             GenerateGeometryBuffers();
             GenerateInstanceVertexDeclaration();
             GenerateInstanceInformation();
+            spriteFont = Content.Load<SpriteFont>("FPS");
 
             bindings = new VertexBufferBinding[2];
             bindings[0] = new VertexBufferBinding(geometryBuffer);
@@ -374,7 +422,7 @@ namespace KADA
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.CornflowerBlue);
-
+            
             effect.CurrentTechnique = effect.Techniques["Instancing"];
             effect.Parameters["WVP"].SetValue(View * Projection);
             lock (GraphicsDevice)
@@ -387,7 +435,15 @@ namespace KADA
 
                 GraphicsDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 24, 0, 12, count);
 
+                /*spriteBatch.Begin();
+                spriteBatch.DrawString(spriteFont, string.Format("FPS={0}", fps),
+                    new Vector2(10.0f, 20.0f),Microsoft.Xna.Framework.Color.Green);
+                spriteBatch.End();
+                totalFrames++;*/
             }
+
+            
+
             base.Draw(gameTime);
 
         }
