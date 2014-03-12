@@ -19,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Drawing;
 using System.Drawing.Imaging;
+using Microsoft.Xna.Framework;
 
 
 
@@ -45,6 +46,7 @@ namespace KADA
 
         private bool readyForWrite = true;
         private Thread bitmapFiller, depthUpdater;
+     
 
         System.Windows.Threading.DispatcherOperation viewer;
 
@@ -123,11 +125,10 @@ namespace KADA
                 }
 
                 this.kinect.ElevationAngle = 10;
+                //bitmapFiller.Start();
+                //depthUpdater.Start();
 
-                bitmapFiller.Start();
-                depthUpdater.Start();
-
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < 6; i++)
                 {
                     depthPool.Enqueue(new DepthColor[640, 480]);
                 }
@@ -156,6 +157,28 @@ namespace KADA
             g.Exit();
         }
 
+        private void UpdateDepthOnly(DepthColor[,] depth)
+        {
+            int baseindex;
+
+            for (int i = 0; i < 640 * 480; i++)
+            {
+                int x = i % 640;
+                int y = i / 640;
+                if ((this.colorPoints[i].X >= 0 && this.colorPoints[i].X < 640 && this.colorPoints[i].Y >= 0 && this.colorPoints[i].Y < 480))
+                {
+
+                    depth[x, y].Depth = this.depthPixels[i].Depth;
+
+
+                    depth[x, y].UpToDate = true;
+                }
+
+            }
+
+        }
+
+
         private void UpdateDepthData()
         {
             int baseindex;
@@ -164,8 +187,26 @@ namespace KADA
                 DepthColor[,] depth;
                 lock (this.depthPool)
                 {
-                    depth = this.depthPool.Dequeue();
+                    if (this.depthPool.Count > 0)
+                        depth = this.depthPool.Dequeue();
+                    else
+                        return;
                 }
+
+                /*for (int y = 0; y < 5; y++)
+                {
+                    depthLineUpdaters[y] = new Thread(new ThreadStart(() => UpdateLine(y * 640*80, depth)));
+                    depthLineUpdaters[y].Start();
+                }
+                for (int i = 0; i < 5; i++)
+                {
+                    if (depthLineUpdaters[i].ThreadState != ThreadState.Unstarted)
+                        depthLineUpdaters[i].Join();
+                    else
+                    {
+                        depthLineUpdaters[i] = depthLineUpdaters[i];
+                    }
+                }*/
 
                 for (int i = 0; i < 640 * 480; i++)
                 {
@@ -178,29 +219,20 @@ namespace KADA
 
                         ColorImagePoint p = this.colorPoints[i];
                         baseindex = (p.X + p.Y * 640) * 4;
+                        Vector3 c = depth[x, y].Color;
 
-                        depth[x, y].Color.X = this.colorPixels[baseindex + 2]/255f;
-                        depth[x, y].Color.Y = this.colorPixels[baseindex + 1] / 255f;
-                        depth[x, y].Color.Z = this.colorPixels[baseindex] / 255f;
+                        c.X = this.colorPixels[baseindex + 2];
+                        c.Y = this.colorPixels[baseindex + 1];
+                        c.Z = this.colorPixels[baseindex];
 
+                        depth[x, y].Color = c / 255f;
 
-                        //depth[x, y].Color = System.Drawing.Color.FromArgb(this.colorPixels[i * 4], this.colorPixels[i * 4 + 1], this.colorPixels[i * 4 + 2]);
-                        //depth[x, y].Depth = this.depthPixels[this.colorPoints[i].X + this.colorPoints[i].Y * 640].Depth;
                         depth[x, y].UpToDate = true;
                     }
 
                 }
 
-                /*foreach (DepthImagePoint p in depthPoints)
-                {
-                    if (p.X >= 0 && p.X < 640 && p.Y >= 0 && p.Y < 480)
-                    {
-                        depth[p.X, p.Y].Depth = p.Depth;
-                        depth[p.X, p.Y].Color = System.Drawing.Color.FromArgb(255, 0, 250);
-                        depth[p.X, p.Y].UpToDate = true;
-                    }
-                }
-                */
+
 
                 lock (this.depthQueue)
                 {
@@ -310,6 +342,7 @@ namespace KADA
                 depthUpdater.Start();
 
             }
+            
 
         }
 

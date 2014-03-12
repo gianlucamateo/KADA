@@ -133,7 +133,7 @@ namespace KADA
                             pos.Y = -(y - 240);
                             pos.Z = -1000;
                             instances[i].ScreenPos = pos;
-                            instances[i].Scale = (float)d.Depth/1000f;
+                            instances[i].Scale = -d.Depth;//(float)Math.Sqrt(Math.Pow(d.Depth,2)+Math.Pow(pos.X,2))/1000f;
                             instances[i].Color = d.Color;
                         }
                         else
@@ -434,7 +434,7 @@ namespace KADA
                 GraphicsDevice.SetVertexBuffers(bindings);
 
                 GraphicsDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 24, 0, 12, count);
-
+                
                 /*spriteBatch.Begin();
                 spriteBatch.DrawString(spriteFont, string.Format("FPS={0}", fps),
                     new Vector2(10.0f, 20.0f),Microsoft.Xna.Framework.Color.Green);
