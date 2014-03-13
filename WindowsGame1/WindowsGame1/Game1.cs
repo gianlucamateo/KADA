@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 
 namespace KADA
@@ -48,22 +49,26 @@ namespace KADA
 
         VertexDeclaration instanceVertexDeclaration;
 
-        
+
         Effect effect;
-        private Vector3 CameraPosition = new Vector3(0, 0, -200);
+        private Vector3 CameraPosition = new Vector3(0, 0, 0);
         private Vector3 CameraLookAt = new Vector3(0, 0, -400);
+        private Vector3 CameraUp = Vector3.Up;
 
         private Matrix World;
         private Matrix View;
         private Matrix Projection;
 
-        private Queue<DepthColor[,]> depths, depthsPool;
+        private ConcurrentQueue<DepthColor[,]> depths, depthsPool;
         SpriteFont spriteFont;
         int totalFrames = 0;
         int elapsedTime = 0;
+        int oldScroll;
         float fps = 0;
+        bool freeze = false;
+        
         Random rnd = new Random();
-       
+
         Task transformationUpdater;
         //Task cleanUpBufferTask;
 
@@ -93,28 +98,26 @@ namespace KADA
             for (int i = 0; i < count; i++)
             {
                 instances[i].ScreenPos =
-                new Vector3(0,0,0);
+                new Vector3(0, 0, 0);
                 instances[i].Scale = 1;
-                instances[i].Color = new Vector3(0,0,0);
+                instances[i].Color = new Vector3(0, 0, 0);
             }
             instanceBuffer = new VertexBuffer(GraphicsDevice, instanceVertexDeclaration, count, BufferUsage.WriteOnly);
             instanceBuffer.SetData(instances);
         }
 
         private void UpdateInstanceInformation()
-        {
-            
-            
+        {           
+
             DepthColor[,] depth = null;
             bool frameLoaded = false;
-            lock (this.depths)
-            {                
-                if (this.depths.Count > 1)
-                {
-                    depth = this.depths.Dequeue();
-                    frameLoaded = true;
-                }
+
+            if (this.depths.Count > 1)
+            {
+                this.depths.TryDequeue(out depth);
             }
+            if (depth != null)
+                frameLoaded = true;
 
             if (frameLoaded)
             {
@@ -152,39 +155,37 @@ namespace KADA
                 }
 
 
-                lock (this.depthsPool)
-                {
-                    this.depthsPool.Enqueue(depth);
-                }
+              
+                this.depthsPool.Enqueue(depth);
+
                 //cleanUpBufferTask = new Task(() => this.CleanUpBuffer(depth));
                 //cleanUpBufferTask.Start();
-                
+
             }
-            
+
 
         }
         private void CleanUpBuffer(DepthColor[,] depth)
         {
-           /* for (int x = 0; x < depth.GetLength(0); x++)
-            {
-                for (int y = 0; y < depth.GetLength(1); y++)
-                {
-                    depth[x, y].UpToDate = false;
-                }
+            /* for (int x = 0; x < depth.GetLength(0); x++)
+             {
+                 for (int y = 0; y < depth.GetLength(1); y++)
+                 {
+                     depth[x, y].UpToDate = false;
+                 }
 
-            }*/
+             }*/
 
-            lock (this.depthsPool)
-            {
-                this.depthsPool.Enqueue(depth);
-            }
-            
+
+            this.depthsPool.Enqueue(depth);
+
+
         }
 
-        public PCViewer(Queue<DepthColor[,]> depths, Queue<DepthColor[,]> depthsPool)
+        public PCViewer(ConcurrentQueue<DepthColor[,]> depths, ConcurrentQueue<DepthColor[,]> depthsPool)
         {
 
-            
+
             this.depths = depths;
             this.depthsPool = depthsPool;
             graphics = new GraphicsDeviceManager(this);
@@ -194,6 +195,8 @@ namespace KADA
 
 
             graphics.ApplyChanges();
+
+            oldScroll = 0;
 
             Content.RootDirectory = "Content";
         }
@@ -217,7 +220,7 @@ namespace KADA
 
         protected void UpdateView()
         {
-            View = Matrix.CreateLookAt(CameraPosition, CameraLookAt, Vector3.Up);
+            View = Matrix.CreateLookAt(CameraPosition, CameraLookAt, CameraUp);
         }
 
         /// <summary>
@@ -239,43 +242,56 @@ namespace KADA
                 elapsedTime = 0;
             }
 
-            // TODO: Add your update logic here
-            transformationUpdater = new Task(() => this.UpdateInstanceInformation());
-            transformationUpdater.Start();
-
-            HandleInput(Keyboard.GetState());
-
+            
+            HandleInput(Keyboard.GetState(), Mouse.GetState());
+            
+            if(!freeze){
+                transformationUpdater = new Task(() => this.UpdateInstanceInformation());
+                transformationUpdater.Start();
+            }
+            
             base.Update(gameTime);
         }
 
-        protected void HandleInput(KeyboardState kS)
+        protected void HandleInput(KeyboardState kS, MouseState mS)
         {
+
+            int scroll = mS.ScrollWheelValue;
+            Matrix rotX = new Matrix();
+            Vector3 axis = Vector3.Cross(CameraUp, CameraLookAt - CameraPosition);
+            axis.Normalize();
+            rotX = Matrix.CreateFromAxisAngle(axis, (scroll - oldScroll) / 5000f);
+
+            Vector3 CameraLookAtNew = CameraLookAt - CameraPosition;
+            CameraLookAtNew = Vector3.Transform(CameraLookAtNew, rotX);
+            CameraUp = Vector3.Transform(CameraUp, rotX);
+            CameraLookAt = CameraPosition + CameraLookAtNew;
+            oldScroll = scroll;
+
             if (kS.IsKeyDown(Keys.A))
             {
                 Matrix rotY = new Matrix();
-                rotY = Matrix.CreateRotationY(0.02f);
-                Vector3 CameraLookAtNew = CameraLookAt - CameraPosition;
+                rotY = Matrix.CreateFromAxisAngle(CameraUp, 0.02f);
+                CameraLookAtNew = CameraLookAt - CameraPosition;
                 CameraLookAtNew = Vector3.Transform(CameraLookAtNew, rotY);
+                //CameraUp = Vector3.Transform(CameraUp, rotY);
                 CameraLookAtNew += CameraPosition;
                 CameraLookAt = CameraLookAtNew;
-
-                
-
             }
             if (kS.IsKeyDown(Keys.D))
             {
                 Matrix rotY = new Matrix();
-                rotY = Matrix.CreateRotationY(-0.02f);
-                Vector3 CameraLookAtNew = CameraLookAt - CameraPosition;
+                rotY = Matrix.CreateFromAxisAngle(CameraUp, -0.02f);
+                CameraLookAtNew = CameraLookAt - CameraPosition;
                 CameraLookAtNew = Vector3.Transform(CameraLookAtNew, rotY);
+                //CameraUp = Vector3.Transform(CameraUp, rotY);
                 CameraLookAtNew += CameraPosition;
                 CameraLookAt = CameraLookAtNew;
 
-                
-
             }
-            if(kS.IsKeyDown(Keys.W)){
-                Vector3 direction = CameraLookAt-CameraPosition;
+            if (kS.IsKeyDown(Keys.W))
+            {
+                Vector3 direction = CameraLookAt - CameraPosition;
                 direction.Normalize();
                 direction *= 10;
                 CameraPosition += direction;
@@ -289,6 +305,32 @@ namespace KADA
                 CameraPosition -= direction;
                 CameraLookAt -= direction;
             }
+            if (kS.IsKeyDown(Keys.Q))
+            {
+                Vector3 direction = CameraLookAt - CameraPosition;
+                direction.Normalize();
+                Matrix rot = new Matrix();
+                rot = Matrix.CreateFromAxisAngle(direction, -0.02f);
+                CameraUp = Vector3.Transform(CameraUp, rot);
+            }
+            if (kS.IsKeyDown(Keys.E))
+            {
+                Vector3 direction = CameraLookAt - CameraPosition;
+                direction.Normalize();
+                Matrix rot = new Matrix();
+                rot = Matrix.CreateFromAxisAngle(direction, 0.02f);
+                CameraUp = Vector3.Transform(CameraUp, rot);
+            }
+            if (kS.IsKeyDown(Keys.Space))
+            {
+                this.freeze = true;
+            }
+            if (kS.IsKeyDown(Keys.R))
+            {
+                this.freeze = false;
+            }
+
+
 
             UpdateView();
         }
@@ -317,66 +359,63 @@ namespace KADA
 
             effect.CurrentTechnique = effect.Techniques["Instancing"];
             effect.Parameters["WVP"].SetValue(View * Projection);
-
-
-            // TODO: use this.Content to load your game content here
         }
 
         private void GenerateGeometryBuffers()
         {
             VertexPositionTexture[] vertices = new VertexPositionTexture[24];
-            vertices[0].Position = new Vector3(-1, 1, 0);
+            vertices[0].Position = new Vector3(-1, 1, -1);
             vertices[0].TextureCoordinate = new Vector2(0, 0);
-            vertices[1].Position = new Vector3(1, 1, 0);
+            vertices[1].Position = new Vector3(1, 1, -1);
             vertices[1].TextureCoordinate = new Vector2(1, 0);
-            vertices[2].Position = new Vector3(-1, 1, 0.1f);
+            vertices[2].Position = new Vector3(-1, 1, 1f);
             vertices[2].TextureCoordinate = new Vector2(0, 1);
-            vertices[3].Position = new Vector3(1, 1, 0.1f);
+            vertices[3].Position = new Vector3(1, 1, 1f);
             vertices[3].TextureCoordinate = new Vector2(1, 1);
 
-            vertices[4].Position = new Vector3(-1, -1, 0.1f);
+            vertices[4].Position = new Vector3(-1, -1, 1f);
             vertices[4].TextureCoordinate = new Vector2(0, 0);
-            vertices[5].Position = new Vector3(1, -1, 0.1f);
+            vertices[5].Position = new Vector3(1, -1, 1f);
             vertices[5].TextureCoordinate = new Vector2(1, 0);
-            vertices[6].Position = new Vector3(-1, -1, 0);
+            vertices[6].Position = new Vector3(-1, -1, -1);
             vertices[6].TextureCoordinate = new Vector2(0, 1);
-            vertices[7].Position = new Vector3(1, -1, 0);
+            vertices[7].Position = new Vector3(1, -1, -1);
             vertices[7].TextureCoordinate = new Vector2(1, 1);
 
-            vertices[8].Position = new Vector3(-1, 1, 0);
+            vertices[8].Position = new Vector3(-1, 1, -1);
             vertices[8].TextureCoordinate = new Vector2(0, 0);
-            vertices[9].Position = new Vector3(-1, 1, 0.1f);
+            vertices[9].Position = new Vector3(-1, 1, 1f);
             vertices[9].TextureCoordinate = new Vector2(1, 0);
-            vertices[10].Position = new Vector3(-1, -1, 0);
+            vertices[10].Position = new Vector3(-1, -1, -1);
             vertices[10].TextureCoordinate = new Vector2(0, 1);
-            vertices[11].Position = new Vector3(-1, -1, 0.1f);
+            vertices[11].Position = new Vector3(-1, -1, 1f);
             vertices[11].TextureCoordinate = new Vector2(1, 1);
 
-            vertices[12].Position = new Vector3(-1, 1, 0.1f);
+            vertices[12].Position = new Vector3(-1, 1, 1f);
             vertices[12].TextureCoordinate = new Vector2(0, 0);
-            vertices[13].Position = new Vector3(1, 1, 0.1f);
+            vertices[13].Position = new Vector3(1, 1, 1f);
             vertices[13].TextureCoordinate = new Vector2(1, 0);
-            vertices[14].Position = new Vector3(-1, -1, 0.1f);
+            vertices[14].Position = new Vector3(-1, -1, 1f);
             vertices[14].TextureCoordinate = new Vector2(0, 1);
-            vertices[15].Position = new Vector3(1, -1, 0.1f);
+            vertices[15].Position = new Vector3(1, -1, 1f);
             vertices[15].TextureCoordinate = new Vector2(1, 1);
 
-            vertices[16].Position = new Vector3(1, 1, 0.1f);
+            vertices[16].Position = new Vector3(1, 1, 1f);
             vertices[16].TextureCoordinate = new Vector2(0, 0);
-            vertices[17].Position = new Vector3(1, 1, 0);
+            vertices[17].Position = new Vector3(1, 1, -1);
             vertices[17].TextureCoordinate = new Vector2(1, 0);
-            vertices[18].Position = new Vector3(1, -1, 0.1f);
+            vertices[18].Position = new Vector3(1, -1, 1f);
             vertices[18].TextureCoordinate = new Vector2(0, 1);
-            vertices[19].Position = new Vector3(1, -1, 0);
+            vertices[19].Position = new Vector3(1, -1, -1);
             vertices[19].TextureCoordinate = new Vector2(1, 1);
 
-            vertices[20].Position = new Vector3(1, 1, 0);
+            vertices[20].Position = new Vector3(1, 1, -1);
             vertices[20].TextureCoordinate = new Vector2(0, 0);
-            vertices[21].Position = new Vector3(-1, 1, 0);
+            vertices[21].Position = new Vector3(-1, 1, -1);
             vertices[21].TextureCoordinate = new Vector2(1, 0);
-            vertices[22].Position = new Vector3(1, -1, 0);
+            vertices[22].Position = new Vector3(1, -1, -1);
             vertices[22].TextureCoordinate = new Vector2(0, 1);
-            vertices[23].Position = new Vector3(-1, -1, 0);
+            vertices[23].Position = new Vector3(-1, -1, -1);
             vertices[23].TextureCoordinate = new Vector2(1, 1);
 
             geometryBuffer = new VertexBuffer(GraphicsDevice, VertexPositionTexture.VertexDeclaration, 24, BufferUsage.WriteOnly);
@@ -422,7 +461,7 @@ namespace KADA
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.CornflowerBlue);
-            
+
             effect.CurrentTechnique = effect.Techniques["Instancing"];
             effect.Parameters["WVP"].SetValue(View * Projection);
             lock (GraphicsDevice)
@@ -434,15 +473,15 @@ namespace KADA
                 GraphicsDevice.SetVertexBuffers(bindings);
 
                 GraphicsDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 24, 0, 12, count);
-                
+
                 /*spriteBatch.Begin();
-                spriteBatch.DrawString(spriteFont, string.Format("FPS={0}", fps),
+                spriteBatch.DrawString(spriteFont, string.Format("FPS={0}", fps), 
                     new Vector2(10.0f, 20.0f),Microsoft.Xna.Framework.Color.Green);
                 spriteBatch.End();
                 totalFrames++;*/
             }
 
-            
+
 
             base.Draw(gameTime);
 

@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using System.Drawing;
 using System.Drawing.Imaging;
 using Microsoft.Xna.Framework;
+using System.Collections.Concurrent;
 
 
 
@@ -38,7 +39,7 @@ namespace KADA
         private Bitmap image = new Bitmap(640, 480);
         private byte[] colorPixels;
 
-        private Queue<DepthColor[,]> depthQueue = new Queue<DepthColor[,]>(), depthPool = new Queue<DepthColor[,]>();
+        private ConcurrentQueue<DepthColor[,]> depthQueue = new ConcurrentQueue<DepthColor[,]>(), depthPool = new ConcurrentQueue<DepthColor[,]>();
 
         private DepthImagePixel[] depthPixels;
         private DepthImagePoint[] depthPoints;
@@ -157,26 +158,7 @@ namespace KADA
             g.Exit();
         }
 
-        private void UpdateDepthOnly(DepthColor[,] depth)
-        {
-            int baseindex;
-
-            for (int i = 0; i < 640 * 480; i++)
-            {
-                int x = i % 640;
-                int y = i / 640;
-                if ((this.colorPoints[i].X >= 0 && this.colorPoints[i].X < 640 && this.colorPoints[i].Y >= 0 && this.colorPoints[i].Y < 480))
-                {
-
-                    depth[x, y].Depth = this.depthPixels[i].Depth;
-
-
-                    depth[x, y].UpToDate = true;
-                }
-
-            }
-
-        }
+        
 
 
         private void UpdateDepthData()
@@ -184,14 +166,14 @@ namespace KADA
             int baseindex;
             if (this.depthPool.Count > 0)
             {
-                DepthColor[,] depth;
-                lock (this.depthPool)
-                {
-                    if (this.depthPool.Count > 0)
-                        depth = this.depthPool.Dequeue();
-                    else
-                        return;
-                }
+                DepthColor[,] depth = null;
+                
+                if (this.depthPool.Count > 0)
+                    this.depthPool.TryDequeue(out depth);
+                else
+                    return;
+                if (depth == null)
+                    return;
 
                 /*for (int y = 0; y < 5; y++)
                 {
@@ -211,7 +193,7 @@ namespace KADA
                 for (int i = 0; i < 640 * 480; i++)
                 {
                     int x = i % 640;
-                    int y = i / 640;
+                    int y = 480-(i / 640)-1;
                     if ((this.colorPoints[i].X >= 0 && this.colorPoints[i].X < 640 && this.colorPoints[i].Y >= 0 && this.colorPoints[i].Y < 480))
                     {
 
