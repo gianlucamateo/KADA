@@ -14,6 +14,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.Collections.Concurrent;
+using KADA;
 
 
 namespace KADA
@@ -48,6 +49,7 @@ namespace KADA
         VertexBufferBinding[] bindings;
 
         VertexDeclaration instanceVertexDeclaration;
+        InstanceInfo[] instances;
 
 
         Effect effect;
@@ -66,7 +68,8 @@ namespace KADA
         int oldScroll;
         float fps = 0;
         bool freeze = false;
-        
+        public bool generateBackground = false;
+
         Random rnd = new Random();
 
         Task transformationUpdater;
@@ -89,7 +92,7 @@ namespace KADA
         }
 
         Int32 count = 640 * 480;
-        InstanceInfo[] instances;
+
 
         private void GenerateInstanceInformation()
         {
@@ -107,8 +110,7 @@ namespace KADA
         }
 
         private void UpdateInstanceInformation()
-        {           
-
+        {
             DepthColor[,] depth = null;
             bool frameLoaded = false;
 
@@ -148,14 +150,13 @@ namespace KADA
                     }
 
                 }
-                lock (GraphicsDevice)
+                /*lock (GraphicsDevice)
                 {
-                    GraphicsDevice.SetVertexBuffers(null);
-                    instanceBuffer.SetData(instances);
-                }
+                    
+                }*/
 
 
-              
+
                 this.depthsPool.Enqueue(depth);
 
                 //cleanUpBufferTask = new Task(() => this.CleanUpBuffer(depth));
@@ -188,6 +189,7 @@ namespace KADA
 
             this.depths = depths;
             this.depthsPool = depthsPool;
+            
             graphics = new GraphicsDeviceManager(this);
             graphics.IsFullScreen = false;
             graphics.PreferredBackBufferWidth = 640;
@@ -199,6 +201,8 @@ namespace KADA
             oldScroll = 0;
 
             Content.RootDirectory = "Content";
+            this.IsFixedTimeStep = true;
+
         }
 
 
@@ -230,43 +234,47 @@ namespace KADA
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            // Allows the game to exit
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
-                this.Exit();
 
-            elapsedTime += (int)gameTime.ElapsedGameTime.TotalMilliseconds;
+            // Allows the game to exit
+
+
+            /*elapsedTime += (int)gameTime.ElapsedGameTime.TotalMilliseconds;
             if (elapsedTime > 1000)
             {
                 fps = totalFrames;
                 totalFrames = 0;
                 elapsedTime = 0;
-            }
+            }*/
 
-            
+
             HandleInput(Keyboard.GetState(), Mouse.GetState());
-            
-            if(!freeze){
+
+            if (!freeze)
+            {
                 transformationUpdater = new Task(() => this.UpdateInstanceInformation());
                 transformationUpdater.Start();
             }
-            
+
             base.Update(gameTime);
         }
 
         protected void HandleInput(KeyboardState kS, MouseState mS)
         {
-
+            Vector3 CameraLookAtNew;
             int scroll = mS.ScrollWheelValue;
-            Matrix rotX = new Matrix();
-            Vector3 axis = Vector3.Cross(CameraUp, CameraLookAt - CameraPosition);
-            axis.Normalize();
-            rotX = Matrix.CreateFromAxisAngle(axis, (scroll - oldScroll) / 5000f);
+            if (scroll != oldScroll)
+            {
+                Matrix rotX = new Matrix();
+                Vector3 axis = Vector3.Cross(CameraUp, CameraLookAt - CameraPosition);
+                axis.Normalize();
+                rotX = Matrix.CreateFromAxisAngle(axis, (scroll - oldScroll) / 5000f);
 
-            Vector3 CameraLookAtNew = CameraLookAt - CameraPosition;
-            CameraLookAtNew = Vector3.Transform(CameraLookAtNew, rotX);
-            CameraUp = Vector3.Transform(CameraUp, rotX);
-            CameraLookAt = CameraPosition + CameraLookAtNew;
-            oldScroll = scroll;
+                CameraLookAtNew = CameraLookAt - CameraPosition;
+                CameraLookAtNew = Vector3.Transform(CameraLookAtNew, rotX);
+                CameraUp = Vector3.Transform(CameraUp, rotX);
+                CameraLookAt = CameraPosition + CameraLookAtNew;
+                oldScroll = scroll;
+            }
 
             if (kS.IsKeyDown(Keys.A))
             {
@@ -328,6 +336,10 @@ namespace KADA
             if (kS.IsKeyDown(Keys.R))
             {
                 this.freeze = false;
+            }
+            if (kS.IsKeyDown(Keys.B))
+            {
+                this.generateBackground = true;
             }
 
 
@@ -464,22 +476,24 @@ namespace KADA
 
             effect.CurrentTechnique = effect.Techniques["Instancing"];
             effect.Parameters["WVP"].SetValue(View * Projection);
-            lock (GraphicsDevice)
-            {
-                GraphicsDevice.Indices = indexBuffer;
 
-                effect.CurrentTechnique.Passes[0].Apply();
+            GraphicsDevice.SetVertexBuffers(null);
+            instanceBuffer.SetData(instances);
 
-                GraphicsDevice.SetVertexBuffers(bindings);
+            GraphicsDevice.Indices = indexBuffer;
 
-                GraphicsDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 24, 0, 12, count);
+            effect.CurrentTechnique.Passes[0].Apply();
 
-                /*spriteBatch.Begin();
-                spriteBatch.DrawString(spriteFont, string.Format("FPS={0}", fps), 
-                    new Vector2(10.0f, 20.0f),Microsoft.Xna.Framework.Color.Green);
-                spriteBatch.End();
-                totalFrames++;*/
-            }
+            GraphicsDevice.SetVertexBuffers(bindings);
+
+            GraphicsDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 24, 0, 12, count);
+
+            /*spriteBatch.Begin();
+            spriteBatch.DrawString(spriteFont, string.Format("FPS={0}", fps), 
+                new Vector2(10.0f, 20.0f),Microsoft.Xna.Framework.Color.Green);
+            spriteBatch.End();
+            totalFrames++;*/
+
 
 
 

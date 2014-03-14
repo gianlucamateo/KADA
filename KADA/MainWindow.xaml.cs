@@ -39,20 +39,22 @@ namespace KADA
         private Bitmap image = new Bitmap(640, 480);
         private byte[] colorPixels;
 
-        private ConcurrentQueue<DepthColor[,]> depthQueue = new ConcurrentQueue<DepthColor[,]>(), depthPool = new ConcurrentQueue<DepthColor[,]>();
+        private ConcurrentQueue<DepthColor[,]> renderQueue = new ConcurrentQueue<DepthColor[,]>(),
+            depthPool = new ConcurrentQueue<DepthColor[,]>();
 
         private DepthImagePixel[] depthPixels;
         private DepthImagePoint[] depthPoints;
         private ColorImagePoint[] colorPoints;
 
         private bool readyForWrite = true;
-        private Thread bitmapFiller, depthUpdater;
+        private Thread bitmapFiller, depthUpdater, imageProcessor;
      
 
         System.Windows.Threading.DispatcherOperation viewer;
 
 
         PCViewer g;
+        ImageProcessor processor;
 
 
 
@@ -134,7 +136,10 @@ namespace KADA
                     depthPool.Enqueue(new DepthColor[640, 480]);
                 }
 
-                g = new PCViewer(depthQueue, depthPool);
+                processor = new ImageProcessor(renderQueue);
+
+                g = new PCViewer(renderQueue, depthPool);
+
                 viewer = Dispatcher.BeginInvoke(new Action(() =>
                 {
                     g.Run();
@@ -163,68 +168,56 @@ namespace KADA
 
         private void UpdateDepthData()
         {
+
             int baseindex;
-            if (this.depthPool.Count > 0)
+            
+            DepthColor[,] depth = null;
+            DepthImagePixel[] dPixels = this.depthPixels;
+            DepthImagePixel[] background = null;
+
+            if (!this.depthPool.TryDequeue(out depth))
+                return;
+            if (this.processor.ready())
             {
-                DepthColor[,] depth = null;
+                background = processor.getBackground();
+            }
+            for (int i = 0; i < 640 * 480; i++)
+            {
+                int x = i % 640;
+                int y = 480-(i / 640)-1;
+                if ((this.colorPoints[i].X >= 0 && this.colorPoints[i].X < 640 && this.colorPoints[i].Y >= 0 && this.colorPoints[i].Y < 480))
+                {
+                    
+                    depth[x, y].Depth = dPixels[i].Depth;
+                    if (background!=null)
+                    {
+                        bool drop = dPixels[i].Depth > background[i].Depth;
+                        if (drop)
+                        {
+                            depth[x, y].Depth = 0;
+                        }
+                    }
+                    
+                    ColorImagePoint p = this.colorPoints[i];
+                    baseindex = (p.X + p.Y * 640) * 4;
+                    Vector3 c = depth[x, y].Color;
+
+                    c.X = this.colorPixels[baseindex + 2];
+                    c.Y = this.colorPixels[baseindex + 1];
+                    c.Z = this.colorPixels[baseindex];
+
+                    depth[x, y].Color = c / 255f;
+
+                    depth[x, y].UpToDate = true;
+                }
+
+            }
+            //imageProcessor = new Thread(new ThreadStart(() => processor.PruneBackground(depth)));
+            //imageProcessor.Start();
+            this.renderQueue.Enqueue(depth);
                 
-                if (this.depthPool.Count > 0)
-                    this.depthPool.TryDequeue(out depth);
-                else
-                    return;
-                if (depth == null)
-                    return;
-
-                /*for (int y = 0; y < 5; y++)
-                {
-                    depthLineUpdaters[y] = new Thread(new ThreadStart(() => UpdateLine(y * 640*80, depth)));
-                    depthLineUpdaters[y].Start();
-                }
-                for (int i = 0; i < 5; i++)
-                {
-                    if (depthLineUpdaters[i].ThreadState != ThreadState.Unstarted)
-                        depthLineUpdaters[i].Join();
-                    else
-                    {
-                        depthLineUpdaters[i] = depthLineUpdaters[i];
-                    }
-                }*/
-
-                for (int i = 0; i < 640 * 480; i++)
-                {
-                    int x = i % 640;
-                    int y = 480-(i / 640)-1;
-                    if ((this.colorPoints[i].X >= 0 && this.colorPoints[i].X < 640 && this.colorPoints[i].Y >= 0 && this.colorPoints[i].Y < 480))
-                    {
-
-                        depth[x, y].Depth = this.depthPixels[i].Depth;
-
-                        ColorImagePoint p = this.colorPoints[i];
-                        baseindex = (p.X + p.Y * 640) * 4;
-                        Vector3 c = depth[x, y].Color;
-
-                        c.X = this.colorPixels[baseindex + 2];
-                        c.Y = this.colorPixels[baseindex + 1];
-                        c.Z = this.colorPixels[baseindex];
-
-                        depth[x, y].Color = c / 255f;
-
-                        depth[x, y].UpToDate = true;
-                    }
-
-                }
-
-
-
-                lock (this.depthQueue)
-                {
-                    this.depthQueue.Enqueue(depth);
-                }
-            }
-            else
-            {
-                //Thread.Sleep(100);
-            }
+                
+           
         }
 
         private void OnButtonKeyDown(object sender, KeyEventArgs e)
@@ -233,61 +226,6 @@ namespace KADA
             System.Diagnostics.Debug.WriteLine(e.Key.ToString());
         }
 
-        private void KinectColorFrameReady(object sender, ColorImageFrameReadyEventArgs e)
-        {
-            this.Title = "Working...";
-            using (ColorImageFrame colorFrame = e.OpenColorImageFrame())
-            {
-                if (colorFrame != null)
-                {
-                    colorFrame.CopyPixelDataTo(this.colorPixels);
-                    this.imageBitmap.WritePixels(
-                        new Int32Rect(0, 0, this.imageBitmap.PixelWidth, this.imageBitmap.PixelHeight),
-                        this.colorPixels,
-                        this.imageBitmap.PixelWidth * sizeof(int),
-                        0);
-
-                    //Creates Bitmap
-                    /*using (MemoryStream stream = new MemoryStream())
-                    {
-                        BitmapEncoder encoder = new BmpBitmapEncoder();
-                        encoder.Frames.Add(BitmapFrame.Create((BitmapSource)imageBitmap));
-                        encoder.Save(stream);
-                        this.image.Dispose();
-                        this.image = new System.Drawing.Bitmap(stream);
-                    }*/
-
-
-
-                }
-
-            }
-        }
-
-
-        private void KinectDepthFrameReady(object sender, DepthImageFrameReadyEventArgs e)
-        {
-            using (DepthImageFrame depthFrame = e.OpenDepthImageFrame())
-            {
-                if (depthFrame != null)
-                {
-                    depthFrame.CopyDepthImagePixelDataTo(this.depthPixels);
-
-                    this.depthBitmap.WritePixels(
-                        new Int32Rect(0, 0, this.depthBitmap.PixelWidth, this.depthBitmap.PixelHeight),
-                        this.depthPixels,
-                        this.imageBitmap.PixelWidth * sizeof(int),
-                        0);
-
-                }
-                this.kinect.CoordinateMapper.MapColorFrameToDepthFrame(ColorImageFormat.RgbResolution640x480Fps30, DepthImageFormat.Resolution640x480Fps30, this.depthPixels, this.depthPoints);
-
-                depthUpdater = new Thread(new ThreadStart(UpdateDepthData));
-                depthUpdater.Start();
-                //this.UpdateDepthData();
-                //this.fillBitmap();
-            }
-        }
 
         private void KinectAllFramesReady(object sender, AllFramesReadyEventArgs e)
         {
@@ -322,6 +260,13 @@ namespace KADA
 
                 depthUpdater = new Thread(new ThreadStart(UpdateDepthData));
                 depthUpdater.Start();
+
+                if (!this.processor.ready() && this.g.generateBackground)
+                {
+                    imageProcessor = new Thread(new ThreadStart(() => processor.GenerateBackground(depthPixels)));
+                    imageProcessor.Start();
+                    // this.processor.GenerateBackground(this.depthPixels);
+                }
 
             }
             
