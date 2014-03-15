@@ -168,7 +168,6 @@ namespace KADA
 
         private void UpdateDepthData()
         {
-
             int baseindex;
             
             DepthColor[,] depth = null;
@@ -212,12 +211,23 @@ namespace KADA
                 }
 
             }
-            //imageProcessor = new Thread(new ThreadStart(() => processor.PruneBackground(depth)));
-            //imageProcessor.Start();
-            this.renderQueue.Enqueue(depth);
-                
-                
-           
+            if (this.processor.ready())
+            {
+                if (this.imageProcessor.ThreadState == ThreadState.Stopped)
+                {
+                    imageProcessor = new Thread(new ThreadStart(() => processor.eliminateColor(depth)));
+                    imageProcessor.Start();
+                }
+                else
+                {
+                    this.depthPool.Enqueue(depth);
+                    return;
+                }
+            }
+            else
+            {
+                this.renderQueue.Enqueue(depth);
+            }
         }
 
         private void OnButtonKeyDown(object sender, KeyEventArgs e)

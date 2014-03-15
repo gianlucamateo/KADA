@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Collections.Concurrent;
 using Microsoft.Kinect;
+using Microsoft.Xna.Framework;
 
 namespace KADA
 {
@@ -11,8 +12,8 @@ namespace KADA
     {
         private ConcurrentQueue<DepthColor[,]> renderQueue;
         private DepthImagePixel[] background;
-        private bool backgroundReady=false;
-        private int backgroundFrameCount=0;
+        private bool backgroundReady = false;
+        private int backgroundFrameCount = 0;
         private static Object Semaphor;
         private static DepthImagePixel[][] singleImages;
         private short[] depthValues;
@@ -25,7 +26,7 @@ namespace KADA
             Semaphor = new Object();
         }
 
-        public bool GenerateBackground(DepthImagePixel[] depth)        
+        public bool GenerateBackground(DepthImagePixel[] depth)
         {
             lock (Semaphor)
             {
@@ -46,7 +47,7 @@ namespace KADA
                         //Array.Sort(depthValues);
                         short localDepth = (short)(depthValues[1] + depthValues[2] + depthValues[3]);
                         localDepth /= 3;
-                        localDepth = (short)(localDepth*0.989f);
+                        localDepth = (short)(localDepth * 0.989f);
                         background[i].Depth = (short)(localDepth);
                     }
                 }
@@ -65,6 +66,32 @@ namespace KADA
         public bool ready()
         {
             return this.backgroundReady;
+        }
+
+        public void eliminateColor(DepthColor[,] dc)
+        {
+            lock (Semaphor)
+            {
+                for (int x = 0; x < dc.GetLength(0); x++)
+                {
+                    for (int y = 0; y < dc.GetLength(1); y++)
+                    {
+                        DepthColor pixel = dc[x, y];
+                        Vector3 color = pixel.Color;
+                        if (pixel.Depth != 0)
+                        {
+                            //color.Normalize();
+                            float saturation = (Math.Max(Math.Max(color.X, color.Y), color.Z) - Math.Min(Math.Min(color.X, color.Y), color.Z)) / Math.Max(Math.Max(color.X, color.Y), color.Z);
+                            if (saturation < 0.7f || color.X + color.Y + color.Z < 0.7)
+                            {
+                                pixel.Depth = 0;
+                                dc[x, y] = pixel;
+                            }
+                        }
+                    }
+                }
+            }
+            this.renderQueue.Enqueue(dc);
         }
 
     }
