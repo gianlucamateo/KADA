@@ -47,7 +47,7 @@ namespace KADA
                         //Array.Sort(depthValues);
                         short localDepth = (short)(depthValues[1] + depthValues[2] + depthValues[3]);
                         localDepth /= 3;
-                        localDepth = (short)(localDepth * 0.989f);
+                        localDepth = (short)(localDepth * 0.988f);
                         background[i].Depth = (short)(localDepth);
                     }
                 }
@@ -80,13 +80,25 @@ namespace KADA
                         Vector3 color = pixel.Color;
                         if (pixel.Depth != 0)
                         {
-                            //color.Normalize();
+                            color.Normalize();
                             float saturation = (Math.Max(Math.Max(color.X, color.Y), color.Z) - Math.Min(Math.Min(color.X, color.Y), color.Z)) / Math.Max(Math.Max(color.X, color.Y), color.Z);
-                            if (saturation < 0.7f || color.X + color.Y + color.Z < 0.7)
+                            bool chanceRed = (color.X / (color.Y) > 2) && (color.X / (color.Z)) > 2 && (Math.Abs(color.Y-color.Z))<0.2f;
+                            bool chanceGreen = (color.Y / (color.X) > 1);// && (color.Y / (color.Z)) > 2 && (Math.Abs(color.X - color.Z)) < 0.2f;
+                            if (saturation < 0.5f)//||!(chanceGreen))
                             {
                                 pixel.Depth = 0;
                                 dc[x, y] = pixel;
                             }
+                            if (chanceGreen)
+                            {
+                                chanceGreen = true;
+                            }
+                            /*if (chanceRed)
+                            {
+                                dc[x, y].Color.X = 1;
+                                dc[x, y].Color.Y = 1;
+                                dc[x, y].Color.Z = 1;
+                            }*/
                         }
                     }
                 }
