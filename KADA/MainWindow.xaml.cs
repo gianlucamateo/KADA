@@ -48,7 +48,7 @@ namespace KADA
 
         private bool readyForWrite = true;
         private Thread bitmapFiller, depthUpdater, imageProcessor;
-     
+
 
         System.Windows.Threading.DispatcherOperation viewer;
 
@@ -106,11 +106,12 @@ namespace KADA
                 this.depthPoints = new DepthImagePoint[640 * 480];
                 this.colorPoints = new ColorImagePoint[640 * 480];
                 bitmapFiller = new Thread(new ThreadStart(FillBitmap));
-                depthUpdater = new Thread(new ThreadStart(UpdateDepthData));
+                depthUpdater = new Thread(new ThreadStart(()=>UpdateDepthData()));
                 // this.cdMap = new DepthColorPixel[640, 480];
 
                 this.Image.Source = this.imageBitmap;
                 this.Depth.Source = this.depthBitmap;
+
 
                 this.KeyDown += new KeyEventHandler(OnButtonKeyDown);
 
@@ -138,7 +139,7 @@ namespace KADA
 
                 processor = new ImageProcessor(renderQueue);
 
-                g = new PCViewer(renderQueue, depthPool);
+                g = new PCViewer(renderQueue, depthPool);//, this);
 
                 viewer = Dispatcher.BeginInvoke(new Action(() =>
                 {
@@ -163,13 +164,13 @@ namespace KADA
             g.Exit();
         }
 
-        
 
 
-        private void UpdateDepthData()
+
+        private void UpdateDepthData(bool saveToFile = false)
         {
             int baseindex;
-            
+
             DepthColor[,] depth = null;
             DepthImagePixel[] dPixels = this.depthPixels;
             DepthImagePixel[] background = null;
@@ -183,12 +184,12 @@ namespace KADA
             for (int i = 0; i < 640 * 480; i++)
             {
                 int x = i % 640;
-                int y = 480-(i / 640)-1;
+                int y = 480 - (i / 640) - 1;
                 if ((this.colorPoints[i].X >= 0 && this.colorPoints[i].X < 640 && this.colorPoints[i].Y >= 0 && this.colorPoints[i].Y < 480))
                 {
-                    
+
                     depth[x, y].Depth = dPixels[i].Depth;
-                    if (background!=null)
+                    if (background != null)
                     {
                         bool drop = dPixels[i].Depth > background[i].Depth;
                         if (drop)
@@ -196,7 +197,7 @@ namespace KADA
                             depth[x, y].Depth = 0;
                         }
                     }
-                    
+
                     ColorImagePoint p = this.colorPoints[i];
                     baseindex = (p.X + p.Y * 640) * 4;
                     Vector3 c = depth[x, y].Color;
@@ -211,6 +212,12 @@ namespace KADA
                 }
 
             }
+            if (saveToFile)
+            {
+                Thread saver = new Thread(new ThreadStart(() => this.processor.saveColorsToFile(depth)));
+                saver.Start();
+            }
+
             if (this.processor.ready())
             {
                 if (this.imageProcessor.ThreadState == ThreadState.Stopped)
@@ -268,7 +275,8 @@ namespace KADA
                 //this.kinect.CoordinateMapper.MapColorFrameToDepthFrame(ColorImageFormat.RgbResolution640x480Fps30, DepthImageFormat.Resolution640x480Fps30, this.depthPixels, this.depthPoints);
                 this.kinect.CoordinateMapper.MapDepthFrameToColorFrame(DepthImageFormat.Resolution640x480Fps30, this.depthPixels, ColorImageFormat.RgbResolution640x480Fps30, this.colorPoints);
 
-                depthUpdater = new Thread(new ThreadStart(UpdateDepthData));
+                bool saveToFile = g.saveColors;
+                depthUpdater = new Thread(new ThreadStart(() => UpdateDepthData(saveToFile)));
                 depthUpdater.Start();
 
                 if (!this.processor.ready() && this.g.generateBackground)
@@ -277,9 +285,13 @@ namespace KADA
                     imageProcessor.Start();
                     // this.processor.GenerateBackground(this.depthPixels);
                 }
+                if (this.g.saveColors)
+                {
+                    this.g.saveColors = false;
+                }
 
             }
-            
+
 
         }
 

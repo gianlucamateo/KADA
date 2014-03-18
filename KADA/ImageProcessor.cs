@@ -5,6 +5,10 @@ using System.Text;
 using System.Collections.Concurrent;
 using Microsoft.Kinect;
 using Microsoft.Xna.Framework;
+using System.Windows.Controls;
+using System.Windows.Shapes;
+using System.Windows;
+using System.Drawing;
 
 namespace KADA
 {
@@ -17,6 +21,7 @@ namespace KADA
         private static Object Semaphor;
         private static DepthImagePixel[][] singleImages;
         private short[] depthValues;
+        
 
         public ImageProcessor(ConcurrentQueue<DepthColor[,]> renderQueue)
         {
@@ -24,6 +29,27 @@ namespace KADA
             this.renderQueue = renderQueue;
             this.depthValues = new short[5];
             Semaphor = new Object();
+            
+        }
+
+        public void saveColorsToFile(DepthColor[,] reduced)
+        {
+            Bitmap image = new Bitmap(1000, 1000);
+            foreach (DepthColor d in reduced)
+            {
+                if (d.Depth == 0)
+                {
+                    continue;
+                }
+                Vector3 color = d.Color;
+                float colorSum = color.X + color.Y + color.Z;
+                if (colorSum>0)
+                    color /= colorSum;
+                image.SetPixel((int)(1000 * color.Y), (int)(1000 * color.Z), System.Drawing.Color.FromArgb((int)(255 * color.X), (int)(255 * color.Y), (int)(255 * color.Z)));
+            }
+
+            image.Save("Colors.png");
+            
         }
 
         public bool GenerateBackground(DepthImagePixel[] depth)
@@ -84,11 +110,11 @@ namespace KADA
                             float saturation = (Math.Max(Math.Max(color.X, color.Y), color.Z) - Math.Min(Math.Min(color.X, color.Y), color.Z)) / Math.Max(Math.Max(color.X, color.Y), color.Z);
                             bool chanceRed = (color.X / (color.Y) > 2) && (color.X / (color.Z)) > 2 && (Math.Abs(color.Y-color.Z))<0.2f;
                             bool chanceGreen = (color.Y / (color.X) > 1);// && (color.Y / (color.Z)) > 2 && (Math.Abs(color.X - color.Z)) < 0.2f;
-                            if (saturation < 0.5f)//||!(chanceGreen))
+                            /*if (saturation < 0.5f)//||!(chanceGreen))
                             {
                                 pixel.Depth = 0;
                                 dc[x, y] = pixel;
-                            }
+                            }*/
                             if (chanceGreen)
                             {
                                 chanceGreen = true;

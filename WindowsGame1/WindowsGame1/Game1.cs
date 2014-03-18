@@ -69,6 +69,7 @@ namespace KADA
         float fps = 0;
         bool freeze = false;
         public bool generateBackground = false;
+        public bool saveColors = false;
 
         Random rnd = new Random();
 
@@ -183,7 +184,7 @@ namespace KADA
 
         }
 
-        public PCViewer(ConcurrentQueue<DepthColor[,]> depths, ConcurrentQueue<DepthColor[,]> depthsPool)
+        public PCViewer(ConcurrentQueue<DepthColor[,]> depths, ConcurrentQueue<DepthColor[,]> depthsPool)//, System.Windows.Window window)
         {
 
 
@@ -340,6 +341,10 @@ namespace KADA
             if (kS.IsKeyDown(Keys.B))
             {
                 this.generateBackground = true;
+            }
+            if (kS.IsKeyDown(Keys.I))
+            {
+                this.saveColors = true;
             }
 
 
