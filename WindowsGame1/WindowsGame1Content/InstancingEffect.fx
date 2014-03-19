@@ -28,7 +28,7 @@ InstancingVSoutput InstancingVS(InstancingVSinput input, float3 instanceTransfor
  pos = mul(pos, WVP);
  
  
- output.Position = pos;
+ output.Position = pos;//float4(input.Position + color,0);
  output.TexCoord = input.TexCoord;
  //color = normalize(color);
  output.Color = color;//float4(1,1,1,0)*(max(max(color.x,color.y),color.z)-min(min(color.x,color.y),color.z))/max(max(color.x,color.y),color.z);//color;//normalize(color);

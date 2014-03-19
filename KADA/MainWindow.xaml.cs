@@ -177,7 +177,7 @@ namespace KADA
 
             if (!this.depthPool.TryDequeue(out depth))
                 return;
-            if (this.processor.ready())
+            if (this.processor.BackgroundReady())
             {
                 background = processor.getBackground();
             }
@@ -218,7 +218,7 @@ namespace KADA
                 saver.Start();
             }
 
-            if (this.processor.ready())
+            if (this.processor.ColorReady())
             {
                 if (this.imageProcessor.ThreadState == ThreadState.Stopped)
                 {
@@ -279,7 +279,7 @@ namespace KADA
                 depthUpdater = new Thread(new ThreadStart(() => UpdateDepthData(saveToFile)));
                 depthUpdater.Start();
 
-                if (!this.processor.ready() && this.g.generateBackground)
+                if (!this.processor.BackgroundReady() && this.g.generateBackground)
                 {
                     imageProcessor = new Thread(new ThreadStart(() => processor.GenerateBackground(depthPixels)));
                     imageProcessor.Start();

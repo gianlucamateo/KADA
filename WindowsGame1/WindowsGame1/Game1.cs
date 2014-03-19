@@ -56,7 +56,7 @@ namespace KADA
         private Vector3 CameraPosition = new Vector3(0, 0, 0);
         private Vector3 CameraLookAt = new Vector3(0, 0, -400);
         private Vector3 CameraUp = Vector3.Up;
-
+        
         private Matrix World;
         private Matrix View;
         private Matrix Projection;

@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Shapes;
 using System.Windows;
 using System.Drawing;
+using System.Collections;
 
 namespace KADA
 {
@@ -16,12 +17,14 @@ namespace KADA
     {
         private ConcurrentQueue<DepthColor[,]> renderQueue;
         private DepthImagePixel[] background;
-        private bool backgroundReady = false;
+        private bool backgroundReady = false, colorReady = false;
         private int backgroundFrameCount = 0;
         private static Object Semaphor;
         private static DepthImagePixel[][] singleImages;
         private short[] depthValues;
-        
+        private readonly float MAXCOLROSPACEDISTANCE = 40;
+        private Vector3[] colors = new Vector3[4];
+
 
         public ImageProcessor(ConcurrentQueue<DepthColor[,]> renderQueue)
         {
@@ -29,11 +32,12 @@ namespace KADA
             this.renderQueue = renderQueue;
             this.depthValues = new short[5];
             Semaphor = new Object();
-            
+
         }
 
         public void saveColorsToFile(DepthColor[,] reduced)
         {
+
             Bitmap image = new Bitmap(1000, 1000);
             foreach (DepthColor d in reduced)
             {
@@ -43,13 +47,86 @@ namespace KADA
                 }
                 Vector3 color = d.Color;
                 float colorSum = color.X + color.Y + color.Z;
-                if (colorSum>0)
+                if (colorSum > 0)
                     color /= colorSum;
                 image.SetPixel((int)(1000 * color.Y), (int)(1000 * color.Z), System.Drawing.Color.FromArgb((int)(255 * color.X), (int)(255 * color.Y), (int)(255 * color.Z)));
             }
 
-            image.Save("Colors.png");
+            kMeans(reduced);
+
+            //image.Save("Colors.png");
+            this.colorReady = true;
+
+        }
+
+        public void kMeans(DepthColor[,] dc)
+        {
+            Vector3 red = new Vector3(180, 10,20);
+            Vector3 green = new Vector3(50, 100,50);
+            Vector3 blue = new Vector3(50, 70,125);
+            Vector3 yellow = new Vector3(240, 160, 45);
+            //Vector3 noise = new Vector2(300, 300);
+
+            Vector3[] centroids = { red, green, blue, yellow};
+
+            List<Vector3>[] clusters = new List<Vector3>[4];
             
+            for(int i = 0; i<clusters.Length;i++)
+            {
+                clusters[i] = new List<Vector3>();
+            }
+
+            for (int count = 0; count < 5; count++)
+            {
+                for (int x = 0; x < 640; x++)
+                {
+                    for (int y = 0; y < 480; y++)
+                    {
+                        if (dc[x, y].Depth != 0)
+                        {
+                            Vector3 position = dc[x,y].Color*255;
+                            float distance = float.MaxValue;
+                            int cluster = int.MaxValue;
+                            for (int i = 0; i < clusters.Length; i++)
+                            {
+                                float temp_distance = 0;
+                                Vector3.Distance(ref position, ref centroids[i], out temp_distance);
+                                if (temp_distance < distance && temp_distance < MAXCOLROSPACEDISTANCE)
+                                {
+                                    cluster = i;
+                                    distance = temp_distance;
+                                }
+
+                            }
+                            if (cluster < clusters.Length)
+                                clusters[cluster].Add(position);
+                        }
+                    }
+                }
+                for (int i = 0; i < clusters.Length; i++)
+                {
+                    Vector3 center = new Vector3(0, 0, 0);
+                    foreach (Vector3 v in clusters[i])
+                    {
+                        center += v;
+                    }
+                    center /= clusters[i].Count;
+                    centroids[i] = center;
+                    if (i == 3)
+                    {
+                        i++;
+                    }
+
+                }
+                for (int i = 0; i < clusters.Length; i++)
+                {
+                    clusters[i].Clear();
+                }
+            }
+            for (int i = 0; i < clusters.Length; i++)
+            {
+                this.colors[i] = centroids[i];
+            }
         }
 
         public bool GenerateBackground(DepthImagePixel[] depth)
@@ -89,32 +166,48 @@ namespace KADA
             else
                 return null;
         }
-        public bool ready()
+        public bool BackgroundReady()
         {
             return this.backgroundReady;
+        }
+        public bool ColorReady()
+        {
+            return this.colorReady;
         }
 
         public void eliminateColor(DepthColor[,] dc)
         {
             lock (Semaphor)
             {
+                Vector2 gToB = new Vector2(0,0);
                 for (int x = 0; x < dc.GetLength(0); x++)
                 {
                     for (int y = 0; y < dc.GetLength(1); y++)
                     {
                         DepthColor pixel = dc[x, y];
-                        Vector3 color = pixel.Color;
+                        Vector3 color = pixel.Color*255;
+                        
                         if (pixel.Depth != 0)
                         {
-                            color.Normalize();
+
                             float saturation = (Math.Max(Math.Max(color.X, color.Y), color.Z) - Math.Min(Math.Min(color.X, color.Y), color.Z)) / Math.Max(Math.Max(color.X, color.Y), color.Z);
-                            bool chanceRed = (color.X / (color.Y) > 2) && (color.X / (color.Z)) > 2 && (Math.Abs(color.Y-color.Z))<0.2f;
+                            //color.Normalize();                                                      
+                            bool chanceRed = (color.X / (color.Y) > 2) && (color.X / (color.Z)) > 2 && (Math.Abs(color.Y - color.Z)) < 0.2f;
                             bool chanceGreen = (color.Y / (color.X) > 1);// && (color.Y / (color.Z)) > 2 && (Math.Abs(color.X - color.Z)) < 0.2f;
-                            /*if (saturation < 0.5f)//||!(chanceGreen))
+                            bool accept = false;
+                            float distance;
+                            for (int possibleColor = 0; possibleColor < this.colors.Length; possibleColor++)
+                            {
+                                Vector3.Distance(ref color, ref this.colors[possibleColor], out distance);
+                                if (distance < MAXCOLROSPACEDISTANCE)
+                                    accept = true;
+                            }
+                            
+                            if (!accept)//|| saturation < 0.8)//||!(chanceGreen))
                             {
                                 pixel.Depth = 0;
                                 dc[x, y] = pixel;
-                            }*/
+                            }
                             if (chanceGreen)
                             {
                                 chanceGreen = true;
