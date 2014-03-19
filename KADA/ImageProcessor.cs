@@ -61,10 +61,10 @@ namespace KADA
 
         public void kMeans(DepthColor[,] dc)
         {
-            Vector3 red = new Vector3(180, 10,20);
-            Vector3 green = new Vector3(50, 100,50);
-            Vector3 blue = new Vector3(50, 70,125);
-            Vector3 yellow = new Vector3(240, 160, 45);
+            Vector3 red = new Vector3(250, 15,30);
+            Vector3 green = new Vector3(90, 200,115);
+            Vector3 blue = new Vector3(70, 100,220);
+            Vector3 yellow = new Vector3(210, 140, 50);
             //Vector3 noise = new Vector2(300, 300);
 
             Vector3[] centroids = { red, green, blue, yellow};

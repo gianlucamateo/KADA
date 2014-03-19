@@ -53,10 +53,10 @@ namespace KADA
 
 
         Effect effect;
-        private Vector3 CameraPosition = new Vector3(0, 0, 0);
-        private Vector3 CameraLookAt = new Vector3(0, 0, -400);
-        private Vector3 CameraUp = Vector3.Up;
-        
+        private Vector3 CameraPosition = new Vector3(600, -400,-1200);
+        private Vector3 CameraLookAt = new Vector3(400, -300, -1500);
+        private Vector3 CameraUp;
+         
         private Matrix World;
         private Matrix View;
         private Matrix Projection;
@@ -195,8 +195,12 @@ namespace KADA
             graphics.IsFullScreen = false;
             graphics.PreferredBackBufferWidth = 640;
             graphics.PreferredBackBufferHeight = 480;
+            Vector3 cameraDiff, unitY;
+            unitY = -Vector3.UnitY;
+            cameraDiff = (CameraLookAt - CameraPosition);
 
-
+            Vector3.Cross(ref cameraDiff, ref unitY, out CameraUp);
+            CameraUp.Normalize();
             graphics.ApplyChanges();
 
             oldScroll = 0;
