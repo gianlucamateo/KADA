@@ -22,7 +22,7 @@ namespace KADA
         private static Object Semaphor;
         private static DepthImagePixel[][] singleImages;
         private short[] depthValues;
-        private readonly float MAXCOLROSPACEDISTANCE = 40;
+        private readonly float MAXCOLROSPACEDISTANCE = 50;
         private Vector3[] colors = new Vector3[4];
 
 
@@ -73,6 +73,7 @@ namespace KADA
             
             for(int i = 0; i<clusters.Length;i++)
             {
+                centroids[i] = this.sumNormalize(centroids[i]);
                 clusters[i] = new List<Vector3>();
             }
 
@@ -84,7 +85,7 @@ namespace KADA
                     {
                         if (dc[x, y].Depth != 0)
                         {
-                            Vector3 position = dc[x,y].Color*255;
+                            Vector3 position = sumNormalize(dc[x,y].Color);
                             float distance = float.MaxValue;
                             int cluster = int.MaxValue;
                             for (int i = 0; i < clusters.Length; i++)
@@ -175,6 +176,16 @@ namespace KADA
             return this.colorReady;
         }
 
+        //returns a sum-normalized vector, components ranging from 0-255; 
+        private Vector3 sumNormalize(Vector3 vec)
+        {
+            //float sum = vec.X + vec.Y + vec.Z;
+            //vec /= sum;
+            vec.Normalize();
+            vec *= 255;
+            return vec;
+        }
+
         public void eliminateColor(DepthColor[,] dc)
         {
             lock (Semaphor)
@@ -185,7 +196,7 @@ namespace KADA
                     for (int y = 0; y < dc.GetLength(1); y++)
                     {
                         DepthColor pixel = dc[x, y];
-                        Vector3 color = pixel.Color*255;
+                        Vector3 color = sumNormalize(pixel.Color);
                         
                         if (pixel.Depth != 0)
                         {
@@ -196,10 +207,21 @@ namespace KADA
                             bool chanceGreen = (color.Y / (color.X) > 1);// && (color.Y / (color.Z)) > 2 && (Math.Abs(color.X - color.Z)) < 0.2f;
                             bool accept = false;
                             float distance;
+                            float bonus = 0;
+
+                            /*int diff = 50;
+
+                            if (x > 1 && x < 639 && y > 1 && y < 479)
+                            {
+                                if (Math.Abs((dc[x - 1, y].Depth - dc[x, y].Depth)) < diff && Math.Abs((dc[x + 1, y].Depth - dc[x, y].Depth)) < diff && Math.Abs((dc[x, y + 1].Depth - dc[x, y].Depth)) < diff && Math.Abs((dc[x, y - 1].Depth - dc[x, y].Depth)) < diff)
+                                {
+                                    bonus = 50;
+                                }
+                            }*/
                             for (int possibleColor = 0; possibleColor < this.colors.Length; possibleColor++)
                             {
                                 Vector3.Distance(ref color, ref this.colors[possibleColor], out distance);
-                                if (distance < MAXCOLROSPACEDISTANCE)
+                                if (distance < MAXCOLROSPACEDISTANCE+bonus)
                                     accept = true;
                             }
                             
