@@ -106,7 +106,8 @@ namespace KADA
                 this.depthPoints = new DepthImagePoint[640 * 480];
                 this.colorPoints = new ColorImagePoint[640 * 480];
                 bitmapFiller = new Thread(new ThreadStart(FillBitmap));
-                depthUpdater = new Thread(new ThreadStart(()=>UpdateDepthData()));
+                depthUpdater = new Thread(new ThreadStart(()=>UpdateDepthData(false)));
+                imageProcessor = new Thread(new ThreadStart(() => processor.GenerateBackground(depthPixels)));
                 // this.cdMap = new DepthColorPixel[640, 480];
 
                 this.Image.Source = this.imageBitmap;
@@ -128,7 +129,7 @@ namespace KADA
                     this.Title = "NOT READY";
                 }
 
-                this.kinect.ElevationAngle = 10;
+                //this.kinect.ElevationAngle = 10;
                 //bitmapFiller.Start();
                 //depthUpdater.Start();
 
@@ -167,10 +168,11 @@ namespace KADA
 
 
 
-        private void UpdateDepthData(bool saveToFile = false)
+        private void UpdateDepthData(Object saveToFileOb)
         {
             int baseindex;
 
+            bool saveToFile = (Boolean)saveToFileOb;
             DepthColor[,] depth = null;
             DepthImagePixel[] dPixels = this.depthPixels;
             DepthImagePixel[] background = null;
@@ -189,12 +191,16 @@ namespace KADA
                 {
 
                     depth[x, y].Depth = dPixels[i].Depth;
+                    float scale = -dPixels[i].Depth / 670.63f;
+                    depth[x, y].Position.X = (x - 320) * scale;
+                    depth[x, y].Position.Y = -(y-240) * scale;
+                    depth[x, y].Position.Z = -dPixels[i].Depth;
                     if (background != null)
                     {
                         bool drop = dPixels[i].Depth > background[i].Depth;
                         if (drop)
                         {
-                            depth[x, y].Depth = 0;
+                            depth[x, y].Position *= 0;
                         }
                     }
 
@@ -214,22 +220,24 @@ namespace KADA
             }
             if (saveToFile)
             {
+
                 Thread saver = new Thread(new ThreadStart(() => this.processor.saveColorsToFile(depth)));
                 saver.Start();
             }
 
             if (this.processor.ColorReady())
             {
-                if (this.imageProcessor.ThreadState == ThreadState.Stopped)
-                {
-                    imageProcessor = new Thread(new ThreadStart(() => processor.eliminateColor(depth)));
-                    imageProcessor.Start();
-                }
-                else
-                {
-                    this.depthPool.Enqueue(depth);
-                    return;
-                }
+
+                System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(processor.eliminateColor), depth);
+                ImageProcessor.resetEvent.WaitOne();
+                //System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(processor.scanNormals), depth);
+                    //imageProcessor = new Thread(new ThreadStart(() => processor.eliminateColor(depth)));
+                    //imageProcessor.Start();
+                
+               
+                    /*this.depthPool.Enqueue(depth);
+                    return;*/
+                
             }
             else
             {
@@ -275,9 +283,10 @@ namespace KADA
                 //this.kinect.CoordinateMapper.MapColorFrameToDepthFrame(ColorImageFormat.RgbResolution640x480Fps30, DepthImageFormat.Resolution640x480Fps30, this.depthPixels, this.depthPoints);
                 this.kinect.CoordinateMapper.MapDepthFrameToColorFrame(DepthImageFormat.Resolution640x480Fps30, this.depthPixels, ColorImageFormat.RgbResolution640x480Fps30, this.colorPoints);
 
-                bool saveToFile = g.saveColors;
-                depthUpdater = new Thread(new ThreadStart(() => UpdateDepthData(saveToFile)));
-                depthUpdater.Start();
+                Boolean saveToFile = g.saveColors;
+                System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(UpdateDepthData), saveToFile);
+                /*depthUpdater = new Thread(new ThreadStart(() => UpdateDepthData(saveToFile)));
+                depthUpdater.Start();*/
 
                 if (!this.processor.BackgroundReady() && this.g.generateBackground)
                 {
@@ -289,6 +298,7 @@ namespace KADA
                 {
                     this.g.saveColors = false;
                 }
+                
 
             }
 

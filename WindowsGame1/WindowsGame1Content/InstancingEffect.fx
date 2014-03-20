@@ -19,11 +19,11 @@ InstancingVSoutput InstancingVS(InstancingVSinput input, float3 instanceTransfor
  InstancingVSoutput output;
  float4 pos = input.Position;
  pos = pos+float4(instanceTransform,0);
- pos.z = pos.z+scale;
+ //pos.z = pos.z+scale;
  //scale = sqrt(pow(scale,2)+pow(pos.x,2))/1000;
- float planeScaling = -scale / 670.63;
- pos.x *= planeScaling;
- pos.y *= planeScaling;
+ //float planeScaling = -scale / 670.63;
+ //pos.x *= planeScaling;
+ //pos.y *= planeScaling;
  
  pos = mul(pos, WVP);
  

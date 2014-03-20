@@ -10,6 +10,7 @@ using System.Windows.Shapes;
 using System.Windows;
 using System.Drawing;
 using System.Collections;
+using System.Threading;
 
 namespace KADA
 {
@@ -18,12 +19,15 @@ namespace KADA
         private ConcurrentQueue<DepthColor[,]> renderQueue;
         private DepthImagePixel[] background;
         private bool backgroundReady = false, colorReady = false;
+        private bool readyForNormals = false;
         private int backgroundFrameCount = 0;
-        private static Object Semaphor;
+        private static Object Semaphor, Normalizer;
         private static DepthImagePixel[][] singleImages;
         private short[] depthValues;
         private readonly float MAXCOLROSPACEDISTANCE = 50;
         private Vector3[] colors = new Vector3[4];
+        Bitmap bitmap = new Bitmap(640, 480);
+        public static ManualResetEvent resetEvent = new ManualResetEvent(false);
 
 
         public ImageProcessor(ConcurrentQueue<DepthColor[,]> renderQueue)
@@ -32,6 +36,7 @@ namespace KADA
             this.renderQueue = renderQueue;
             this.depthValues = new short[5];
             Semaphor = new Object();
+            Normalizer = new Object();
 
         }
 
@@ -83,7 +88,7 @@ namespace KADA
                 {
                     for (int y = 0; y < 480; y++)
                     {
-                        if (dc[x, y].Depth != 0)
+                        if (dc[x, y].Position.Z != 0)
                         {
                             Vector3 position = sumNormalize(dc[x,y].Color);
                             float distance = float.MaxValue;
@@ -186,10 +191,12 @@ namespace KADA
             return vec;
         }
 
-        public void eliminateColor(DepthColor[,] dc)
+        public void eliminateColor(Object dcIn)
         {
+            DepthColor[,] dc = (DepthColor[,])dcIn;
             lock (Semaphor)
             {
+               
                 Vector2 gToB = new Vector2(0,0);
                 for (int x = 0; x < dc.GetLength(0); x++)
                 {
@@ -198,9 +205,8 @@ namespace KADA
                         DepthColor pixel = dc[x, y];
                         Vector3 color = sumNormalize(pixel.Color);
                         
-                        if (pixel.Depth != 0)
-                        {
-
+                        if (pixel.Position.Z != 0)
+                        {                            
                             float saturation = (Math.Max(Math.Max(color.X, color.Y), color.Z) - Math.Min(Math.Min(color.X, color.Y), color.Z)) / Math.Max(Math.Max(color.X, color.Y), color.Z);
                             //color.Normalize();                                                      
                             bool chanceRed = (color.X / (color.Y) > 2) && (color.X / (color.Z)) > 2 && (Math.Abs(color.Y - color.Z)) < 0.2f;
@@ -227,6 +233,7 @@ namespace KADA
                             
                             if (!accept)//|| saturation < 0.8)//||!(chanceGreen))
                             {
+                                pixel.Position *= 0;
                                 pixel.Depth = 0;
                                 dc[x, y] = pixel;
                             }
@@ -244,7 +251,84 @@ namespace KADA
                     }
                 }
             }
+            readyForNormals = false;
+            Bitmap bitmap = new Bitmap(640, 480);
+            //DepthColor[,] dc = (DepthColor[,])dcIn;
+
+            Vector3 up, down, left, right;
+            Vector3 zero = new Vector3(0, 0, 0);
+            Vector3 position;
+            Vector3 normal;
+            Vector3 verticalAvg, horizontalAvg;
+            for (int x = 1; x < 640 - 1; x++)
+            {
+                for (int y = 1; y < 480 - 1; y++)
+                {
+                    if (dc[x, y].Depth > 0)
+                    {
+                        position = dc[x, y].Position;
+                        up = dc[x, y - 1].Position - position;
+                        down = dc[x, y + 1].Position - position;
+                        right = dc[x + 1, y].Position - position;
+                        left = dc[x - 1, y].Position - position;
+
+                        verticalAvg = up - down;
+                        horizontalAvg = left - right;
+                        normal = Vector3.Cross(verticalAvg, horizontalAvg);
+                        normal.Normalize();
+                        if (verticalAvg.Length() > 0 && horizontalAvg.Length() > 0)
+                        {
+                            //bitmap.SetPixel(x, 479 - y, System.Drawing.Color.FromArgb(254, 127 + (int)(normal.X * 127), 127 + (int)(normal.Y * 127), 127 + (int)(normal.Z * 127)));
+                        }
+                    }
+                }
+            }
             this.renderQueue.Enqueue(dc);
+            //bitmap.Save("normals.png");
+            resetEvent.Set();
+        }
+
+        public void scanNormals(Object dcIn)
+        {
+            lock (Normalizer)
+            {
+                readyForNormals = false;
+                bitmap = new Bitmap(640, 480);
+                DepthColor[,] dc = (DepthColor[,])dcIn;
+
+                Vector3 up, down, left, right;
+                Vector3 zero = new Vector3(0, 0, 0);
+                Vector3 position;
+                Vector3 normal;
+                Vector3 verticalAvg, horizontalAvg;
+                for (int x = 1; x < 640 - 1; x++)
+                {
+                    for (int y = 1; y < 480 - 1; y++)
+                    {
+                        if (dc[x, y].Depth > 0)
+                        {
+                            position = dc[x, y].Position;
+                            up = dc[x, y - 1].Position - position;
+                            down = dc[x, y + 1].Position - position;
+                            right = dc[x + 1, y].Position - position;
+                            left = dc[x - 1, y].Position - position;
+
+                            verticalAvg = up - down;
+                            horizontalAvg = left - right;
+                            normal = Vector3.Cross(verticalAvg, horizontalAvg);
+                            normal.Normalize();
+                            if (verticalAvg.Length() > 0 && horizontalAvg.Length() > 0)
+                            {
+                                bitmap.SetPixel(x, 479 - y, System.Drawing.Color.FromArgb(254, 127 + (int)(normal.X * 127), 127 + (int)(normal.Y * 127), 127 + (int)(normal.Z * 127)));
+                            }
+                        }
+                    }
+                }
+               
+                bitmap.Save("normals.png");
+                //return bitmap;
+
+            }
         }
 
     }

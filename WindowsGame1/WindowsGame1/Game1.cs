@@ -28,12 +28,14 @@ namespace KADA
         public Vector3 Color;
         public int Depth;
         public bool UpToDate;
+        public Vector3 Position;
 
         public DepthColor(int Depth, Vector3 Color)
         {
             this.Depth = Depth;
             this.Color = Color;
             this.UpToDate = true;
+            this.Position = new Vector3(0, 0, 0);
         }
     }
 
@@ -134,11 +136,11 @@ namespace KADA
                         {
                             //instances[i].ScreenPos =
                             //new Vector3(x - 320, -(y - 240),-1000); //-d.Depth
-                            Vector3 pos = instances[i].ScreenPos;
-                            pos.X = x - 320;
-                            pos.Y = -(y - 240);
-                            pos.Z = -1000;
-                            instances[i].ScreenPos = pos;
+                            //Vector3 pos = instances[i].ScreenPos;
+                           // pos.X = x - 320;
+                            //pos.Y = -(y - 240);
+                            //pos.Z = -1000;
+                            instances[i].ScreenPos = d.Position;
                             instances[i].Scale = -d.Depth;//(float)Math.Sqrt(Math.Pow(d.Depth,2)+Math.Pow(pos.X,2))/1000f;
                             instances[i].Color = d.Color;
                         }
