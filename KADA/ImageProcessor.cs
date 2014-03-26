@@ -11,6 +11,7 @@ using System.Windows;
 using System.Drawing;
 using System.Collections;
 using System.Threading;
+using Image = System.Drawing.Image;
 
 namespace KADA
 {
@@ -26,6 +27,7 @@ namespace KADA
         private short[] depthValues;
         private readonly float MAXCOLROSPACEDISTANCE = 50;
         private Vector3[] colors = new Vector3[4];
+        List<Histogram> Histograms;
         Bitmap bitmap = new Bitmap(640, 480);
         public static ManualResetEvent resetEvent = new ManualResetEvent(false);
 
@@ -37,10 +39,27 @@ namespace KADA
             this.depthValues = new short[5];
             Semaphor = new Object();
             Normalizer = new Object();
+            Histograms = new List<Histogram>();
+
+            Bitmap red = (Bitmap)Image.FromFile("../../ressources/histogram/Red_cleaned_filled.png", true);
+            Histogram r = new Histogram(red, 100, 8);
+            //Histograms.Add(r);
+
+            Bitmap green = (Bitmap)Image.FromFile("../../ressources/histogram/Green_cleaned_filled.png", true);
+            Histogram g = new Histogram(green, 20, 16);
+            //Histograms.Add(g);
+
+            Bitmap blue = (Bitmap)Image.FromFile("../../ressources/histogram/Blue_cleaned_filled.png", true);
+            Histogram b = new Histogram(blue, 15, 16);
+            Histograms.Add(b);
+
+            Bitmap yellow = (Bitmap)Image.FromFile("../../ressources/histogram/Yellow_cleaned_filled.png", true);
+            Histogram ye = new Histogram(yellow, 150, 8);
+            //Histograms.Add(ye);
 
         }
 
-        public void saveColorsToFile(DepthColor[,] reduced)
+        /*public void saveColorsToFile(DepthColor[,] reduced)
         {
 
             Bitmap image = new Bitmap(1000, 1000);
@@ -133,7 +152,7 @@ namespace KADA
             {
                 this.colors[i] = centroids[i];
             }
-        }
+        }*/
 
         public bool GenerateBackground(DepthImagePixel[] depth)
         {
@@ -191,7 +210,7 @@ namespace KADA
             return vec;
         }
 
-        public void eliminateColor(Object dcIn)
+        /*public void eliminateColor(Object dcIn)
         {
             DepthColor[,] dc = (DepthColor[,])dcIn;
             lock (Semaphor)
@@ -215,15 +234,7 @@ namespace KADA
                             float distance;
                             float bonus = 0;
 
-                            /*int diff = 50;
-
-                            if (x > 1 && x < 639 && y > 1 && y < 479)
-                            {
-                                if (Math.Abs((dc[x - 1, y].Depth - dc[x, y].Depth)) < diff && Math.Abs((dc[x + 1, y].Depth - dc[x, y].Depth)) < diff && Math.Abs((dc[x, y + 1].Depth - dc[x, y].Depth)) < diff && Math.Abs((dc[x, y - 1].Depth - dc[x, y].Depth)) < diff)
-                                {
-                                    bonus = 50;
-                                }
-                            }*/
+                            
                             for (int possibleColor = 0; possibleColor < this.colors.Length; possibleColor++)
                             {
                                 Vector3.Distance(ref color, ref this.colors[possibleColor], out distance);
@@ -241,12 +252,7 @@ namespace KADA
                             {
                                 chanceGreen = true;
                             }
-                            /*if (chanceRed)
-                            {
-                                dc[x, y].Color.X = 1;
-                                dc[x, y].Color.Y = 1;
-                                dc[x, y].Color.Z = 1;
-                            }*/
+                            
                         }
                     }
                 }
@@ -283,6 +289,44 @@ namespace KADA
                     }
                 }
             }
+            this.renderQueue.Enqueue(dc);
+            //bitmap.Save("normals.png");
+            resetEvent.Set();
+        }*/
+        public void eliminateColor(Object dcIn)
+        {
+            DepthColor[,] dc = (DepthColor[,])dcIn;
+            lock (Semaphor)
+            {                
+                for (int x = 0; x < dc.GetLength(0); x++)
+                {
+                    for (int y = 0; y < dc.GetLength(1); y++)
+                    {
+                        DepthColor pixel = dc[x, y];
+                        Vector3 color = pixel.Color*256;
+
+                        if (pixel.Position.Z != 0)
+                        {
+                            int maxval = 0;
+                            foreach (Histogram h in this.Histograms)
+                            {
+                                int val = h.getValue(color);
+                                if (maxval < val)
+                                {
+                                    maxval = val;
+                                }
+                            }
+                            if (maxval == 0)
+                            {
+                                pixel.Position.Z = 0;
+                                pixel.Depth = 0;
+                                
+                            }
+                            dc[x, y] = pixel;
+                        }
+                    }
+                }
+            }            
             this.renderQueue.Enqueue(dc);
             //bitmap.Save("normals.png");
             resetEvent.Set();

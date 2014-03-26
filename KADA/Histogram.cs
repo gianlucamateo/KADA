@@ -6,7 +6,7 @@ using System.Drawing;
 using Color = System.Drawing.Color;
 using Microsoft.Xna.Framework;
 
-namespace HistogramReader
+namespace KADA
 {
     class Histogram
     {
@@ -71,7 +71,7 @@ namespace HistogramReader
             }*/
         }
 
-        public float getValue(Vector3 color)
+        public int getValue(Vector3 color)
         {
             if (color.Length() < 50)
                 return 0;

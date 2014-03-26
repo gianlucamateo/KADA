@@ -8,7 +8,7 @@ using System.Collections;
 using Microsoft.Xna.Framework;
 using Color = System.Drawing.Color;
 
-namespace HistogramReader
+namespace KADA
 {
     class HistogramReader
     {

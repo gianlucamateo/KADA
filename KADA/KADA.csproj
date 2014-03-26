@@ -67,6 +67,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Histogram.cs" />
     <Compile Include="ImageProcessor.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
@@ -102,6 +103,12 @@
       <Project>{6A838C9A-1D01-40B4-99B5-6A21B40EA33A}</Project>
       <Name>PCViewer</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="ressources\histogram\Blue_cleaned_filled.png" />
+    <Resource Include="ressources\histogram\Green_cleaned_filled.png" />
+    <Resource Include="ressources\histogram\Red_cleaned_filled.png" />
+    <Resource Include="ressources\histogram\Yellow_cleaned_filled.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -132,7 +132,7 @@ namespace KADA
                     for (int y = 0; y < depth.GetLength(1); y++)
                     {
                         DepthColor d = depth[x, y];
-                        if (d.UpToDate)
+                        if (d.UpToDate && d.Depth != 0)
                         {
                             //instances[i].ScreenPos =
                             //new Vector3(x - 320, -(y - 240),-1000); //-d.Depth

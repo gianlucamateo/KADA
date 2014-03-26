@@ -172,7 +172,7 @@ namespace KADA
         {
             int baseindex;
 
-            bool saveToFile = (Boolean)saveToFileOb;
+            bool processColors = (Boolean)saveToFileOb;
             DepthColor[,] depth = null;
             DepthImagePixel[] dPixels = this.depthPixels;
             DepthImagePixel[] background = null;
@@ -218,27 +218,28 @@ namespace KADA
                 }
 
             }
-            if (saveToFile)
+            if (processColors)
             {
-
-                Thread saver = new Thread(new ThreadStart(() => this.processor.saveColorsToFile(depth)));
-                saver.Start();
+                System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(this.processor.eliminateColor), depth);
+                ImageProcessor.resetEvent.WaitOne();
+                
+                
             }
 
-            if (this.processor.ColorReady())
-            {
+           // if (this.processor.ColorReady())
+            //{
 
-                System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(processor.eliminateColor), depth);
-                ImageProcessor.resetEvent.WaitOne();
-                //System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(processor.scanNormals), depth);
-                    //imageProcessor = new Thread(new ThreadStart(() => processor.eliminateColor(depth)));
-                    //imageProcessor.Start();
+           //     System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(processor.eliminateColor), depth);
+          //      ImageProcessor.resetEvent.WaitOne();
+           //     //System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(processor.scanNormals), depth);
+          //          //imageProcessor = new Thread(new ThreadStart(() => processor.eliminateColor(depth)));
+          //          //imageProcessor.Start();
                 
                
                     /*this.depthPool.Enqueue(depth);
                     return;*/
                 
-            }
+           // }
             else
             {
                 this.renderQueue.Enqueue(depth);
@@ -283,8 +284,8 @@ namespace KADA
                 //this.kinect.CoordinateMapper.MapColorFrameToDepthFrame(ColorImageFormat.RgbResolution640x480Fps30, DepthImageFormat.Resolution640x480Fps30, this.depthPixels, this.depthPoints);
                 this.kinect.CoordinateMapper.MapDepthFrameToColorFrame(DepthImageFormat.Resolution640x480Fps30, this.depthPixels, ColorImageFormat.RgbResolution640x480Fps30, this.colorPoints);
 
-                Boolean saveToFile = g.saveColors;
-                System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(UpdateDepthData), saveToFile);
+                Boolean processColors = g.saveColors;
+                System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(UpdateDepthData), processColors);
                 /*depthUpdater = new Thread(new ThreadStart(() => UpdateDepthData(saveToFile)));
                 depthUpdater.Start();*/
 
@@ -294,10 +295,7 @@ namespace KADA
                     imageProcessor.Start();
                     // this.processor.GenerateBackground(this.depthPixels);
                 }
-                if (this.g.saveColors)
-                {
-                    this.g.saveColors = false;
-                }
+                
                 
 
             }
