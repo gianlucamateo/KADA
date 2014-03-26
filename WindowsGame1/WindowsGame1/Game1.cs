@@ -55,8 +55,8 @@ namespace KADA
 
 
         Effect effect;
-        private Vector3 CameraPosition = new Vector3(600, -400,-1200);
-        private Vector3 CameraLookAt = new Vector3(400, -300, -1500);
+        private Vector3 CameraPosition = new Vector3(0, -200,0);
+        private Vector3 CameraLookAt = new Vector3(0, -130, -370);
         private Vector3 CameraUp;
          
         private Matrix World;
@@ -197,11 +197,11 @@ namespace KADA
             graphics.IsFullScreen = false;
             graphics.PreferredBackBufferWidth = 640;
             graphics.PreferredBackBufferHeight = 480;
-            Vector3 cameraDiff, unitY;
-            unitY = -Vector3.UnitY;
+            Vector3 cameraDiff, unitX;
+            unitX = -Vector3.UnitX;
             cameraDiff = (CameraLookAt - CameraPosition);
 
-            Vector3.Cross(ref cameraDiff, ref unitY, out CameraUp);
+            Vector3.Cross(ref cameraDiff, ref unitX, out CameraUp);
             CameraUp.Normalize();
             graphics.ApplyChanges();
 
@@ -484,7 +484,8 @@ namespace KADA
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.CornflowerBlue);
-
+            
+            totalFrames++;
             effect.CurrentTechnique = effect.Techniques["Instancing"];
             effect.Parameters["WVP"].SetValue(View * Projection);
 
@@ -497,16 +498,7 @@ namespace KADA
 
             GraphicsDevice.SetVertexBuffers(bindings);
 
-            GraphicsDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 24, 0, 12, count);
-
-            /*spriteBatch.Begin();
-            spriteBatch.DrawString(spriteFont, string.Format("FPS={0}", fps), 
-                new Vector2(10.0f, 20.0f),Microsoft.Xna.Framework.Color.Green);
-            spriteBatch.End();
-            totalFrames++;*/
-
-
-
+            GraphicsDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 24, 0, 12, count); 
 
             base.Draw(gameTime);
 

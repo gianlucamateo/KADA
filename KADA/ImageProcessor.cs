@@ -42,20 +42,20 @@ namespace KADA
             Histograms = new List<Histogram>();
 
             Bitmap red = (Bitmap)Image.FromFile("../../ressources/histogram/Red_cleaned_filled.png", true);
-            Histogram r = new Histogram(red, 100, 8);
-            //Histograms.Add(r);
+            Histogram r = new Histogram(red, 20, 16);
+            Histograms.Add(r);
 
             Bitmap green = (Bitmap)Image.FromFile("../../ressources/histogram/Green_cleaned_filled.png", true);
-            Histogram g = new Histogram(green, 20, 16);
-            //Histograms.Add(g);
+            Histogram g = new Histogram(green, 15, 16);
+            Histograms.Add(g);
 
             Bitmap blue = (Bitmap)Image.FromFile("../../ressources/histogram/Blue_cleaned_filled.png", true);
             Histogram b = new Histogram(blue, 15, 16);
             Histograms.Add(b);
 
             Bitmap yellow = (Bitmap)Image.FromFile("../../ressources/histogram/Yellow_cleaned_filled.png", true);
-            Histogram ye = new Histogram(yellow, 150, 8);
-            //Histograms.Add(ye);
+            Histogram ye = new Histogram(yellow, 18, 16);
+            Histograms.Add(ye);
 
         }
 
