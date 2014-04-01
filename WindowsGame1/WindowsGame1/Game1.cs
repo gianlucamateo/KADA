@@ -65,10 +65,10 @@ namespace KADA
 
         private ConcurrentQueue<DepthColor[,]> depths, depthsPool;
         SpriteFont spriteFont;
-        int totalFrames = 0;
-        int elapsedTime = 0;
+        //int totalFrames = 0;
+        //int elapsedTime = 0;
         int oldScroll;
-        float fps = 0;
+        //float fps = 0;
         bool freeze = false;
         public bool generateBackground = false;
         public bool saveColors = false;
@@ -485,7 +485,7 @@ namespace KADA
         {
             GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.CornflowerBlue);
             
-            totalFrames++;
+            
             effect.CurrentTechnique = effect.Techniques["Instancing"];
             effect.Parameters["WVP"].SetValue(View * Projection);
 

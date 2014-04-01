@@ -25,8 +25,7 @@ namespace KADA
         private static Object Semaphor, Normalizer;
         private static DepthImagePixel[][] singleImages;
         private short[] depthValues;
-        private readonly float MAXCOLROSPACEDISTANCE = 50;
-        private Vector3[] colors = new Vector3[4];
+        //private Vector3[] colors = new Vector3[4];
         List<Histogram> Histograms;
         Bitmap bitmap = new Bitmap(640, 480);
         public static ManualResetEvent resetEvent = new ManualResetEvent(false);
