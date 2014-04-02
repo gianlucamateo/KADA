@@ -59,9 +59,9 @@ namespace KADA
         private Vector3 CameraLookAt = new Vector3(0, -130, -370);
         private Vector3 CameraUp;
          
-        private Matrix World;
-        private Matrix View;
-        private Matrix Projection;
+        public Matrix World;
+        public Matrix View;
+        public Matrix Projection;
 
         private ConcurrentQueue<DepthColor[,]> depths, depthsPool;
         SpriteFont spriteFont;
@@ -209,6 +209,8 @@ namespace KADA
 
             Content.RootDirectory = "Content";
             this.IsFixedTimeStep = true;
+
+
 
         }
 

@@ -1,0 +1,42 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Microsoft.Xna.Framework;
+
+namespace XYZFileLoader
+{
+    public struct Point
+    {
+        Vector3 position;
+        Vector3 normal;
+        public Point(Vector3 pos, Vector3 nor)
+        {
+            position = pos;
+            normal = nor;
+        }
+    }
+    
+    class Program
+    {
+        static KDTree.KDTree<Point> kdTree;
+
+        static void Main(string[] args)
+        {
+            kdTree = new KDTree.KDTree<Point>(3);
+            string[] lines = System.IO.File.ReadAllLines("..\\..\\Duplo_5000samples.xyz");
+            string[] parts;
+            foreach (string line in lines)
+            {
+                parts = line.Split(' ');
+                float x = float.Parse(parts[0]);
+                float y = float.Parse(parts[1]);
+                float z = float.Parse(parts[2]);
+                Point p = new Point(new Vector3(x, y, z), new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
+                double[] pos = {x,y,z};
+                kdTree.AddPoint(pos,p);                
+            }
+            Console.ReadKey();
+        }
+    }
+}

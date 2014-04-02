@@ -50,10 +50,11 @@ namespace KADA
         private Thread bitmapFiller, depthUpdater, imageProcessor;
 
 
-        System.Windows.Threading.DispatcherOperation viewer;
+        System.Windows.Threading.DispatcherOperation pcviewer, brickviewer;
 
 
         PCViewer g;
+        BrickViewer.BrickViewer v;
         ImageProcessor processor;
 
 
@@ -142,10 +143,15 @@ namespace KADA
 
                 g = new PCViewer(renderQueue, depthPool);//, this);
 
-                viewer = Dispatcher.BeginInvoke(new Action(() =>
+                pcviewer = Dispatcher.BeginInvoke(new Action(() =>
                 {
                     g.Run();
                 }));
+
+
+               
+               
+                
 
             }
 
@@ -248,6 +254,13 @@ namespace KADA
 
         private void OnButtonKeyDown(object sender, KeyEventArgs e)
         {
+            v = new BrickViewer.BrickViewer(g);
+
+            //System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(v.Run));
+            brickviewer = Dispatcher.BeginInvoke(new Action(() =>
+            {
+                v.Run();
+            }));
 
             System.Diagnostics.Debug.WriteLine(e.Key.ToString());
         }
