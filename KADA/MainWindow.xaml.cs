@@ -146,12 +146,7 @@ namespace KADA
                 pcviewer = Dispatcher.BeginInvoke(new Action(() =>
                 {
                     g.Run();
-                }));
-
-
-               
-               
-                
+                }));   
 
             }
 

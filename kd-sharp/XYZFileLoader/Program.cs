@@ -29,9 +29,9 @@ namespace XYZFileLoader
             foreach (string line in lines)
             {
                 parts = line.Split(' ');
-                float x = float.Parse(parts[0]);
-                float y = float.Parse(parts[1]);
-                float z = float.Parse(parts[2]);
+                float x = float.Parse(parts[0])*10;
+                float y = float.Parse(parts[1])*10;
+                float z = float.Parse(parts[2])*10;
                 Point p = new Point(new Vector3(x, y, z), new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
                 double[] pos = {x,y,z};
                 kdTree.AddPoint(pos,p);                

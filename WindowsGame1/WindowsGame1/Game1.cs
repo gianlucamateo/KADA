@@ -19,10 +19,8 @@ using KADA;
 
 namespace KADA
 {
-    /// <summary>
-    /// This is the main type for your game
-    /// </summary>
-    /// 
+    #region DepthColor Struct
+    
     public struct DepthColor
     {
         public Vector3 Color;
@@ -38,9 +36,18 @@ namespace KADA
             this.Position = new Vector3(0, 0, 0);
         }
     }
-
+    #endregion
+    #region PCViewer
+    
     public class PCViewer : Microsoft.Xna.Framework.Game
     {
+        #region Class Variables
+
+        Int32 count = 640 * 480;
+        Viewport PCViewport;
+        Viewport BrickViewport;
+        Model brick;
+
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
 
@@ -55,8 +62,8 @@ namespace KADA
 
 
         Effect effect;
-        private Vector3 CameraPosition = new Vector3(0, -200,0);
-        private Vector3 CameraLookAt = new Vector3(0, -130, -370);
+        private Vector3 CameraPosition = new Vector3(0, 0,0);
+        private Vector3 CameraLookAt = new Vector3(0, 0, -370);
         private Vector3 CameraUp;
          
         public Matrix World;
@@ -64,20 +71,16 @@ namespace KADA
         public Matrix Projection;
 
         private ConcurrentQueue<DepthColor[,]> depths, depthsPool;
-        SpriteFont spriteFont;
-        //int totalFrames = 0;
-        //int elapsedTime = 0;
-        int oldScroll;
-        //float fps = 0;
+        SpriteFont spriteFont;        
+        int oldScroll;        
         bool freeze = false;
         public bool generateBackground = false;
         public bool saveColors = false;
 
-        Random rnd = new Random();
-
         Task transformationUpdater;
-        //Task cleanUpBufferTask;
 
+        #endregion
+     
         struct InstanceInfo
         {
             public Vector3 ScreenPos;
@@ -94,9 +97,6 @@ namespace KADA
             instanceVertexDeclaration = new VertexDeclaration(instanceStreamElements);
         }
 
-        Int32 count = 640 * 480;
-
-
         private void GenerateInstanceInformation()
         {
             instances = new InstanceInfo[count];
@@ -111,7 +111,7 @@ namespace KADA
             instanceBuffer = new VertexBuffer(GraphicsDevice, instanceVertexDeclaration, count, BufferUsage.WriteOnly);
             instanceBuffer.SetData(instances);
         }
-
+        
         private void UpdateInstanceInformation()
         {
             DepthColor[,] depth = null;
@@ -134,14 +134,8 @@ namespace KADA
                         DepthColor d = depth[x, y];
                         if (d.UpToDate && d.Depth != 0)
                         {
-                            //instances[i].ScreenPos =
-                            //new Vector3(x - 320, -(y - 240),-1000); //-d.Depth
-                            //Vector3 pos = instances[i].ScreenPos;
-                           // pos.X = x - 320;
-                            //pos.Y = -(y - 240);
-                            //pos.Z = -1000;
                             instances[i].ScreenPos = d.Position;
-                            instances[i].Scale = -d.Depth;//(float)Math.Sqrt(Math.Pow(d.Depth,2)+Math.Pow(pos.X,2))/1000f;
+                            instances[i].Scale = -d.Depth;
                             instances[i].Color = d.Color;
                         }
                         else
@@ -151,51 +145,32 @@ namespace KADA
                         }
                         i++;
                     }
-
                 }
-                /*lock (GraphicsDevice)
-                {
-                    
-                }*/
-
-
-
-                this.depthsPool.Enqueue(depth);
-
-                //cleanUpBufferTask = new Task(() => this.CleanUpBuffer(depth));
-                //cleanUpBufferTask.Start();
-
+                this.depthsPool.Enqueue(depth); 
             }
-
-
         }
-        private void CleanUpBuffer(DepthColor[,] depth)
+      
+        public PCViewer(ConcurrentQueue<DepthColor[,]> depths, ConcurrentQueue<DepthColor[,]> depthsPool)
         {
-            /* for (int x = 0; x < depth.GetLength(0); x++)
-             {
-                 for (int y = 0; y < depth.GetLength(1); y++)
-                 {
-                     depth[x, y].UpToDate = false;
-                 }
+            PCViewport = new Viewport();
+            PCViewport.X = 0;
+            PCViewport.Y = 0;
+            PCViewport.Width = 640;
+            PCViewport.Height = 480;
 
-             }*/
-
-
-            this.depthsPool.Enqueue(depth);
-
-
-        }
-
-        public PCViewer(ConcurrentQueue<DepthColor[,]> depths, ConcurrentQueue<DepthColor[,]> depthsPool)//, System.Windows.Window window)
-        {
-
-
+            BrickViewport = new Viewport();
+            BrickViewport.X = 640;
+            BrickViewport.Y = 0;
+            BrickViewport.Width = 640;
+            BrickViewport.Height = 480;
+            
+            
             this.depths = depths;
             this.depthsPool = depthsPool;
             
             graphics = new GraphicsDeviceManager(this);
             graphics.IsFullScreen = false;
-            graphics.PreferredBackBufferWidth = 640;
+            graphics.PreferredBackBufferWidth = 1280;
             graphics.PreferredBackBufferHeight = 480;
             Vector3 cameraDiff, unitX;
             unitX = -Vector3.UnitX;
@@ -209,13 +184,8 @@ namespace KADA
 
             Content.RootDirectory = "Content";
             this.IsFixedTimeStep = true;
-
-
-
         }
-
-
-
+           
         /// <summary>
         /// Allows the game to perform any initialization it needs to before starting to run.
         /// This is where it can query for any required services and load any non-graphic
@@ -227,14 +197,34 @@ namespace KADA
             // TODO: Add your initialization logic here
             World = Matrix.Identity;
             UpdateView();
-            Projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4, GraphicsDevice.Viewport.AspectRatio, 1, 100000);
+            Projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4, 640f/480f, 10, 1500);
             base.Initialize();
         }
 
-        protected void UpdateView()
+        /// <summary>
+        /// LoadContent will be called once per game and is the place to load
+        /// all of your content.
+        /// </summary>
+        protected override void LoadContent()
         {
-            View = Matrix.CreateLookAt(CameraPosition, CameraLookAt, CameraUp);
-        }
+            // Create a new SpriteBatch, which can be used to draw textures.
+            spriteBatch = new SpriteBatch(GraphicsDevice);
+            GenerateGeometryBuffers();
+            GenerateInstanceVertexDeclaration();
+            GenerateInstanceInformation();
+            spriteFont = Content.Load<SpriteFont>("FPS");
+            brick = Content.Load<Model>("Models\\duploblock");
+
+            bindings = new VertexBufferBinding[2];
+            bindings[0] = new VertexBufferBinding(geometryBuffer);
+            bindings[1] = new VertexBufferBinding(instanceBuffer, 0, 1);
+
+            effect = Content.Load<Effect>("InstancingEffect");
+
+
+            effect.CurrentTechnique = effect.Techniques["Instancing"];
+            effect.Parameters["WVP"].SetValue(View * Projection);
+        }   
 
         /// <summary>
         /// Allows the game to run logic such as updating the world,
@@ -265,6 +255,11 @@ namespace KADA
             }
 
             base.Update(gameTime);
+        }  
+
+        protected void UpdateView()
+        {
+            View = Matrix.CreateLookAt(CameraPosition, CameraLookAt, CameraUp);
         }
 
         protected void HandleInput(KeyboardState kS, MouseState mS)
@@ -355,37 +350,9 @@ namespace KADA
                 this.saveColors = true;
             }
 
-
-
             UpdateView();
         }
-
-
-
-        /// <summary>
-        /// LoadContent will be called once per game and is the place to load
-        /// all of your content.
-        /// </summary>
-        protected override void LoadContent()
-        {
-            // Create a new SpriteBatch, which can be used to draw textures.
-            spriteBatch = new SpriteBatch(GraphicsDevice);
-            GenerateGeometryBuffers();
-            GenerateInstanceVertexDeclaration();
-            GenerateInstanceInformation();
-            spriteFont = Content.Load<SpriteFont>("FPS");
-
-            bindings = new VertexBufferBinding[2];
-            bindings[0] = new VertexBufferBinding(geometryBuffer);
-            bindings[1] = new VertexBufferBinding(instanceBuffer, 0, 1);
-
-            effect = Content.Load<Effect>("InstancingEffect");
-
-
-            effect.CurrentTechnique = effect.Techniques["Instancing"];
-            effect.Parameters["WVP"].SetValue(View * Projection);
-        }
-
+       
         private void GenerateGeometryBuffers()
         {
             VertexPositionTexture[] vertices = new VertexPositionTexture[24];
@@ -478,13 +445,13 @@ namespace KADA
             // TODO: Unload any non ContentManager content here
         }
 
-
         /// <summary>
         /// This is called when the game should draw itself.
         /// </summary>
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
+            GraphicsDevice.Viewport = PCViewport;
             GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.CornflowerBlue);
             
             
@@ -500,14 +467,42 @@ namespace KADA
 
             GraphicsDevice.SetVertexBuffers(bindings);
 
-            GraphicsDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 24, 0, 12, count); 
+            GraphicsDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 24, 0, 12, count);
+            base.Draw(gameTime);
+
+            GraphicsDevice.Viewport = BrickViewport;
+
+            Matrix[] transforms = new Matrix[brick.Bones.Count];
+            brick.CopyAbsoluteBoneTransformsTo(transforms);
+
+            // Draw the model. A model can have multiple meshes, so loop.
+            foreach (ModelMesh mesh in brick.Meshes)
+            {
+                // This is where the mesh orientation is set, as well 
+                // as our camera and projection.
+                foreach (BasicEffect eff in mesh.Effects)
+                {
+                    eff.EnableDefaultLighting();
+                    eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) * World * Matrix.CreateTranslation(new Vector3(0, -0, -0));// *
+                    // Matrix.CreateRotationX((float)Math.PI / 2) *
+                    //Matrix.CreateRotationY(modelRotation)
+                    //* Matrix.CreateTranslation(modelPosition);
+                    eff.View =View;
+                    eff.Projection =Projection;
+                }
+                // Draw the mesh, using the effects set above.
+                mesh.Draw();
+            }
+            
+            /* GraphicsDevice.SetVertexBuffers(null);
+            spriteBatch.Begin();
+            spriteBatch.DrawString(spriteFont, "TEST", new Vector2(100,100), Microsoft.Xna.Framework.Color.Black,
+                    0, new Vector2(0,0), 1.0f, SpriteEffects.None, 0.5f);
+            spriteBatch.End();*/
 
             base.Draw(gameTime);
 
         }
-
-
-
-
     }
 }
+#endregion
