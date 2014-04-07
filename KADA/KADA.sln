@@ -13,9 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KDTree", "..\kd-sharp\KDTre
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XYZFileLoader", "..\kd-sharp\XYZFileLoader\XYZFileLoader.csproj", "{3E8764A8-729E-4E6F-84A7-D01608AAD9DA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BrickViewer", "BrickViewer\BrickViewer\BrickViewer.csproj", "{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}"
-EndProject
-Project("{96E2B04D-8817-42C6-938A-82C39BA4D311}") = "BrickViewerContent", "BrickViewer\BrickViewerContent\BrickViewerContent.contentproj", "{42BDB3FD-EE24-4DA9-9DF9-968D11B43185}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BrickViewerContent", "BrickViewer\BrickViewerContent\BrickViewerContent.contentproj", "{42BDB3FD-EE24-4DA9-9DF9-968D11B43185}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -73,16 +71,6 @@ Global
 		{3E8764A8-729E-4E6F-84A7-D01608AAD9DA}.Release|Mixed Platforms.Build.0 = Release|x86
 		{3E8764A8-729E-4E6F-84A7-D01608AAD9DA}.Release|x86.ActiveCfg = Release|x86
 		{3E8764A8-729E-4E6F-84A7-D01608AAD9DA}.Release|x86.Build.0 = Release|x86
-		{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}.Debug|Mixed Platforms.Build.0 = Debug|x86
-		{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}.Debug|x86.ActiveCfg = Debug|x86
-		{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}.Debug|x86.Build.0 = Debug|x86
-		{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}.Release|Any CPU.ActiveCfg = Release|x86
-		{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}.Release|Mixed Platforms.ActiveCfg = Release|x86
-		{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}.Release|Mixed Platforms.Build.0 = Release|x86
-		{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}.Release|x86.ActiveCfg = Release|x86
-		{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}.Release|x86.Build.0 = Release|x86
 		{42BDB3FD-EE24-4DA9-9DF9-968D11B43185}.Debug|Any CPU.ActiveCfg = Debug|x86
 		{42BDB3FD-EE24-4DA9-9DF9-968D11B43185}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
 		{42BDB3FD-EE24-4DA9-9DF9-968D11B43185}.Debug|x86.ActiveCfg = Debug|x86

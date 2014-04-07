@@ -60,6 +60,8 @@ namespace KADA
         VertexDeclaration instanceVertexDeclaration;
         InstanceInfo[] instances;
 
+        private Vector3 brickTransform=new Vector3(0,0,0);
+
 
         Effect effect;
         private Vector3 CameraPosition = new Vector3(0, 0,0);
@@ -87,6 +89,11 @@ namespace KADA
             public float Scale;
             public Vector3 Color;
         };
+
+        public void SetBrickTransform(Vector3 b)
+        {
+            this.brickTransform = b;
+        }
 
         private void GenerateInstanceVertexDeclaration()
         {
@@ -132,7 +139,7 @@ namespace KADA
                     for (int y = 0; y < depth.GetLength(1); y++)
                     {
                         DepthColor d = depth[x, y];
-                        if (d.UpToDate && d.Depth != 0)
+                        if (d.Depth != 0&&d.Position.Z!=0)
                         {
                             instances[i].ScreenPos = d.Position;
                             instances[i].Scale = -d.Depth;
@@ -483,7 +490,7 @@ namespace KADA
                 foreach (BasicEffect eff in mesh.Effects)
                 {
                     eff.EnableDefaultLighting();
-                    eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) * World * Matrix.CreateTranslation(new Vector3(0, -0, -0));// *
+                    eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) * World * Matrix.CreateTranslation(brickTransform);// *
                     // Matrix.CreateRotationX((float)Math.PI / 2) *
                     //Matrix.CreateRotationY(modelRotation)
                     //* Matrix.CreateTranslation(modelPosition);

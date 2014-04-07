@@ -63,6 +63,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Compile Include="3DProcessor.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -102,10 +103,6 @@
     <ProjectReference Include="..\WindowsGame1\WindowsGame1\PCViewer.csproj">
       <Project>{6A838C9A-1D01-40B4-99B5-6A21B40EA33A}</Project>
       <Name>PCViewer</Name>
-    </ProjectReference>
-    <ProjectReference Include="BrickViewer\BrickViewer\BrickViewer.csproj">
-      <Project>{90EA0E3F-7D47-4C6E-A707-24EF7244D5DE}</Project>
-      <Name>BrickViewer</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

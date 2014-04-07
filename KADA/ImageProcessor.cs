@@ -17,7 +17,7 @@ namespace KADA
 {
     class ImageProcessor
     {
-        private ConcurrentQueue<DepthColor[,]> renderQueue;
+        private ConcurrentQueue<DepthColor[,]> processingQueue;
         private DepthImagePixel[] background;
         private bool backgroundReady = false, colorReady = false;
         private bool readyForNormals = false;
@@ -31,10 +31,10 @@ namespace KADA
         public static ManualResetEvent resetEvent = new ManualResetEvent(false);
 
 
-        public ImageProcessor(ConcurrentQueue<DepthColor[,]> renderQueue)
+        public ImageProcessor(ConcurrentQueue<DepthColor[,]> processingQueue)
         {
             singleImages = new DepthImagePixel[5][];
-            this.renderQueue = renderQueue;
+            this.processingQueue = processingQueue;
             this.depthValues = new short[5];
             Semaphor = new Object();
             Normalizer = new Object();
@@ -326,7 +326,7 @@ namespace KADA
                     }
                 }
             }            
-            this.renderQueue.Enqueue(dc);
+            this.processingQueue.Enqueue(dc);
             //bitmap.Save("normals.png");
             resetEvent.Set();
         }
