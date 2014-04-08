@@ -264,7 +264,7 @@ namespace KADA
 
         private void OnButtonKeyDown(object sender, KeyEventArgs e)
         {
-           
+            _3Dprocessor.scanNormals(); 
 
             System.Diagnostics.Debug.WriteLine(e.Key.ToString());
         }

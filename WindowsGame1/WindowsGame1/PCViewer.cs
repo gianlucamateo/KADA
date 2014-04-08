@@ -490,7 +490,7 @@ namespace KADA
                 foreach (BasicEffect eff in mesh.Effects)
                 {
                     eff.EnableDefaultLighting();
-                    eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) * World * Matrix.CreateTranslation(brickTransform);// *
+                    eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) *Matrix.CreateTranslation(new Vector3(-36.5f,-17f,15f)) * World * Matrix.CreateTranslation(brickTransform);// *
                     // Matrix.CreateRotationX((float)Math.PI / 2) *
                     //Matrix.CreateRotationY(modelRotation)
                     //* Matrix.CreateTranslation(modelPosition);
