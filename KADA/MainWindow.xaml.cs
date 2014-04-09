@@ -236,7 +236,7 @@ namespace KADA
                 if (centers.TryDequeue(out center) == true)
                 {
                     this.g.SetBrickTransform(center);
-                    Debug.WriteLine(center);
+                    //Debug.WriteLine(center);
                 }
                 //this.renderQueue.Enqueue(depth);
                 
