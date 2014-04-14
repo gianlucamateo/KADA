@@ -9,6 +9,9 @@ using Microsoft.Xna.Framework;
 using Image = System.Drawing.Image;
 using System.Drawing;
 using Color = System.Drawing.Color;
+using KDTree;
+using XYZFileLoader;
+using Point = XYZFileLoader.Point;
 namespace KADA
 {
     class _3DProcessor
@@ -17,9 +20,11 @@ namespace KADA
         private ConcurrentQueue<Vector3> centers;
         private Vector3 oldCenter = Vector3.Zero;
         private readonly float THRESHOLD = 100;
+        private KDTree<Point> brick; 
 
-        public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue, ConcurrentQueue<Vector3> centers)
+        public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue, ConcurrentQueue<Vector3> centers, Vector3 offset)
         {
+            this.brick = XYZFileLoader.Reader.readFromFile(offset);
             this.renderQueue = renderQueue;
             this.processingQueue = processingQueue;
             this.centers = centers;
@@ -88,6 +93,30 @@ namespace KADA
             z /= counter;
             center = new Vector3(x, y, z);
             oldCenter = center;
+
+
+            //RUN ICP
+            for (int xP = 0; xP < dc.GetLength(0); xP++)
+            {
+                for (int yP = 0; yP < dc.GetLength(1); yP++)
+                {
+                    c = dc[xP, yP];
+                    if (c.Position.Z != 0)
+                    {
+                        float dist;
+                        Vector3.Distance(ref center, ref c.Position, out dist);
+                        if (dist < THRESHOLD)
+                        {
+                            x += c.Position.X;
+                            y += c.Position.Y;
+                            z += c.Position.Z;
+                            counter++;
+                        }
+                    }
+                }
+            }
+
+
             this.centers.Enqueue(center);
             this.renderQueue.Enqueue(dc);
         }

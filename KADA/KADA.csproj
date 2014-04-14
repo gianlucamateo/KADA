@@ -98,8 +98,17 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
     <AppDesigner Include="Properties\" />
+    <None Include="ressources\pointcloud\Duplo_5000samples.xyz" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\kd-sharp\KDTree\KDTree.csproj">
+      <Project>{33A00A90-C02E-474B-A8C0-3B0559873EA0}</Project>
+      <Name>KDTree</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\kd-sharp\XYZFileLoader\XYZFileLoader.csproj">
+      <Project>{3E8764A8-729E-4E6F-84A7-D01608AAD9DA}</Project>
+      <Name>XYZFileLoader</Name>
+    </ProjectReference>
     <ProjectReference Include="..\WindowsGame1\WindowsGame1\PCViewer.csproj">
       <Project>{6A838C9A-1D01-40B4-99B5-6A21B40EA33A}</Project>
       <Name>PCViewer</Name>

@@ -22,6 +22,7 @@ using System.Drawing.Imaging;
 using Microsoft.Xna.Framework;
 using System.Collections.Concurrent;
 
+using Matrix = Microsoft.Xna.Framework.Matrix;
 using System.Diagnostics;
 
 
@@ -125,16 +126,7 @@ namespace KADA
 
                 //this.kinect.ColorFrameReady += this.KinectColorFrameReady;
                 //this.kinect.DepthFrameReady += this.KinectDepthFrameReady;
-                this.kinect.AllFramesReady += this.KinectAllFramesReady;
-                try
-                {
-                    this.kinect.Start();
-                }
-                catch (IOException)
-                {
-                    this.kinect = null;
-                    this.Title = "NOT READY";
-                }
+                
 
                 //this.kinect.ElevationAngle = 10;
                 //bitmapFiller.Start();
@@ -146,7 +138,7 @@ namespace KADA
                 }
 
                 imageProcessor = new ImageProcessor(processingQueue);
-                _3Dprocessor = new _3DProcessor(processingQueue, renderQueue, centers);
+                
 
 
                 g = new PCViewer(renderQueue, depthPool);//, this);
@@ -154,7 +146,20 @@ namespace KADA
                 pcviewer = Dispatcher.BeginInvoke(new Action(() =>
                 {
                     g.Run();
-                }));   
+                }));
+
+                this.kinect.AllFramesReady += this.KinectAllFramesReady;
+                try
+                {
+                    this.kinect.Start();
+                }
+                catch (IOException)
+                {
+                    this.kinect = null;
+                    this.Title = "NOT READY";
+                }
+
+                _3Dprocessor = new _3DProcessor(processingQueue, renderQueue, centers, g.offset);
 
             }
 
@@ -235,7 +240,7 @@ namespace KADA
                 Vector3 center;
                 if (centers.TryDequeue(out center) == true)
                 {
-                    this.g.SetBrickTransform(center);
+                    this.g.SetBrickTransform(Matrix.CreateTranslation(center));
                     //Debug.WriteLine(center);
                 }
                 //this.renderQueue.Enqueue(depth);

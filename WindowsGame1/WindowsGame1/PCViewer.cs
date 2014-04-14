@@ -60,7 +60,9 @@ namespace KADA
         VertexDeclaration instanceVertexDeclaration;
         InstanceInfo[] instances;
 
-        private Vector3 brickTransform=new Vector3(0,0,0);
+        public Vector3 offset = new Vector3(-36.5f, -17f, 15f);
+
+        private Matrix brickTransform=Matrix.CreateTranslation(new Vector3(0,0,0));
 
 
         Effect effect;
@@ -90,7 +92,7 @@ namespace KADA
             public Vector3 Color;
         };
 
-        public void SetBrickTransform(Vector3 b)
+        public void SetBrickTransform(Matrix b)
         {
             this.brickTransform = b;
         }
@@ -490,7 +492,7 @@ namespace KADA
                 foreach (BasicEffect eff in mesh.Effects)
                 {
                     eff.EnableDefaultLighting();
-                    eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) *Matrix.CreateTranslation(new Vector3(-36.5f,-17f,15f)) * World * Matrix.CreateTranslation(brickTransform);// *
+                    eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) *Matrix.CreateTranslation(this.offset) * World * brickTransform;// *
                     // Matrix.CreateRotationX((float)Math.PI / 2) *
                     //Matrix.CreateRotationY(modelRotation)
                     //* Matrix.CreateTranslation(modelPosition);
