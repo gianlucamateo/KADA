@@ -12,6 +12,8 @@ using Color = System.Drawing.Color;
 using KDTree;
 using XYZFileLoader;
 using Point = XYZFileLoader.Point;
+
+
 namespace KADA
 {
     class _3DProcessor
@@ -20,7 +22,8 @@ namespace KADA
         private ConcurrentQueue<Vector3> centers;
         private Vector3 oldCenter = Vector3.Zero;
         private readonly float THRESHOLD = 100;
-        private KDTree<Point> brick; 
+        private KDTreeWrapper brick;
+        private List<Point> brickPoints;
 
         public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue, ConcurrentQueue<Vector3> centers, Vector3 offset)
         {
@@ -28,6 +31,7 @@ namespace KADA
             this.renderQueue = renderQueue;
             this.processingQueue = processingQueue;
             this.centers = centers;
+            
         }
 
         public void generateCenter(Object dcIn)
@@ -96,7 +100,7 @@ namespace KADA
 
 
             //RUN ICP
-            for (int xP = 0; xP < dc.GetLength(0); xP++)
+            /*for (int xP = 0; xP < dc.GetLength(0); xP++)
             {
                 for (int yP = 0; yP < dc.GetLength(1); yP++)
                 {
@@ -115,7 +119,7 @@ namespace KADA
                     }
                 }
             }
-
+            */
 
             this.centers.Enqueue(center);
             this.renderQueue.Enqueue(dc);

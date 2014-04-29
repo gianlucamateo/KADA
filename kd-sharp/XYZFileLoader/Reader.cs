@@ -19,10 +19,10 @@ namespace XYZFileLoader
     
     public class Reader
     {
-        public static KDTree.KDTree<Point> readFromFile(Vector3 offset)
+        public static KDTreeWrapper readFromFile(Vector3 offset)
         {
-            KDTree.KDTree<Point> kdTree;
-            kdTree = new KDTree.KDTree<Point>(3);
+            KDTreeWrapper kdTree;
+            kdTree = new KDTreeWrapper();
             string[] lines = System.IO.File.ReadAllLines("../../ressources/pointcloud/Duplo_5000samples.xyz");
             string[] parts;
             foreach (string line in lines)
@@ -34,8 +34,7 @@ namespace XYZFileLoader
                 Vector3 pos = new Vector3(x, y, z);
                 pos -= offset;
                 Point p = new Point(pos, new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
-                double[] position = {x,y,z};
-                kdTree.AddPoint(position,p);                
+                kdTree.AddPoint(pos,p);                
             }
             return kdTree;
         }
