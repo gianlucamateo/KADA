@@ -52,6 +52,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\dotNumerics\DotNumerics\DotNumerics VS2008.csproj">
+      <Project>{48185EF1-B73B-457B-AA37-0BCE567C5AB1}</Project>
+      <Name>DotNumerics VS2008</Name>
+    </ProjectReference>
     <ProjectReference Include="..\KDTree\KDTree.csproj">
       <Project>{33A00A90-C02E-474B-A8C0-3B0559873EA0}</Project>
       <Name>KDTree</Name>

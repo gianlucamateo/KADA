@@ -47,6 +47,8 @@ namespace KADA
 
         private ConcurrentQueue<Vector3> centers = new ConcurrentQueue<Vector3>();
 
+        private ConcurrentQueue<Matrix> rotations = new ConcurrentQueue<Matrix>();
+
         private DepthImagePixel[] depthPixels;
         private DepthImagePoint[] depthPoints;
         private ColorImagePoint[] colorPoints;
@@ -59,7 +61,7 @@ namespace KADA
 
 
         PCViewer g;
-       
+
         ImageProcessor imageProcessor;
 
         _3DProcessor _3Dprocessor;
@@ -114,7 +116,7 @@ namespace KADA
                 this.depthPoints = new DepthImagePoint[640 * 480];
                 this.colorPoints = new ColorImagePoint[640 * 480];
                 bitmapFiller = new Thread(new ThreadStart(FillBitmap));
-                depthUpdater = new Thread(new ThreadStart(()=>UpdateDepthData(false)));
+                depthUpdater = new Thread(new ThreadStart(() => UpdateDepthData(false)));
                 imageProcessorThread = new Thread(new ThreadStart(() => imageProcessor.GenerateBackground(depthPixels)));
                 // this.cdMap = new DepthColorPixel[640, 480];
 
@@ -126,7 +128,7 @@ namespace KADA
 
                 //this.kinect.ColorFrameReady += this.KinectColorFrameReady;
                 //this.kinect.DepthFrameReady += this.KinectDepthFrameReady;
-                
+
 
                 //this.kinect.ElevationAngle = 10;
                 //bitmapFiller.Start();
@@ -138,7 +140,7 @@ namespace KADA
                 }
 
                 imageProcessor = new ImageProcessor(processingQueue);
-                
+
 
 
                 g = new PCViewer(renderQueue, depthPool);//, this);
@@ -159,7 +161,7 @@ namespace KADA
                     this.Title = "NOT READY";
                 }
 
-                _3Dprocessor = new _3DProcessor(processingQueue, renderQueue, centers, g.offset);
+                _3Dprocessor = new _3DProcessor(processingQueue, renderQueue, centers, rotations, g.offset);
 
             }
 
@@ -240,7 +242,11 @@ namespace KADA
                 Vector3 center;
                 if (centers.TryDequeue(out center) == true)
                 {
-                    this.g.SetBrickTransform(Matrix.CreateTranslation(center));
+                    this.g.SetBrickTranslate(Matrix.CreateTranslation(center));
+                    Matrix R;
+                    if(rotations.TryDequeue(out R)){
+                        this.g.SetBrickRotation(R);
+                    }
                     //Debug.WriteLine(center);
                 }
                 //this.renderQueue.Enqueue(depth);
@@ -269,7 +275,7 @@ namespace KADA
 
         private void OnButtonKeyDown(object sender, KeyEventArgs e)
         {
-            _3Dprocessor.scanNormals(); 
+            _3Dprocessor.scanNormals();
 
             System.Diagnostics.Debug.WriteLine(e.Key.ToString());
         }
@@ -317,8 +323,8 @@ namespace KADA
                     imageProcessorThread.Start();
                     // this.processor.GenerateBackground(this.depthPixels);
                 }
-                
-                
+
+
 
             }
 

@@ -62,7 +62,8 @@ namespace KADA
 
         public Vector3 offset = new Vector3(-36.5f, -17f, 15f);
 
-        private Matrix brickTransform=Matrix.CreateTranslation(new Vector3(0,0,0));
+        private Matrix brickTranslation=Matrix.CreateTranslation(new Vector3(0,0,0));
+        private Matrix brickRotation = Matrix.CreateTranslation(Vector3.Zero);
 
 
         Effect effect;
@@ -92,9 +93,14 @@ namespace KADA
             public Vector3 Color;
         };
 
-        public void SetBrickTransform(Matrix b)
+        public void SetBrickTranslate(Matrix b)
         {
-            this.brickTransform = b;
+            this.brickTranslation = b;
+        }
+
+        public void SetBrickRotation(Matrix b)
+        {
+            this.brickRotation = b;
         }
 
         private void GenerateInstanceVertexDeclaration()
@@ -492,7 +498,7 @@ namespace KADA
                 foreach (BasicEffect eff in mesh.Effects)
                 {
                     eff.EnableDefaultLighting();
-                    eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) *Matrix.CreateTranslation(this.offset) * World * brickTransform;// *
+                    eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) *Matrix.CreateTranslation(this.offset) * brickRotation * brickTranslation;// *
                     // Matrix.CreateRotationX((float)Math.PI / 2) *
                     //Matrix.CreateRotationY(modelRotation)
                     //* Matrix.CreateTranslation(modelPosition);

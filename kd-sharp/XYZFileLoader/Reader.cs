@@ -8,12 +8,14 @@ namespace XYZFileLoader
 {
     public struct Point
     {
-        Vector3 position;
-        Vector3 normal;
+        public Vector3 position;
+        public Vector3 normal;
+        public double[] positionArr;
         public Point(Vector3 pos, Vector3 nor)
         {
             position = pos;
             normal = nor;
+            positionArr = new double[] {pos.X,pos.Y,pos.Z};
         }
     }
     

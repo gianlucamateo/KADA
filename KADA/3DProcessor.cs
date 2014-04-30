@@ -12,6 +12,8 @@ using Color = System.Drawing.Color;
 using KDTree;
 using XYZFileLoader;
 using Point = XYZFileLoader.Point;
+using DotNumerics.LinearAlgebra;
+using Matrix = DotNumerics.LinearAlgebra.Matrix;
 
 
 namespace KADA
@@ -20,22 +22,28 @@ namespace KADA
     {
         private ConcurrentQueue<DepthColor[,]> renderQueue, processingQueue;
         private ConcurrentQueue<Vector3> centers;
+        private ConcurrentQueue<Microsoft.Xna.Framework.Matrix> rotations;
         private Vector3 oldCenter = Vector3.Zero;
         private readonly float THRESHOLD = 100;
         private KDTreeWrapper brick;
         private List<Point> brickPoints;
+        private List<Vector3> qi;
 
-        public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue, ConcurrentQueue<Vector3> centers, Vector3 offset)
+        public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue,
+            ConcurrentQueue<Vector3> centers, ConcurrentQueue<Microsoft.Xna.Framework.Matrix> rotations, Vector3 offset)
         {
             this.brick = XYZFileLoader.Reader.readFromFile(offset);
             this.renderQueue = renderQueue;
             this.processingQueue = processingQueue;
+            this.rotations = rotations;
             this.centers = centers;
-            
+            this.qi = new List<Vector3>();
+
         }
 
         public void generateCenter(Object dcIn)
         {
+            List<Vector3> qi = new List<Vector3>(this.qi);
             DepthColor[,] dc;
             if (processingQueue.TryDequeue(out dc) == false)
                 return;
@@ -88,6 +96,8 @@ namespace KADA
                             y += c.Position.Y;
                             z += c.Position.Z;
                             counter++;
+                            double[] arr = { c.Position.X, c.Position.Y, c.Position.Z };
+                            qi.Add(c.Position);
                         }
                     }
                 }
@@ -98,6 +108,65 @@ namespace KADA
             center = new Vector3(x, y, z);
             oldCenter = center;
 
+
+            Matrix H = new Matrix(3, 3);
+            double[,] HArr = new double[3, 3];
+            Matrix HTemp = new Matrix(3, 3);
+            int count = 0;
+            foreach (Vector3 v in qi)
+            {
+                count++;
+                Vector3 vC = v - center;
+                double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
+                NearestNeighbour<Point> b = brick.NearestNeighbors(vArr, 1);
+                b.MoveNext();
+                Point p = b.Current;
+                Vector3 pos = p.position;
+                HArr[0, 0] = vC.X * pos.X;
+                HArr[0, 1] = vC.Y * pos.X;
+                HArr[0, 2] = vC.Z * pos.X;
+                HArr[1, 0] = vC.X * pos.Y;
+                HArr[1, 1] = vC.Y * pos.Y;
+                HArr[1, 2] = vC.Z * pos.Y;
+                HArr[2, 0] = vC.X * pos.Z;
+                HArr[2, 1] = vC.Y * pos.Z;
+                HArr[2, 2] = vC.Z * pos.Z;
+                HTemp = new Matrix(HArr);
+                if (b.CurrentDistance < 1000)
+                {
+                    H.AddInplace(HTemp);
+                }
+                else
+                {
+                    count--;
+                }
+            }
+            H.Multiply(1.0 / (double)count);
+
+            DotNumerics.LinearAlgebra.SingularValueDecomposition s = new SingularValueDecomposition();
+            Matrix S, U, VT;
+            s.ComputeSVD(H, out S, out U, out VT);
+
+            Matrix V = VT.Transpose();
+            Matrix UT = U.Transpose();
+            Matrix X = V.Multiply(UT);
+            double[,] RArr = X.CopyToArray();
+            Microsoft.Xna.Framework.Matrix R = new Microsoft.Xna.Framework.Matrix(
+                (float)RArr[0, 0],
+                (float)RArr[0, 1],
+                (float)RArr[0, 2],
+                0,
+                (float)RArr[1, 0],
+                (float)RArr[1, 1],
+                (float)RArr[1, 2],
+                0,
+                (float)RArr[2, 0],
+                (float)RArr[2, 1],
+                (float)RArr[2, 2],
+                0,
+                0, 0, 0, 1
+                );
+            
 
             //RUN ICP
             /*for (int xP = 0; xP < dc.GetLength(0); xP++)
@@ -120,7 +189,10 @@ namespace KADA
                 }
             }
             */
-
+            if (R.Determinant() == 1)
+            {
+                this.rotations.Enqueue(R);
+            }
             this.centers.Enqueue(center);
             this.renderQueue.Enqueue(dc);
         }
@@ -150,7 +222,7 @@ namespace KADA
                     {
 
                         Vector3 currentNormal = normals[x, y];
-                        
+
                         float distance = float.MaxValue;
                         int cluster = int.MaxValue;
                         for (int i = 0; i < clusters.Length; i++)
