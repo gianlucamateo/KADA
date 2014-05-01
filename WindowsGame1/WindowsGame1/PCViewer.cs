@@ -47,6 +47,7 @@ namespace KADA
         Viewport PCViewport;
         Viewport BrickViewport;
         Model brick;
+        Texture2D brickTexture;
 
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
@@ -229,6 +230,8 @@ namespace KADA
             GenerateInstanceInformation();
             spriteFont = Content.Load<SpriteFont>("FPS");
             brick = Content.Load<Model>("Models\\duploblock");
+            brickTexture = Content.Load<Texture2D>("Textures\\Exploded_cube_map");
+            
 
             bindings = new VertexBufferBinding[2];
             bindings[0] = new VertexBufferBinding(geometryBuffer);
@@ -497,6 +500,7 @@ namespace KADA
                 // as our camera and projection.
                 foreach (BasicEffect eff in mesh.Effects)
                 {
+                    eff.TextureEnabled = false;
                     eff.EnableDefaultLighting();
                     eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) *Matrix.CreateTranslation(this.offset) * brickRotation * brickTranslation;// *
                     // Matrix.CreateRotationX((float)Math.PI / 2) *

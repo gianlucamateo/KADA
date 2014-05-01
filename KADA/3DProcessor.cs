@@ -112,83 +112,95 @@ namespace KADA
             Matrix H = new Matrix(3, 3);
             double[,] HArr = new double[3, 3];
             Matrix HTemp = new Matrix(3, 3);
-            int count = 0;
-            foreach (Vector3 v in qi)
+            Microsoft.Xna.Framework.Matrix R = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
+            Microsoft.Xna.Framework.Matrix RInv = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
+
+            for (int i = 0; i < 5; i++)
             {
-                count++;
-                Vector3 vC = v - center;
-                double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
-                NearestNeighbour<Point> b = brick.NearestNeighbors(vArr, 1);
-                b.MoveNext();
-                Point p = b.Current;
-                Vector3 pos = p.position;
-                HArr[0, 0] = vC.X * pos.X;
-                HArr[0, 1] = vC.Y * pos.X;
-                HArr[0, 2] = vC.Z * pos.X;
-                HArr[1, 0] = vC.X * pos.Y;
-                HArr[1, 1] = vC.Y * pos.Y;
-                HArr[1, 2] = vC.Z * pos.Y;
-                HArr[2, 0] = vC.X * pos.Z;
-                HArr[2, 1] = vC.Y * pos.Z;
-                HArr[2, 2] = vC.Z * pos.Z;
-                HTemp = new Matrix(HArr);
-                if (b.CurrentDistance < 1000)
+                int count = 0;
+                if (R.Determinant() == 1)
                 {
-                    H.AddInplace(HTemp);
+                    Microsoft.Xna.Framework.Matrix.Invert(ref R, out RInv);
                 }
-                else
+                foreach (Vector3 v in qi)
                 {
-                    count--;
-                }
-            }
-            H.Multiply(1.0 / (double)count);
+                    count++;
+                    Vector3 vC = v - center;
+                    vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);                    
 
-            DotNumerics.LinearAlgebra.SingularValueDecomposition s = new SingularValueDecomposition();
-            Matrix S, U, VT;
-            s.ComputeSVD(H, out S, out U, out VT);
-
-            Matrix V = VT.Transpose();
-            Matrix UT = U.Transpose();
-            Matrix X = V.Multiply(UT);
-            double[,] RArr = X.CopyToArray();
-            Microsoft.Xna.Framework.Matrix R = new Microsoft.Xna.Framework.Matrix(
-                (float)RArr[0, 0],
-                (float)RArr[0, 1],
-                (float)RArr[0, 2],
-                0,
-                (float)RArr[1, 0],
-                (float)RArr[1, 1],
-                (float)RArr[1, 2],
-                0,
-                (float)RArr[2, 0],
-                (float)RArr[2, 1],
-                (float)RArr[2, 2],
-                0,
-                0, 0, 0, 1
-                );
-            
-
-            //RUN ICP
-            /*for (int xP = 0; xP < dc.GetLength(0); xP++)
-            {
-                for (int yP = 0; yP < dc.GetLength(1); yP++)
-                {
-                    c = dc[xP, yP];
-                    if (c.Position.Z != 0)
+                    double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
+                    NearestNeighbour<Point> b = brick.NearestNeighbors(vArr, 1);
+                    b.MoveNext();
+                    Point p = b.Current;
+                    Vector3 pos = p.position;
+                    HArr[0, 0] = vC.X * pos.X;
+                    HArr[0, 1] = vC.Y * pos.X;
+                    HArr[0, 2] = vC.Z * pos.X;
+                    HArr[1, 0] = vC.X * pos.Y;
+                    HArr[1, 1] = vC.Y * pos.Y;
+                    HArr[1, 2] = vC.Z * pos.Y;
+                    HArr[2, 0] = vC.X * pos.Z;
+                    HArr[2, 1] = vC.Y * pos.Z;
+                    HArr[2, 2] = vC.Z * pos.Z;
+                    HTemp = new Matrix(HArr);
+                    if (b.CurrentDistance < 500)
                     {
-                        float dist;
-                        Vector3.Distance(ref center, ref c.Position, out dist);
-                        if (dist < THRESHOLD)
+                        H.AddInplace(HTemp);
+                    }
+                    else
+                    {
+                        count--;
+                    }
+                }
+                H.Multiply(1.0 / (double)count);
+
+                DotNumerics.LinearAlgebra.SingularValueDecomposition s = new SingularValueDecomposition();
+                Matrix S, U, VT;
+                s.ComputeSVD(H, out S, out U, out VT);
+
+                Matrix V = VT.Transpose();
+                Matrix UT = U.Transpose();
+                Matrix X = V.Multiply(UT);
+                double[,] RArr = X.CopyToArray();
+                Microsoft.Xna.Framework.Matrix RTemp = new Microsoft.Xna.Framework.Matrix(
+                    (float)RArr[0, 0],
+                    (float)RArr[0, 1],
+                    (float)RArr[0, 2],
+                    0,
+                    (float)RArr[1, 0],
+                    (float)RArr[1, 1],
+                    (float)RArr[1, 2],
+                    0,
+                    (float)RArr[2, 0],
+                    (float)RArr[2, 1],
+                    (float)RArr[2, 2],
+                    0,
+                    0, 0, 0, 1
+                    );
+                R = Microsoft.Xna.Framework.Matrix.Multiply(R, RTemp);
+
+                //RUN ICP
+                /*for (int xP = 0; xP < dc.GetLength(0); xP++)
+                {
+                    for (int yP = 0; yP < dc.GetLength(1); yP++)
+                    {
+                        c = dc[xP, yP];
+                        if (c.Position.Z != 0)
                         {
-                            x += c.Position.X;
-                            y += c.Position.Y;
-                            z += c.Position.Z;
-                            counter++;
+                            float dist;
+                            Vector3.Distance(ref center, ref c.Position, out dist);
+                            if (dist < THRESHOLD)
+                            {
+                                x += c.Position.X;
+                                y += c.Position.Y;
+                                z += c.Position.Z;
+                                counter++;
+                            }
                         }
                     }
                 }
+                */
             }
-            */
             if (R.Determinant() == 1)
             {
                 this.rotations.Enqueue(R);
