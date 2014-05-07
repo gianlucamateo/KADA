@@ -161,7 +161,7 @@ namespace KADA
                     this.Title = "NOT READY";
                 }
 
-                _3Dprocessor = new _3DProcessor(processingQueue, renderQueue, centers, rotations, g.offset);
+                _3Dprocessor = new _3DProcessor(processingQueue, renderQueue, centers, rotations, g.offset, g);
 
             }
 

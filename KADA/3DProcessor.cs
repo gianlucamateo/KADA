@@ -29,9 +29,11 @@ namespace KADA
         private static Microsoft.Xna.Framework.Matrix prevR;
         private static bool prevRKnown = false;
         private List<Vector3> qi;
+        public double ICPMisalignment = 0;
+        private PCViewer g;
 
         public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue,
-            ConcurrentQueue<Vector3> centers, ConcurrentQueue<Microsoft.Xna.Framework.Matrix> rotations, Vector3 offset)
+            ConcurrentQueue<Vector3> centers, ConcurrentQueue<Microsoft.Xna.Framework.Matrix> rotations, Vector3 offset, PCViewer g)
         {
             this.brick = XYZFileLoader.Reader.readFromFile(offset);
             this.renderQueue = renderQueue;
@@ -39,6 +41,7 @@ namespace KADA
             this.rotations = rotations;
             this.centers = centers;
             this.qi = new List<Vector3>();
+            this.g = g;
 
         }
 
@@ -110,6 +113,8 @@ namespace KADA
             oldCenter = center;
 
             //ICP
+            this.ICPMisalignment = 0;
+            
             Matrix H = new Matrix(3, 3);
             double[,] HArr = new double[3, 3];
             Matrix HTemp = new Matrix(3, 3);
@@ -141,6 +146,7 @@ namespace KADA
                     NearestNeighbour<Point> b = brick.NearestNeighbors(vArr, 1,fDistance: THRESHOLD);
                     b.MoveNext();
                     Point p = b.Current;
+                    this.ICPMisalignment += b.CurrentDistance;
                     Vector3 pos = p.position;
                     HArr[0, 0] = vC.X * pos.X;
                     HArr[0, 1] = vC.Y * pos.X;
@@ -219,6 +225,7 @@ namespace KADA
             }
             this.centers.Enqueue(center);
             this.renderQueue.Enqueue(dc);
+            g.ICPMisalignment = this.ICPMisalignment;
         }
         public void kMeans(Vector3[,] normals)
         {

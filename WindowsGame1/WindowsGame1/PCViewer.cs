@@ -43,6 +43,8 @@ namespace KADA
     {
         #region Class Variables
 
+        public double ICPMisalignment;
+
         Int32 count = 640 * 480;
         Viewport PCViewport;
         Viewport BrickViewport;
@@ -271,6 +273,7 @@ namespace KADA
                 transformationUpdater = new Task(() => this.UpdateInstanceInformation());
                 transformationUpdater.Start();
             }
+            this.Window.Title = this.ICPMisalignment.ToString();
 
             base.Update(gameTime);
         }  
@@ -512,16 +515,16 @@ namespace KADA
                 // Draw the mesh, using the effects set above.
                 mesh.Draw();
             }
-            
+
             /* GraphicsDevice.SetVertexBuffers(null);
             spriteBatch.Begin();
             spriteBatch.DrawString(spriteFont, "TEST", new Vector2(100,100), Microsoft.Xna.Framework.Color.Black,
                     0, new Vector2(0,0), 1.0f, SpriteEffects.None, 0.5f);
             spriteBatch.End();*/
-
             base.Draw(gameTime);
 
         }
+
     }
 }
 #endregion
