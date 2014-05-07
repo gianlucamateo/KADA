@@ -24,9 +24,10 @@ namespace KADA
         private ConcurrentQueue<Vector3> centers;
         private ConcurrentQueue<Microsoft.Xna.Framework.Matrix> rotations;
         private Vector3 oldCenter = Vector3.Zero;
-        private readonly float THRESHOLD = 100;
+        private readonly float THRESHOLD = 50;
         private KDTreeWrapper brick;
-        private List<Point> brickPoints;
+        private static Microsoft.Xna.Framework.Matrix prevR;
+        private static bool prevRKnown = false;
         private List<Vector3> qi;
 
         public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue,
@@ -108,14 +109,22 @@ namespace KADA
             center = new Vector3(x, y, z);
             oldCenter = center;
 
-
+            //ICP
             Matrix H = new Matrix(3, 3);
             double[,] HArr = new double[3, 3];
             Matrix HTemp = new Matrix(3, 3);
-            Microsoft.Xna.Framework.Matrix R = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
+            Microsoft.Xna.Framework.Matrix R;
+            if (!prevRKnown)
+            {
+                R = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
+            }
+            else
+            {
+                R = prevR;
+            }
             Microsoft.Xna.Framework.Matrix RInv = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
 
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 9; i++)
             {
                 int count = 0;
                 if (R.Determinant() == 1)
@@ -126,10 +135,10 @@ namespace KADA
                 {
                     count++;
                     Vector3 vC = v - center;
-                    vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);                    
+                    vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
 
                     double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
-                    NearestNeighbour<Point> b = brick.NearestNeighbors(vArr, 1);
+                    NearestNeighbour<Point> b = brick.NearestNeighbors(vArr, 1,fDistance: THRESHOLD);
                     b.MoveNext();
                     Point p = b.Current;
                     Vector3 pos = p.position;
@@ -177,6 +186,7 @@ namespace KADA
                     0,
                     0, 0, 0, 1
                     );
+                RTemp = Microsoft.Xna.Framework.Matrix.Transpose(RTemp);
                 R = Microsoft.Xna.Framework.Matrix.Multiply(R, RTemp);
 
                 //RUN ICP
@@ -204,6 +214,8 @@ namespace KADA
             if (R.Determinant() == 1)
             {
                 this.rotations.Enqueue(R);
+                prevRKnown = true;
+                prevR = R;
             }
             this.centers.Enqueue(center);
             this.renderQueue.Enqueue(dc);

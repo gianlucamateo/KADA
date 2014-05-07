@@ -34,7 +34,7 @@ namespace XYZFileLoader
                 float y = float.Parse(parts[1])*10;
                 float z = float.Parse(parts[2])*10;
                 Vector3 pos = new Vector3(x, y, z);
-                pos -= offset;
+                pos += offset;
                 Point p = new Point(pos, new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
                 kdTree.AddPoint(pos,p);                
             }
