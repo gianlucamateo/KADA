@@ -41,6 +41,7 @@ namespace KADA
         private WriteableBitmap depthBitmap;
         private Bitmap image = new Bitmap(640, 480);
         private byte[] colorPixels;
+        private float angleFactor = (float)(1.0/Math.Tan(43.0 / 180.0 / 480*Math.PI));
 
         private ConcurrentQueue<DepthColor[,]> renderQueue = new ConcurrentQueue<DepthColor[,]>(),
             depthPool = new ConcurrentQueue<DepthColor[,]>(), processingQueue = new ConcurrentQueue<DepthColor[,]>();
@@ -207,7 +208,7 @@ namespace KADA
                 {
 
                     depth[x, y].Depth = dPixels[i].Depth;
-                    float scale = -dPixels[i].Depth / 670.63f;
+                    float scale = -dPixels[i].Depth / angleFactor;
                     depth[x, y].Position.X = (x - 320) * scale;
                     depth[x, y].Position.Y = -(y-240) * scale;
                     depth[x, y].Position.Z = -dPixels[i].Depth;

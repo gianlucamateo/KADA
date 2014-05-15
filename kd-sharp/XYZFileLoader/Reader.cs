@@ -37,12 +37,6 @@ namespace XYZFileLoader
                 pos += offset;
                 Point p = new Point(pos, new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
                 kdTree.AddPoint(pos,p);
-                pos += new Vector3(0,1.9f,0);
-                p = new Point(pos, new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
-                kdTree.AddPoint(pos, p);
-                pos += new Vector3(0, 1.9f, 0);
-                p = new Point(pos, new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
-                kdTree.AddPoint(pos, p); 
             }
             return kdTree;
         }
