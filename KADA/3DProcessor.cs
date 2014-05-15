@@ -131,6 +131,7 @@ namespace KADA
 
             for (int i = 0; i < 9; i++)
             {
+                ICPMisalignment = 0;
                 int count = 0;
                 if (R.Determinant() == 1)
                 {
@@ -146,7 +147,7 @@ namespace KADA
                     NearestNeighbour<Point> b = brick.NearestNeighbors(vArr, 1,fDistance: THRESHOLD);
                     b.MoveNext();
                     Point p = b.Current;
-                    this.ICPMisalignment += b.CurrentDistance;
+                    //this.ICPMisalignment += b.CurrentDistance;
                     Vector3 pos = p.position;
                     HArr[0, 0] = vC.X * pos.X;
                     HArr[0, 1] = vC.Y * pos.X;
@@ -161,6 +162,10 @@ namespace KADA
                     if (b.CurrentDistance < 500)
                     {
                         H.AddInplace(HTemp);
+                        if (b.CurrentDistance < 5)
+                        {
+                            ICPMisalignment++;
+                        }
                     }
                     else
                     {
