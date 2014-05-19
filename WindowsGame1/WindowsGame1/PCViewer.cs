@@ -15,6 +15,7 @@ using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.Collections.Concurrent;
 using KADA;
+using XYZFileLoader;
 
 
 namespace KADA
@@ -45,7 +46,7 @@ namespace KADA
 
         public double ICPMisalignment;
 
-        Int32 count = 640 * 480;
+        Int32 count = 640 * 480 + 100000;
         Viewport PCViewport;
         Viewport BrickViewport;
         Model brick;
@@ -153,18 +154,29 @@ namespace KADA
                         if (d.Depth != 0&&d.Position.Z!=0)
                         {
                             instances[i].ScreenPos = d.Position;
-                            instances[i].Scale = -d.Depth;
+                            instances[i].Scale = 1;
                             instances[i].Color = d.Color;
                         }
                         else
                         {
                             instances[i].ScreenPos.Z = float.MaxValue;
-                            instances[i].Scale = 1;
+                            instances[i].Scale = 0f;
                         }
                         i++;
                     }
                 }
                 this.depthsPool.Enqueue(depth); 
+                foreach(Vector3 v in Reader.positions){
+                    Matrix transform = brickRotation * brickTranslation;
+                    Vector3 pos = Vector3.Transform(v, transform);
+                    if (i % 10 == 0)
+                    {
+                        instances[i].ScreenPos = pos;
+                        instances[i].Scale = 0.1f;  
+                        instances[i].Color = new Vector3(255, 0, 100);
+                    }
+                    i++;
+                }
             }
         }
       
@@ -215,7 +227,7 @@ namespace KADA
             // TODO: Add your initialization logic here
             World = Matrix.Identity;
             UpdateView();
-            Projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4, 640f/480f, 10, 1500);
+            Projection = Matrix.CreatePerspectiveFieldOfView(43f/180f*MathHelper.Pi, 640f/480f, 10, 1500);
             base.Initialize();
         }
 
@@ -370,7 +382,6 @@ namespace KADA
             {
                 this.saveColors = true;
             }
-
             UpdateView();
         }
        

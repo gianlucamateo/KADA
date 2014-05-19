@@ -21,8 +21,10 @@ namespace XYZFileLoader
     
     public class Reader
     {
+        public static List<Vector3> positions;
         public static KDTreeWrapper readFromFile(Vector3 offset)
         {
+            positions = new List<Vector3>();
             KDTreeWrapper kdTree;
             kdTree = new KDTreeWrapper();
             string[] lines = System.IO.File.ReadAllLines("../../ressources/pointcloud/Duplo_5000samples_stratified_triangle.xyz");
@@ -35,8 +37,22 @@ namespace XYZFileLoader
                 float z = float.Parse(parts[2])*10;
                 Vector3 pos = new Vector3(x, y, z);
                 pos += offset;
+                positions.Add(pos);
                 Point p = new Point(pos, new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
                 kdTree.AddPoint(pos,p);
+                /*
+                pos = new Vector3(x, y, z);
+                pos += offset;
+                pos += new Vector3(0,-18,0);
+                positions.Add(pos);
+                p = new Point(pos, new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
+                kdTree.AddPoint(pos, p);
+                pos = new Vector3(x, y, z);
+                pos += offset;
+                pos += new Vector3(0, -18, 0);
+                positions.Add(pos);
+                p = new Point(pos, new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
+                kdTree.AddPoint(pos, p);*/
             }
             return kdTree;
         }

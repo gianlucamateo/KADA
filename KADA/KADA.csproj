@@ -68,6 +68,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DataContainers\ICPDataContainer.cs" />
     <Compile Include="Histogram.cs" />
     <Compile Include="ImageProcessor.cs" />
     <Compile Include="MainWindow.xaml.cs">

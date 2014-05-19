@@ -41,7 +41,7 @@ namespace KADA
         private WriteableBitmap depthBitmap;
         private Bitmap image = new Bitmap(640, 480);
         private byte[] colorPixels;
-        private float angleFactor = (float)(1.0/Math.Tan(43.0 / 180.0 / 480*Math.PI));
+        private float angleFactor = (float)(1.0/Math.Tan(43.0 / 180.0 / 480*Math.PI))*0.85f;
 
         private ConcurrentQueue<DepthColor[,]> renderQueue = new ConcurrentQueue<DepthColor[,]>(),
             depthPool = new ConcurrentQueue<DepthColor[,]>(), processingQueue = new ConcurrentQueue<DepthColor[,]>();
@@ -276,7 +276,8 @@ namespace KADA
 
         private void OnButtonKeyDown(object sender, KeyEventArgs e)
         {
-            _3Dprocessor.scanNormals();
+            //_3Dprocessor.scanNormals();
+            _3Dprocessor.oldCenter = Vector3.Zero;
 
             System.Diagnostics.Debug.WriteLine(e.Key.ToString());
         }

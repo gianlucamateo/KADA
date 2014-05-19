@@ -23,13 +23,13 @@ namespace KADA
         private ConcurrentQueue<DepthColor[,]> renderQueue, processingQueue;
         private ConcurrentQueue<Vector3> centers;
         private ConcurrentQueue<Microsoft.Xna.Framework.Matrix> rotations;
-        private Vector3 oldCenter = Vector3.Zero;
-        private readonly float THRESHOLD = 50;
+        public Vector3 oldCenter = Vector3.Zero;
+        private readonly float THRESHOLD = 300;
         private KDTreeWrapper brick;
         private static Microsoft.Xna.Framework.Matrix prevR;
         private static bool prevRKnown = false;
         private List<Vector3> qi;
-        public double ICPMisalignment = 0;
+        public double ICPInliers = 0;
         private PCViewer g;
 
         public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue,
@@ -113,8 +113,21 @@ namespace KADA
             oldCenter = center;
 
             //ICP
-            this.ICPMisalignment = 0;
-            
+            System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(this.ICP), new ICPDataContainer(dc,center,qi));
+            this.centers.Enqueue(center);
+            this.renderQueue.Enqueue(dc);
+            //this.ICP(center, dc, qi);
+        }
+
+        public void ICP(Object input)
+        {
+            ICPDataContainer container = (ICPDataContainer)input;
+            Vector3 center = container.center;
+            DepthColor[,] dc = container.dc;
+            List<Vector3> qi = container.qi;
+            this.ICPInliers = 0;
+            int currentICPInliers = 0;
+           
             Matrix H = new Matrix(3, 3);
             double[,] HArr = new double[3, 3];
             Matrix HTemp = new Matrix(3, 3);
@@ -131,7 +144,7 @@ namespace KADA
 
             for (int i = 0; i < 9; i++)
             {
-                ICPMisalignment = 0;
+                currentICPInliers = 0;
                 int count = 0;
                 if (R.Determinant() == 1)
                 {
@@ -144,7 +157,7 @@ namespace KADA
                     vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
 
                     double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
-                    NearestNeighbour<Point> b = brick.NearestNeighbors(vArr, 1,fDistance: THRESHOLD);
+                    NearestNeighbour<Point> b = brick.NearestNeighbors(vArr, 1, fDistance: THRESHOLD);
                     b.MoveNext();
                     Point p = b.Current;
                     //this.ICPMisalignment += b.CurrentDistance;
@@ -164,7 +177,7 @@ namespace KADA
                         H.AddInplace(HTemp);
                         if (b.CurrentDistance < 5)
                         {
-                            ICPMisalignment++;
+                            currentICPInliers++;
                         }
                     }
                     else
@@ -172,8 +185,13 @@ namespace KADA
                         count--;
                     }
                 }
-                H.Multiply(1.0 / (double)count);
 
+                if (currentICPInliers < this.ICPInliers)
+                {
+                    break;
+                }
+                
+                H.Multiply(1.0 / (double)count);
                 DotNumerics.LinearAlgebra.SingularValueDecomposition s = new SingularValueDecomposition();
                 Matrix S, U, VT;
                 s.ComputeSVD(H, out S, out U, out VT);
@@ -200,27 +218,7 @@ namespace KADA
                 RTemp = Microsoft.Xna.Framework.Matrix.Transpose(RTemp);
                 R = Microsoft.Xna.Framework.Matrix.Multiply(R, RTemp);
 
-                //RUN ICP
-                /*for (int xP = 0; xP < dc.GetLength(0); xP++)
-                {
-                    for (int yP = 0; yP < dc.GetLength(1); yP++)
-                    {
-                        c = dc[xP, yP];
-                        if (c.Position.Z != 0)
-                        {
-                            float dist;
-                            Vector3.Distance(ref center, ref c.Position, out dist);
-                            if (dist < THRESHOLD)
-                            {
-                                x += c.Position.X;
-                                y += c.Position.Y;
-                                z += c.Position.Z;
-                                counter++;
-                            }
-                        }
-                    }
-                }
-                */
+                this.ICPInliers = currentICPInliers;
             }
             if (R.Determinant() == 1)
             {
@@ -228,9 +226,9 @@ namespace KADA
                 prevRKnown = true;
                 prevR = R;
             }
-            this.centers.Enqueue(center);
-            this.renderQueue.Enqueue(dc);
-            g.ICPMisalignment = this.ICPMisalignment;
+            
+            g.ICPMisalignment = this.ICPInliers;
+            
         }
         public void kMeans(Vector3[,] normals)
         {
