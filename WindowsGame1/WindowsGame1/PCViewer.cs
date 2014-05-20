@@ -177,6 +177,9 @@ namespace KADA
                     }
                     i++;
                 }
+                instances[i].ScreenPos = Vector3.Transform(Vector3.One,brickTranslation);
+                instances[i].Scale = 1;
+                instances[i].Color = new Vector3(0, 255, 0);
             }
         }
       
@@ -507,31 +510,24 @@ namespace KADA
             Matrix[] transforms = new Matrix[brick.Bones.Count];
             brick.CopyAbsoluteBoneTransformsTo(transforms);
 
-            // Draw the model. A model can have multiple meshes, so loop.
+           
             foreach (ModelMesh mesh in brick.Meshes)
             {
-                // This is where the mesh orientation is set, as well 
-                // as our camera and projection.
+                
                 foreach (BasicEffect eff in mesh.Effects)
                 {
                     eff.TextureEnabled = false;
                     eff.EnableDefaultLighting();
                     eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) *Matrix.CreateTranslation(this.offset) * brickRotation * brickTranslation;// *
-                    // Matrix.CreateRotationX((float)Math.PI / 2) *
-                    //Matrix.CreateRotationY(modelRotation)
-                    //* Matrix.CreateTranslation(modelPosition);
+                    
                     eff.View =View;
                     eff.Projection =Projection;
                 }
-                // Draw the mesh, using the effects set above.
+       
                 mesh.Draw();
             }
 
-            /* GraphicsDevice.SetVertexBuffers(null);
-            spriteBatch.Begin();
-            spriteBatch.DrawString(spriteFont, "TEST", new Vector2(100,100), Microsoft.Xna.Framework.Color.Black,
-                    0, new Vector2(0,0), 1.0f, SpriteEffects.None, 0.5f);
-            spriteBatch.End();*/
+            
             base.Draw(gameTime);
 
         }

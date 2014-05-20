@@ -101,7 +101,7 @@ namespace KADA
                             z += c.Position.Z;
                             counter++;
                             double[] arr = { c.Position.X, c.Position.Y, c.Position.Z };
-                            qi.Add(c.Position);
+                            qi.Add(c.Position); 
                         }
                     }
                 }

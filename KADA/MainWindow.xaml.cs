@@ -63,7 +63,7 @@ namespace KADA
 
         PCViewer g;
 
-        ImageProcessor imageProcessor;
+        _2DProcessor _2Dprocessor;
 
         _3DProcessor _3Dprocessor;
 
@@ -118,7 +118,7 @@ namespace KADA
                 this.colorPoints = new ColorImagePoint[640 * 480];
                 bitmapFiller = new Thread(new ThreadStart(FillBitmap));
                 depthUpdater = new Thread(new ThreadStart(() => UpdateDepthData(false)));
-                imageProcessorThread = new Thread(new ThreadStart(() => imageProcessor.GenerateBackground(depthPixels)));
+                imageProcessorThread = new Thread(new ThreadStart(() => _2Dprocessor.GenerateBackground(depthPixels)));
                 // this.cdMap = new DepthColorPixel[640, 480];
 
                 this.Image.Source = this.imageBitmap;
@@ -140,7 +140,7 @@ namespace KADA
                     depthPool.Enqueue(new DepthColor[640, 480]);
                 }
 
-                imageProcessor = new ImageProcessor(processingQueue);
+                _2Dprocessor = new _2DProcessor(processingQueue);
 
 
 
@@ -185,20 +185,20 @@ namespace KADA
 
 
 
-        private void UpdateDepthData(Object saveToFileOb)
+        private void UpdateDepthData(Object input)
         {
             int baseindex;
 
-            bool processColors = (Boolean)saveToFileOb;
+            bool processColors = (Boolean)input;
             DepthColor[,] depth = null;
             DepthImagePixel[] dPixels = this.depthPixels;
             DepthImagePixel[] background = null;
 
             if (!this.depthPool.TryDequeue(out depth))
                 return;
-            if (this.imageProcessor.BackgroundReady())
+            if (this._2Dprocessor.BackgroundReady())
             {
-                background = imageProcessor.getBackground();
+                background = _2Dprocessor.getBackground();
             }
             for (int i = 0; i < 640 * 480; i++)
             {
@@ -218,6 +218,7 @@ namespace KADA
                         if (drop)
                         {
                             depth[x, y].Position *= 0;
+                            depth[x, y].Depth = 0;
                         }
                     }
 
@@ -237,8 +238,8 @@ namespace KADA
             }
             if (processColors)
             {
-                System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(this.imageProcessor.eliminateColor), depth);
-                ImageProcessor.resetEvent.WaitOne();
+                System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(this._2Dprocessor.eliminateColor), depth);
+                _2DProcessor.resetEvent.WaitOne();
                 System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(this._3Dprocessor.generateCenter));
                 Vector3 center;
                 if (centers.TryDequeue(out center) == true)
@@ -319,9 +320,9 @@ namespace KADA
                 /*depthUpdater = new Thread(new ThreadStart(() => UpdateDepthData(saveToFile)));
                 depthUpdater.Start();*/
 
-                if (!this.imageProcessor.BackgroundReady() && this.g.generateBackground)
+                if (!this._2Dprocessor.BackgroundReady() && this.g.generateBackground)
                 {
-                    imageProcessorThread = new Thread(new ThreadStart(() => imageProcessor.GenerateBackground(depthPixels)));
+                    imageProcessorThread = new Thread(new ThreadStart(() => _2Dprocessor.GenerateBackground(depthPixels)));
                     imageProcessorThread.Start();
                     // this.processor.GenerateBackground(this.depthPixels);
                 }

@@ -15,7 +15,7 @@ using Image = System.Drawing.Image;
 
 namespace KADA
 {
-    class ImageProcessor
+    class _2DProcessor
     {
         private ConcurrentQueue<DepthColor[,]> processingQueue;
         private DepthImagePixel[] background;
@@ -31,7 +31,7 @@ namespace KADA
         public static ManualResetEvent resetEvent = new ManualResetEvent(false);
 
 
-        public ImageProcessor(ConcurrentQueue<DepthColor[,]> processingQueue)
+        public _2DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue)
         {
             singleImages = new DepthImagePixel[5][];
             this.processingQueue = processingQueue;
@@ -317,7 +317,7 @@ namespace KADA
                             }
                             if (maxval == 0)
                             {
-                                pixel.Position.Z = 0;
+                                //pixel.Position.Z = 0;
                                 pixel.Depth = 0;
                                 
                             }
@@ -326,12 +326,160 @@ namespace KADA
                     }
                 }
             }            
-            this.processingQueue.Enqueue(dc);
+            deNoise(dc);
+
+            //this.processingQueue.Enqueue(dc);
             
-            resetEvent.Set();
+            //resetEvent.Set();
         }
 
-        
+        public void deNoise(Object dcIn)
+        {
+            DepthColor[,] dc = (DepthColor[,])dcIn;
+            int width = dc.GetLength(0), height = dc.GetLength(1);
+
+            bool[,] grid = new bool[width, height];
+            bool[,] outputGrid = null;
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    if (dc[x, y].Depth>0)
+                    {
+                        grid[x, y] = true;
+                    }
+                }
+            }
+            for (int i = 0; i < 2; i++)
+			{
+				outputGrid = new bool[width, height];
+				for (int x = 1; x < width - 1; x++)
+				{
+					for (int y = 1; y < height - 1; y++)
+					{
+						int diagonalContact = 0;
+						if (grid[x - 1, y - 1] == true)
+						{
+							diagonalContact++;
+						}
+
+						if (grid[x - 1, y + 1] == true)
+						{
+							diagonalContact++;
+						}
+
+						if (grid[x + 1, y - 1] == true)
+						{
+							diagonalContact++;
+						}
+
+						if (grid[x + 1, y + 1] == true)
+						{
+							diagonalContact++;
+						}
+
+						/*if (grid[x + 1, y + 0] == true)
+						{
+							directContact++;
+						}
+
+						if (grid[x - 1, y + 0] == true)
+						{
+							directContact++;
+						}
+
+						if (grid[x + 0, y + 1] == true)
+						{
+							directContact++;
+						}
+
+						if (grid[x + 0, y - 1] == true)
+						{
+							directContact++;
+						}*/
+						if (grid[x, y] && diagonalContact > 3) // && directContact > 3 &&
+						{
+							outputGrid[x, y] = true;
+						}
+					}
+				}
+				grid = (bool[,])outputGrid.Clone();
+				
+			}
+			for (int i = 0; i < 3; i++)
+			{
+				for (int x = 1; x < width - 1; x++)
+				{
+					for (int y = 1; y < height - 1; y++)
+					{
+						if (outputGrid[x - 1, y - 1] == true)
+						{
+							grid[x, y] = true;
+						}
+						if (outputGrid[x - 1, y + 1] == true)
+						{
+							grid[x, y] = true;
+						}
+						if (outputGrid[x + 1, y - 1] == true)
+						{
+							grid[x, y] = true;
+						}
+						if (outputGrid[x + 1, y + 1] == true)
+						{
+							grid[x, y] = true;
+						}
+
+                        if (outputGrid[x, y + 1] == true)
+                        {
+                            grid[x, y] = true;
+                        }
+
+                        if (outputGrid[x, y - 1] == true)
+                        {
+                            grid[x, y] = true;
+                        }
+
+                        if (outputGrid[x + 1, y] == true)
+                        {
+                            grid[x, y] = true;
+                        }
+
+                        if (outputGrid[x - 1, y] == true)
+                        {
+                            grid[x, y] = true;
+                        }
+					}
+				}
+				outputGrid = (bool[,])grid.Clone();
+			}
+
+			for (int x = 1; x < width - 1; x++)
+			{
+				for (int y = 1; y < height - 1; y++)
+				{
+                    if (grid[x, y] == true)
+                    {
+                        dc[x, y].Depth = 1;
+                        //output.SetPixel(x, y, Color.Black);
+                    }
+                    else
+                    {
+                        dc[x, y].Depth = 0;
+                        dc[x, y].Position.Z = 0;
+                    }
+				}
+			}
+			
+			//Console.WriteLine(System.DateTime.Now - start);
+			//System.Threading.Thread.Sleep(1000);
+			//output.Save("../../output_denoising.png");
+
+			//gridImage = (Bitmap)Image.FromFile("../../cleaned_sample.png", true);
+            this.processingQueue.Enqueue(dc);
+
+            resetEvent.Set();
+		}       
 
     }
 }
