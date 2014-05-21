@@ -24,7 +24,7 @@ namespace KADA
         private ConcurrentQueue<Vector3> centers;
         private ConcurrentQueue<Microsoft.Xna.Framework.Matrix> rotations;
         public Vector3 oldCenter = Vector3.Zero;
-        private readonly float THRESHOLD = 300;
+        private readonly float THRESHOLD = 100;
         private KDTreeWrapper brick;
         private static Microsoft.Xna.Framework.Matrix prevR;
         private static bool prevRKnown = false;
@@ -34,7 +34,7 @@ namespace KADA
 
         private int normalCounter=0;
 
-        private const double MINICPRATIO = 5.0;
+        private const double MINICPRATIO = 2.0;
 
         public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue,
             ConcurrentQueue<Vector3> centers, ConcurrentQueue<Microsoft.Xna.Framework.Matrix> rotations, Vector3 offset, PCViewer g)
@@ -147,7 +147,7 @@ namespace KADA
             Microsoft.Xna.Framework.Matrix RInv = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
             this.ICPRatio = 0;
             int iterations = 0;
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 15; i++)
             {
                 iterations = i;
                 currentICPInliers = 0;
@@ -197,7 +197,7 @@ namespace KADA
                     }
                 }
 
-                if (this.ICPRatio > MINICPRATIO)
+                if (this.ICPRatio > MINICPRATIO && i>2)
                 {
                     break;
                 }
@@ -236,7 +236,7 @@ namespace KADA
             if (R.Determinant() == 1)
             {
                 normalCounter++;
-                if (this.ICPRatio > MINICPRATIO)
+                //if (this.ICPRatio > MINICPRATIO)
                 {
                     //normalCounter = 0;
                     this.rotations.Enqueue(R);
