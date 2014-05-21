@@ -44,7 +44,9 @@ namespace KADA
     {
         #region Class Variables
 
-        public double ICPMisalignment;
+        public double ICPInliers, ICPOutliers, ICPRatio;
+
+        public Vector3[] Normals = new Vector3[3];
 
         Int32 count = 640 * 480 + 100000;
         Viewport PCViewport;
@@ -177,7 +179,36 @@ namespace KADA
                     }
                     i++;
                 }
-                instances[i].ScreenPos = Vector3.Transform(Vector3.One,brickTranslation);
+                Vector3 center = Vector3.Transform(Vector3.One, brickTranslation);
+                for (int o = 0; o < 3; o++)
+                {
+                    if (this.Normals[o] != null)
+                    {
+                        Vector3 normal = this.Normals[o];
+                        for (int segment = 0; segment < 90; segment++)
+                        {
+                            instances[i].ScreenPos = center + normal * segment;
+                            instances[i].Scale = 1;
+                            Vector3 c = Vector3.Zero;
+                            if (o == 0)
+                            {
+                                c = new Vector3(255, 0, 0);
+                            }
+                            if (o == 1)
+                            {
+                                c = new Vector3(0, 255, 0);
+                            }
+                            if (o == 2)
+                            {
+                                c = new Vector3(0, 0, 255);
+                            }
+                            instances[i].Color = c;
+                            i++;
+                        }
+                    }
+                }
+                
+                instances[i].ScreenPos = center;
                 instances[i].Scale = 1;
                 instances[i].Color = new Vector3(0, 255, 0);
             }
@@ -288,7 +319,7 @@ namespace KADA
                 transformationUpdater = new Task(() => this.UpdateInstanceInformation());
                 transformationUpdater.Start();
             }
-            this.Window.Title = this.ICPMisalignment.ToString();
+            this.Window.Title = "Inliers: " + this.ICPInliers+", Outliers: "+ this.ICPOutliers +", Ratio: "+ this.ICPRatio;
 
             base.Update(gameTime);
         }  

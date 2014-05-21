@@ -29,8 +29,12 @@ namespace KADA
         private static Microsoft.Xna.Framework.Matrix prevR;
         private static bool prevRKnown = false;
         private List<Vector3> qi;
-        public double ICPInliers = 0;
+        public double ICPInliers = 0, ICPOutliers = 0, ICPRatio = 0;
         private PCViewer g;
+
+        private int normalCounter=0;
+
+        private const double MINICPRATIO = 5.0;
 
         public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue,
             ConcurrentQueue<Vector3> centers, ConcurrentQueue<Microsoft.Xna.Framework.Matrix> rotations, Vector3 offset, PCViewer g)
@@ -126,7 +130,7 @@ namespace KADA
             DepthColor[,] dc = container.dc;
             List<Vector3> qi = container.qi;
             this.ICPInliers = 0;
-            int currentICPInliers = 0;
+            int currentICPInliers = 0, currentICPOutliers = 0;
            
             Matrix H = new Matrix(3, 3);
             double[,] HArr = new double[3, 3];
@@ -141,10 +145,13 @@ namespace KADA
                 R = prevR;
             }
             Microsoft.Xna.Framework.Matrix RInv = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
-
-            for (int i = 0; i < 9; i++)
+            this.ICPRatio = 0;
+            int iterations = 0;
+            for (int i = 0; i < 5; i++)
             {
+                iterations = i;
                 currentICPInliers = 0;
+                currentICPOutliers = 0;
                 int count = 0;
                 if (R.Determinant() == 1)
                 {
@@ -179,6 +186,10 @@ namespace KADA
                         {
                             currentICPInliers++;
                         }
+                        else
+                        {
+                            currentICPOutliers++;
+                        }
                     }
                     else
                     {
@@ -186,7 +197,7 @@ namespace KADA
                     }
                 }
 
-                if (currentICPInliers < this.ICPInliers)
+                if (this.ICPRatio > MINICPRATIO)
                 {
                     break;
                 }
@@ -219,16 +230,31 @@ namespace KADA
                 R = Microsoft.Xna.Framework.Matrix.Multiply(R, RTemp);
 
                 this.ICPInliers = currentICPInliers;
+                this.ICPOutliers = currentICPOutliers;
+                this.ICPRatio = this.ICPInliers / this.ICPOutliers;
             }
             if (R.Determinant() == 1)
             {
-                this.rotations.Enqueue(R);
+                normalCounter++;
+                if (this.ICPRatio > MINICPRATIO)
+                {
+                    //normalCounter = 0;
+                    this.rotations.Enqueue(R);
+                }
+                if(normalCounter>30)
+                {
+                    //normalCounter++;
+                    normalCounter = 0;
+                    this.scanNormals();                    
+                }
                 prevRKnown = true;
                 prevR = R;
             }
             
-            g.ICPMisalignment = this.ICPInliers;
-            
+            g.ICPInliers = this.ICPInliers;
+            g.ICPOutliers = this.ICPOutliers;
+            g.ICPRatio = this.ICPRatio;
+            System.Diagnostics.Debug.WriteLine(iterations);
         }
         public void kMeans(Vector3[,] normals)
         {
@@ -315,11 +341,11 @@ namespace KADA
                 System.Diagnostics.Debug.Write("{" + estimatedNormals[i].X + "," + estimatedNormals[i].Y + "," + estimatedNormals[i].Z + "},");
             }
             norm.Save("normals_clustered.png");
+            g.Normals = estimatedNormals;
         }
 
         public void scanNormals()
         {
-
             Vector3[,] normals = new Vector3[640, 480];
             Bitmap bitmap = new Bitmap(640, 480);
             DepthColor[,] dc;
@@ -364,7 +390,7 @@ namespace KADA
                             normal = -normal;
                             normals[639 - x, 479 - y] = normal;
                             //bins[3+(int)Math.Floor(binIndicator.X), 3+(int)Math.Floor(binIndicator.Y), 3+(int)Math.Floor(binIndicator.Y)] += 1;
-                            bitmap.SetPixel(639 - x, 479 - y, System.Drawing.Color.FromArgb(254, 127 + (int)(normal.X * 127), 127 + (int)(normal.Y * 127), 127 + (int)(normal.Z * 127)));
+                            //bitmap.SetPixel(639 - x, 479 - y, System.Drawing.Color.FromArgb(254, 127 + (int)(normal.X * 127), 127 + (int)(normal.Y * 127), 127 + (int)(normal.Z * 127)));
                         }
                     }
                 }
@@ -388,7 +414,7 @@ namespace KADA
              int third = greatest.ElementAt(3);*/
 
 
-            bitmap.Save("normals.png");
+            //bitmap.Save("normals.png");
             this.kMeans(normals);
             //return bitmap;
 
