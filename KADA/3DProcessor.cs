@@ -32,7 +32,7 @@ namespace KADA
         public double ICPInliers = 0, ICPOutliers = 0, ICPRatio = 0;
         private PCViewer g;
 
-        private int normalCounter=0;
+        private int normalCounter = 0;
 
         private const double MINICPRATIO = 2.0;
 
@@ -105,7 +105,7 @@ namespace KADA
                             z += c.Position.Z;
                             counter++;
                             double[] arr = { c.Position.X, c.Position.Y, c.Position.Z };
-                            qi.Add(c.Position); 
+                            qi.Add(c.Position);
                         }
                     }
                 }
@@ -117,13 +117,13 @@ namespace KADA
             oldCenter = center;
 
             //ICP
-            System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(this.ICP), new ICPDataContainer(dc,center,qi));
+            System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(this.PtPlaneICP), new ICPDataContainer(dc, center, qi));
             this.centers.Enqueue(center);
             this.renderQueue.Enqueue(dc);
             //this.ICP(center, dc, qi);
         }
 
-        public void ICP(Object input)
+        public void PtPointICP(Object input)
         {
             ICPDataContainer container = (ICPDataContainer)input;
             Vector3 center = container.center;
@@ -131,7 +131,7 @@ namespace KADA
             List<Vector3> qi = container.qi;
             this.ICPInliers = 0;
             int currentICPInliers = 0, currentICPOutliers = 0;
-           
+
             Matrix H = new Matrix(3, 3);
             double[,] HArr = new double[3, 3];
             Matrix HTemp = new Matrix(3, 3);
@@ -197,11 +197,11 @@ namespace KADA
                     }
                 }
 
-                if (this.ICPRatio > MINICPRATIO && i>2)
+                if (this.ICPRatio > MINICPRATIO && i > 2)
                 {
                     break;
                 }
-                
+
                 H.Multiply(1.0 / (double)count);
                 DotNumerics.LinearAlgebra.SingularValueDecomposition s = new SingularValueDecomposition();
                 Matrix S, U, VT;
@@ -241,16 +241,218 @@ namespace KADA
                     //normalCounter = 0;
                     this.rotations.Enqueue(R);
                 }
-                if(normalCounter>30)
+                if (normalCounter > 30)
                 {
                     //normalCounter++;
                     normalCounter = 0;
-                    this.scanNormals();                    
+                    this.scanNormals();
                 }
                 prevRKnown = true;
                 prevR = R;
             }
-            
+
+            g.ICPInliers = this.ICPInliers;
+            g.ICPOutliers = this.ICPOutliers;
+            g.ICPRatio = this.ICPRatio;
+            System.Diagnostics.Debug.WriteLine(iterations);
+        }
+
+        public void PtPlaneICP(Object input)
+        {
+            ICPDataContainer container = (ICPDataContainer)input;
+            Vector3 center = container.center;
+            DepthColor[,] dc = container.dc;
+            List<Vector3> qi = container.qi;
+            this.ICPInliers = 0;
+            int currentICPInliers = 0, currentICPOutliers = 0;
+
+            Matrix H = new Matrix(3, 3);
+            double[,] HArr = new double[3, 3];
+            Matrix HTemp = new Matrix(3, 3);
+            Microsoft.Xna.Framework.Matrix R;
+            if (!prevRKnown)
+            {
+                R = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
+            }
+            else
+            {
+                R = prevR;
+            }
+            Microsoft.Xna.Framework.Matrix RInv = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
+            this.ICPRatio = 0;
+            int iterations = 0;
+            for (int i = 0; i < 15; i++)
+            {
+                iterations = i;
+                currentICPInliers = 0;
+                currentICPOutliers = 0;
+
+                if (R.Determinant() == 1)
+                {
+                    Microsoft.Xna.Framework.Matrix.Invert(ref R, out RInv);
+                }
+                Matrix A = new Matrix(new double[6, 6]);
+                Vector B = new Vector(new double[6]);
+                foreach (Vector3 v in qi)
+                {
+
+                    Vector3 vC = v - center;
+                    vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
+                    double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
+                    NearestNeighbour<Point> neighbour = brick.NearestNeighbors(vArr, 1, fDistance: THRESHOLD);
+                    neighbour.MoveNext();
+                    Point p = neighbour.Current;
+                    //this.ICPMisalignment += b.CurrentDistance;
+                    Vector3 pos = p.position;
+                    Vector3 n = p.normal;
+                    Vector3 c = Vector3.Cross(pos, p.normal);
+
+                   /* if (neighbour.CurrentDistance > THRESHOLD)
+                    {
+                        ICPOutliers++;
+                        continue;
+                    }*/
+
+                    double[,] tmA = new double[6, 6];
+                    tmA[0, 0] = c.X * c.X; tmA[0, 1] = c.X * c.Y; tmA[0, 2] = c.X * c.Z; tmA[0, 3] = c.X * n.X; tmA[0, 4] = c.X * n.Y; tmA[0, 5] = c.X * n.Z;
+                    tmA[1, 0] = tmA[0, 1]; tmA[1, 1] = c.Y * c.Y; tmA[1, 2] = c.Y * c.Z; tmA[1, 3] = c.Y * n.X; tmA[1, 4] = c.Y * n.Y; tmA[1, 5] = c.Y * n.Z;
+                    tmA[2, 0] = tmA[0, 2]; tmA[2, 1] = tmA[1, 2]; tmA[2, 2] = c.Z * c.Z; tmA[2, 3] = c.Z * n.X; tmA[2, 4] = c.Z * n.Y; tmA[2, 5] = c.Z * n.Z;
+                    tmA[3, 0] = tmA[0, 3]; tmA[3, 1] = tmA[1, 3]; tmA[3, 2] = tmA[2, 3]; tmA[3, 3] = n.X * n.X; tmA[3, 4] = n.X * n.Y; tmA[3, 5] = n.X * n.Z;
+                    tmA[4, 0] = tmA[0, 4]; tmA[4, 1] = tmA[1, 4]; tmA[4, 2] = tmA[2, 4]; tmA[4, 3] = tmA[3, 4]; tmA[4, 4] = n.Y * n.Y; tmA[4, 5] = n.Y * n.Z;
+                    tmA[5, 0] = tmA[0, 5]; tmA[5, 1] = tmA[1, 5]; tmA[5, 2] = tmA[2, 5]; tmA[5, 3] = tmA[3, 5]; tmA[5, 4] = tmA[4, 5]; tmA[5, 5] = n.Z * n.Z;
+
+                    double[] tempB = new double[6];
+
+                    float pMinqTimesN = Vector3.Dot(pos - v, n);
+
+                    tempB[0] = pMinqTimesN * c.X;
+                    tempB[1] = pMinqTimesN * c.Y;
+                    tempB[2] = pMinqTimesN * c.Z;
+                    tempB[3] = pMinqTimesN * n.X;
+                    tempB[4] = pMinqTimesN * n.Y;
+                    tempB[5] = pMinqTimesN * n.Z;
+
+                    A = A.Add(new Matrix(tmA));
+
+                   
+                    
+                    B = B.Subtract(new Vector(tempB));
+                    if (neighbour.CurrentDistance < 5)
+                    {
+                        currentICPInliers++;
+                    }
+                    else
+                    {
+                        currentICPOutliers++;
+                    }
+                }
+
+                if (this.ICPRatio > MINICPRATIO && i > 2)
+                {
+                    break;
+                }
+
+                LinearEquations LE = new LinearEquations();
+                Vector X = LE.Solve(A, B);
+                double[] XArr = X.ToArray();
+                Microsoft.Xna.Framework.Matrix RTemp = Microsoft.Xna.Framework.Matrix.CreateTranslation(Vector3.Zero);
+                
+                RTemp.M12 = (float)-XArr[2];
+                RTemp.M21 = (float)XArr[2];
+                RTemp.M13 = (float)XArr[1];
+                RTemp.M31 = (float)-XArr[1];
+                RTemp.M23 = (float)-XArr[0];
+                RTemp.M32 = (float)XArr[0];
+
+               /* RTemp.M41 = (float)XArr[3];
+                RTemp.M42 = (float)XArr[4];
+                RTemp.M43 = (float)XArr[5];*/
+
+                R = Microsoft.Xna.Framework.Matrix.Multiply(R, RTemp);
+
+                /*HArr[0, 0] = vC.X * pos.X;
+                HArr[0, 1] = vC.Y * pos.X;
+                HArr[0, 2] = vC.Z * pos.X;
+                HArr[1, 0] = vC.X * pos.Y;
+                HArr[1, 1] = vC.Y * pos.Y;
+                HArr[1, 2] = vC.Z * pos.Y;
+                HArr[2, 0] = vC.X * pos.Z;
+                HArr[2, 1] = vC.Y * pos.Z;
+                HArr[2, 2] = vC.Z * pos.Z;
+                HTemp = new Matrix(HArr);
+                if (b.CurrentDistance < 500)
+                {
+                    H.AddInplace(HTemp);
+                    if (b.CurrentDistance < 5)
+                    {
+                        currentICPInliers++;
+                    }
+                    else
+                    {
+                        currentICPOutliers++;
+                    }
+                }
+                else
+                {
+                    count--;
+                }
+            }
+
+            if (this.ICPRatio > MINICPRATIO && i > 2)
+            {
+                break;
+            }
+
+            H.Multiply(1.0 / (double)count);
+            DotNumerics.LinearAlgebra.SingularValueDecomposition s = new SingularValueDecomposition();
+            Matrix S, U, VT;
+            s.ComputeSVD(H, out S, out U, out VT);
+
+            Matrix V = VT.Transpose();
+            Matrix UT = U.Transpose();
+            Matrix X = V.Multiply(UT);
+            double[,] RArr = X.CopyToArray();
+            Microsoft.Xna.Framework.Matrix RTemp = new Microsoft.Xna.Framework.Matrix(
+                (float)RArr[0, 0],
+                (float)RArr[0, 1],
+                (float)RArr[0, 2],
+                0,
+                (float)RArr[1, 0],
+                (float)RArr[1, 1],
+                (float)RArr[1, 2],
+                0,
+                (float)RArr[2, 0],
+                (float)RArr[2, 1],
+                (float)RArr[2, 2],
+                0,
+                0, 0, 0, 1
+                );
+            RTemp = Microsoft.Xna.Framework.Matrix.Transpose(RTemp);
+            R = Microsoft.Xna.Framework.Matrix.Multiply(R, RTemp);
+                */
+                this.ICPInliers = currentICPInliers;
+                this.ICPOutliers = currentICPOutliers;
+                this.ICPRatio = this.ICPInliers / this.ICPOutliers;
+            }
+            //System.Diagnostics.Debug.WriteLine(R.Determinant());
+            if (R.Determinant() == 1)
+            {
+                normalCounter++;
+                //if (this.ICPRatio > MINICPRATIO)
+                {
+                    //normalCounter = 0;
+                    this.rotations.Enqueue(R);
+                }
+                if (normalCounter > 30)
+                {
+                    //normalCounter++;
+                    normalCounter = 0;
+                    this.scanNormals();
+                }
+                prevRKnown = true;
+                prevR = R;
+            }
+
             g.ICPInliers = this.ICPInliers;
             g.ICPOutliers = this.ICPOutliers;
             g.ICPRatio = this.ICPRatio;

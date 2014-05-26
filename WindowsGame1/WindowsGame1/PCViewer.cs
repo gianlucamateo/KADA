@@ -171,10 +171,10 @@ namespace KADA
                 foreach(Vector3 v in Reader.positions){
                     Matrix transform = brickRotation * brickTranslation;
                     Vector3 pos = Vector3.Transform(v, transform);
-                    if (i % 10 == 0)
+                    if (i % 5 == 0)
                     {
                         instances[i].ScreenPos = pos;
-                        instances[i].Scale = 0.1f;  
+                        instances[i].Scale = 0.3f;  
                         instances[i].Color = new Vector3(255, 0, 100);
                     }
                     i++;

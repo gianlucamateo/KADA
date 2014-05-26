@@ -15,10 +15,10 @@ namespace XYZFileLoader
         {
             position = pos;
             normal = nor;
-            positionArr = new double[] {pos.X,pos.Y,pos.Z};
+            positionArr = new double[] { pos.X, pos.Y, pos.Z };
         }
     }
-    
+
     public class Reader
     {
         public static List<Vector3> positions;
@@ -32,14 +32,14 @@ namespace XYZFileLoader
             foreach (string line in lines)
             {
                 parts = line.Split(' ');
-                float x = float.Parse(parts[0])*10;
-                float y = float.Parse(parts[1])*10;
-                float z = float.Parse(parts[2])*10;
+                float x = float.Parse(parts[0]) * 10;// *2;
+                float y = float.Parse(parts[1]) * 10;// *2;
+                float z = float.Parse(parts[2]) * 10;// *2;
                 Vector3 pos = new Vector3(x, y, z);
-                pos += offset;
+                pos += offset;// *2;
                 positions.Add(pos);
                 Point p = new Point(pos, new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
-                kdTree.AddPoint(pos,p);
+                kdTree.AddPoint(pos, p);
                 /*
                 pos = new Vector3(x, y, z);
                 pos += offset;
