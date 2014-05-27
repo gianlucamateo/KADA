@@ -14,6 +14,7 @@ using XYZFileLoader;
 using Point = XYZFileLoader.Point;
 using DotNumerics.LinearAlgebra;
 using Matrix = DotNumerics.LinearAlgebra.Matrix;
+using XNAMatrix = Microsoft.Xna.Framework.Matrix;
 
 
 namespace KADA
@@ -22,11 +23,11 @@ namespace KADA
     {
         private ConcurrentQueue<DepthColor[,]> renderQueue, processingQueue;
         private ConcurrentQueue<Vector3> centers;
-        private ConcurrentQueue<Microsoft.Xna.Framework.Matrix> rotations;
+        private ConcurrentQueue<XNAMatrix> rotations;
         public Vector3 oldCenter = Vector3.Zero;
         private readonly float THRESHOLD = 100;
         private KDTreeWrapper brick;
-        private static Microsoft.Xna.Framework.Matrix prevR;
+        private static XNAMatrix prevR;
         private static bool prevRKnown = false;
         private List<Vector3> qi;
         public double ICPInliers = 0, ICPOutliers = 0, ICPRatio = 0;
@@ -37,7 +38,7 @@ namespace KADA
         private const double MINICPRATIO = 2.0;
 
         public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue,
-            ConcurrentQueue<Vector3> centers, ConcurrentQueue<Microsoft.Xna.Framework.Matrix> rotations, Vector3 offset, PCViewer g)
+            ConcurrentQueue<Vector3> centers, ConcurrentQueue<XNAMatrix> rotations, Vector3 offset, PCViewer g)
         {
             this.brick = XYZFileLoader.Reader.readFromFile(offset);
             this.renderQueue = renderQueue;
@@ -135,16 +136,16 @@ namespace KADA
             Matrix H = new Matrix(3, 3);
             double[,] HArr = new double[3, 3];
             Matrix HTemp = new Matrix(3, 3);
-            Microsoft.Xna.Framework.Matrix R;
+            XNAMatrix R;
             if (!prevRKnown)
             {
-                R = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
+                R = XNAMatrix.CreateRotationX(0);
             }
             else
             {
                 R = prevR;
             }
-            Microsoft.Xna.Framework.Matrix RInv = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
+            XNAMatrix RInv = XNAMatrix.CreateRotationX(0);
             this.ICPRatio = 0;
             int iterations = 0;
             for (int i = 0; i < 15; i++)
@@ -155,7 +156,7 @@ namespace KADA
                 int count = 0;
                 if (R.Determinant() == 1)
                 {
-                    Microsoft.Xna.Framework.Matrix.Invert(ref R, out RInv);
+                    XNAMatrix.Invert(ref R, out RInv);
                 }
                 foreach (Vector3 v in qi)
                 {
@@ -211,7 +212,7 @@ namespace KADA
                 Matrix UT = U.Transpose();
                 Matrix X = V.Multiply(UT);
                 double[,] RArr = X.CopyToArray();
-                Microsoft.Xna.Framework.Matrix RTemp = new Microsoft.Xna.Framework.Matrix(
+                XNAMatrix RTemp = new XNAMatrix(
                     (float)RArr[0, 0],
                     (float)RArr[0, 1],
                     (float)RArr[0, 2],
@@ -226,8 +227,8 @@ namespace KADA
                     0,
                     0, 0, 0, 1
                     );
-                RTemp = Microsoft.Xna.Framework.Matrix.Transpose(RTemp);
-                R = Microsoft.Xna.Framework.Matrix.Multiply(R, RTemp);
+                RTemp = XNAMatrix.Transpose(RTemp);
+                R = XNAMatrix.Multiply(R, RTemp);
 
                 this.ICPInliers = currentICPInliers;
                 this.ICPOutliers = currentICPOutliers;
@@ -269,16 +270,16 @@ namespace KADA
             Matrix H = new Matrix(3, 3);
             double[,] HArr = new double[3, 3];
             Matrix HTemp = new Matrix(3, 3);
-            Microsoft.Xna.Framework.Matrix R;
+            XNAMatrix R;
             if (!prevRKnown)
             {
-                R = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
+                R = XNAMatrix.CreateRotationX(0);
             }
             else
             {
                 R = prevR;
             }
-            Microsoft.Xna.Framework.Matrix RInv = Microsoft.Xna.Framework.Matrix.CreateRotationX(0);
+            XNAMatrix RInv = XNAMatrix.CreateRotationX(0);
             this.ICPRatio = 0;
             int iterations = 0;
             for (int i = 0; i < 15; i++)
@@ -287,9 +288,9 @@ namespace KADA
                 currentICPInliers = 0;
                 currentICPOutliers = 0;
 
-                if (R.Determinant() == 1)
+                //if (R.Determinant() == 1)
                 {
-                    Microsoft.Xna.Framework.Matrix.Invert(ref R, out RInv);
+                    XNAMatrix.Invert(ref R, out RInv);
                 }
                 Matrix A = new Matrix(new double[6, 6]);
                 Vector B = new Vector(new double[6]);
@@ -299,7 +300,7 @@ namespace KADA
                     Vector3 vC = v - center;
                     vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
                     double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
-                    NearestNeighbour<Point> neighbour = brick.NearestNeighbors(vArr, 1, fDistance: THRESHOLD);
+                    NearestNeighbour<Point> neighbour = brick.NearestNeighbors(vArr, 5, fDistance: THRESHOLD);
                     neighbour.MoveNext();
                     Point p = neighbour.Current;
                     //this.ICPMisalignment += b.CurrentDistance;
@@ -307,11 +308,11 @@ namespace KADA
                     Vector3 n = p.normal;
                     Vector3 c = Vector3.Cross(pos, p.normal);
 
-                   /* if (neighbour.CurrentDistance > THRESHOLD)
+                    if (neighbour.CurrentDistance > THRESHOLD)
                     {
                         ICPOutliers++;
                         continue;
-                    }*/
+                    }
 
                     double[,] tmA = new double[6, 6];
                     tmA[0, 0] = c.X * c.X; tmA[0, 1] = c.X * c.Y; tmA[0, 2] = c.X * c.Z; tmA[0, 3] = c.X * n.X; tmA[0, 4] = c.X * n.Y; tmA[0, 5] = c.X * n.Z;
@@ -323,7 +324,7 @@ namespace KADA
 
                     double[] tempB = new double[6];
 
-                    float pMinqTimesN = Vector3.Dot(pos - v, n);
+                    float pMinqTimesN = Vector3.Dot(pos - vC, n);
 
                     tempB[0] = pMinqTimesN * c.X;
                     tempB[1] = pMinqTimesN * c.Y;
@@ -353,89 +354,30 @@ namespace KADA
                 }
 
                 LinearEquations LE = new LinearEquations();
-                Vector X = LE.Solve(A, B);
+                Vector X;
+                try
+                {
+                    X = LE.Solve(A, B);
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Debug.WriteLine(e.Message+"LE solver encountered an exception");
+                    break;
+                }
                 double[] XArr = X.ToArray();
-                Microsoft.Xna.Framework.Matrix RTemp = Microsoft.Xna.Framework.Matrix.CreateTranslation(Vector3.Zero);
-                
-                RTemp.M12 = (float)-XArr[2];
-                RTemp.M21 = (float)XArr[2];
-                RTemp.M13 = (float)XArr[1];
-                RTemp.M31 = (float)-XArr[1];
-                RTemp.M23 = (float)-XArr[0];
-                RTemp.M32 = (float)XArr[0];
+                XNAMatrix RTemp = XNAMatrix.CreateRotationX(0.1f*(float)XArr[0]);
 
-               /* RTemp.M41 = (float)XArr[3];
-                RTemp.M42 = (float)XArr[4];
-                RTemp.M43 = (float)XArr[5];*/
-
-                R = Microsoft.Xna.Framework.Matrix.Multiply(R, RTemp);
-
-                /*HArr[0, 0] = vC.X * pos.X;
-                HArr[0, 1] = vC.Y * pos.X;
-                HArr[0, 2] = vC.Z * pos.X;
-                HArr[1, 0] = vC.X * pos.Y;
-                HArr[1, 1] = vC.Y * pos.Y;
-                HArr[1, 2] = vC.Z * pos.Y;
-                HArr[2, 0] = vC.X * pos.Z;
-                HArr[2, 1] = vC.Y * pos.Z;
-                HArr[2, 2] = vC.Z * pos.Z;
-                HTemp = new Matrix(HArr);
-                if (b.CurrentDistance < 500)
-                {
-                    H.AddInplace(HTemp);
-                    if (b.CurrentDistance < 5)
-                    {
-                        currentICPInliers++;
-                    }
-                    else
-                    {
-                        currentICPOutliers++;
-                    }
-                }
-                else
-                {
-                    count--;
-                }
-            }
-
-            if (this.ICPRatio > MINICPRATIO && i > 2)
-            {
-                break;
-            }
-
-            H.Multiply(1.0 / (double)count);
-            DotNumerics.LinearAlgebra.SingularValueDecomposition s = new SingularValueDecomposition();
-            Matrix S, U, VT;
-            s.ComputeSVD(H, out S, out U, out VT);
-
-            Matrix V = VT.Transpose();
-            Matrix UT = U.Transpose();
-            Matrix X = V.Multiply(UT);
-            double[,] RArr = X.CopyToArray();
-            Microsoft.Xna.Framework.Matrix RTemp = new Microsoft.Xna.Framework.Matrix(
-                (float)RArr[0, 0],
-                (float)RArr[0, 1],
-                (float)RArr[0, 2],
-                0,
-                (float)RArr[1, 0],
-                (float)RArr[1, 1],
-                (float)RArr[1, 2],
-                0,
-                (float)RArr[2, 0],
-                (float)RArr[2, 1],
-                (float)RArr[2, 2],
-                0,
-                0, 0, 0, 1
-                );
-            RTemp = Microsoft.Xna.Framework.Matrix.Transpose(RTemp);
-            R = Microsoft.Xna.Framework.Matrix.Multiply(R, RTemp);
-                */
+                XNAMatrix Rot = XNAMatrix.CreateRotationY(0.1f * (float)XArr[1]);
+                RTemp = XNAMatrix.Multiply(RTemp, Rot);
+                Rot = XNAMatrix.CreateRotationZ(0.1f * (float)XArr[2]);
+                RTemp = XNAMatrix.Multiply(RTemp, Rot);
                 this.ICPInliers = currentICPInliers;
                 this.ICPOutliers = currentICPOutliers;
                 this.ICPRatio = this.ICPInliers / this.ICPOutliers;
+                R = XNAMatrix.Multiply(R, RTemp);
             }
             //System.Diagnostics.Debug.WriteLine(R.Determinant());
-            if (R.Determinant() == 1)
+            if (Math.Abs(R.Determinant() - 1)<0.001f)
             {
                 normalCounter++;
                 //if (this.ICPRatio > MINICPRATIO)
@@ -458,6 +400,9 @@ namespace KADA
             g.ICPRatio = this.ICPRatio;
             System.Diagnostics.Debug.WriteLine(iterations);
         }
+
+        
+        
         public void kMeans(Vector3[,] normals)
         {
             Bitmap norm = new Bitmap(640, 480);

@@ -27,7 +27,7 @@ namespace XYZFileLoader
             positions = new List<Vector3>();
             KDTreeWrapper kdTree;
             kdTree = new KDTreeWrapper();
-            string[] lines = System.IO.File.ReadAllLines("../../ressources/pointcloud/Duplo_5000samples_stratified_triangle.xyz");
+            string[] lines = System.IO.File.ReadAllLines("../../ressources/pointcloud/Duplo_cleaned_2500samples_stratified_triangle.xyz");
             string[] parts;
             foreach (string line in lines)
             {

@@ -61,10 +61,6 @@
       <Name>KDTree</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="Duplo_5000samples.xyz" />
-    <None Include="Duplo_5000samples_stratified_triangle.xyz" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

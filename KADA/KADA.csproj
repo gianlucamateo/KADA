@@ -101,6 +101,7 @@
     <AppDesigner Include="Properties\" />
     <None Include="ressources\pointcloud\Duplo_5000samples.xyz" />
     <None Include="ressources\pointcloud\Duplo_5000samples_stratified_triangle.xyz" />
+    <None Include="ressources\pointcloud\Duplo_cleaned_2500samples_stratified_triangle.xyz" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\dotNumerics\DotNumerics\DotNumerics VS2008.csproj">
