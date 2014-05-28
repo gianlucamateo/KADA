@@ -25,7 +25,7 @@ namespace KADA
         private ConcurrentQueue<Vector3> centers;
         private ConcurrentQueue<XNAMatrix> rotations;
         public Vector3 oldCenter = Vector3.Zero;
-        private readonly float THRESHOLD = 100;
+        private readonly float THRESHOLD = 200;
         private KDTreeWrapper brick;
         private static XNAMatrix prevR;
         private static bool prevRKnown = false;
@@ -262,7 +262,7 @@ namespace KADA
         {
             ICPDataContainer container = (ICPDataContainer)input;
             Vector3 center = container.center;
-            DepthColor[,] dc = container.dc;
+            //DepthColor[,] dc = container.dc;
             List<Vector3> qi = container.qi;
             this.ICPInliers = 0;
             int currentICPInliers = 0, currentICPOutliers = 0;
@@ -288,10 +288,9 @@ namespace KADA
                 currentICPInliers = 0;
                 currentICPOutliers = 0;
 
-                //if (R.Determinant() == 1)
-                {
-                    XNAMatrix.Invert(ref R, out RInv);
-                }
+                
+                XNAMatrix.Invert(ref R, out RInv);
+                
                 Matrix A = new Matrix(new double[6, 6]);
                 Vector B = new Vector(new double[6]);
                 foreach (Vector3 v in qi)
@@ -300,7 +299,7 @@ namespace KADA
                     Vector3 vC = v - center;
                     vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
                     double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
-                    NearestNeighbour<Point> neighbour = brick.NearestNeighbors(vArr, 5, fDistance: THRESHOLD);
+                    NearestNeighbour<Point> neighbour = brick.NearestNeighbors(vArr, 1, fDistance: THRESHOLD);
                     neighbour.MoveNext();
                     Point p = neighbour.Current;
                     //this.ICPMisalignment += b.CurrentDistance;
@@ -362,19 +361,30 @@ namespace KADA
                 catch (Exception e)
                 {
                     System.Diagnostics.Debug.WriteLine(e.Message+"LE solver encountered an exception");
+                    this.reset();
                     break;
                 }
-                double[] XArr = X.ToArray();
-                XNAMatrix RTemp = XNAMatrix.CreateRotationX(0.1f*(float)XArr[0]);
 
-                XNAMatrix Rot = XNAMatrix.CreateRotationY(0.1f * (float)XArr[1]);
+
+                X= X.Multiply(0.1);
+                double[] XArr = X.ToArray();
+                XNAMatrix RTemp = XNAMatrix.CreateRotationZ((float)XArr[2]);
+
+                XNAMatrix Rot = XNAMatrix.CreateRotationY((float)XArr[1]);
                 RTemp = XNAMatrix.Multiply(RTemp, Rot);
-                Rot = XNAMatrix.CreateRotationZ(0.1f * (float)XArr[2]);
+                Rot = XNAMatrix.CreateRotationX((float)XArr[0]);
                 RTemp = XNAMatrix.Multiply(RTemp, Rot);
+                Vector3 trans = new Vector3((float)(XArr[3]), (float)(XArr[4]), (float)(XArr[5]));
+                if (trans.Length() > 2)
+                {
+                    trans.Normalize();
+                }
+                RTemp = XNAMatrix.Multiply(RTemp, XNAMatrix.CreateTranslation(trans));
                 this.ICPInliers = currentICPInliers;
                 this.ICPOutliers = currentICPOutliers;
                 this.ICPRatio = this.ICPInliers / this.ICPOutliers;
                 R = XNAMatrix.Multiply(R, RTemp);
+                
             }
             //System.Diagnostics.Debug.WriteLine(R.Determinant());
             if (Math.Abs(R.Determinant() - 1)<0.001f)
@@ -401,6 +411,11 @@ namespace KADA
             System.Diagnostics.Debug.WriteLine(iterations);
         }
 
+        private void reset()
+        {
+            prevRKnown = false;
+            this.oldCenter = Vector3.Zero;
+        }
         
         
         public void kMeans(Vector3[,] normals)
