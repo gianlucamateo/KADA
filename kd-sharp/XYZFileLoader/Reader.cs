@@ -22,9 +22,11 @@ namespace XYZFileLoader
     public class Reader
     {
         public static List<Vector3> positions;
+        public static List<Point> points;
         public static KDTreeWrapper readFromFile(Vector3 offset)
         {
             positions = new List<Vector3>();
+            points = new List<Point>();
             KDTreeWrapper kdTree;
             kdTree = new KDTreeWrapper();
             string[] lines = System.IO.File.ReadAllLines("../../ressources/pointcloud/Duplo_cleaned_2500samples_stratified_triangle.xyz");
@@ -36,10 +38,47 @@ namespace XYZFileLoader
                 float y = float.Parse(parts[1]) * 10;// *2;
                 float z = float.Parse(parts[2]) * 10;// *2;
                 Vector3 pos = new Vector3(x, y, z);
+                Vector3 originalPos = pos;
                 pos += offset;// *2;
-                positions.Add(pos);
-                Point p = new Point(pos, new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
-                kdTree.AddPoint(pos, p);
+                
+                /*Vector3 normal = new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5]));
+                normal.Normalize();*/
+
+                Vector3 normal = Vector3.Zero;
+
+                if (Math.Abs(originalPos.X - 0) < 0.01)
+                {
+                    normal = -Vector3.UnitX;
+                }
+                if (Math.Abs(originalPos.X - 64) < 0.01)
+                {
+                    normal = Vector3.UnitX;
+                }
+
+                if (Math.Abs(originalPos.Y - 19.2) < 0.01)
+                {
+                    normal = Vector3.UnitY;
+                }
+
+                if (Math.Abs(originalPos.Z + 0) < 0.01)
+                {
+                    normal = Vector3.UnitZ;
+                }
+
+                if (Math.Abs(originalPos.Z + 32) < 0.01)
+                {
+                    normal = -Vector3.UnitZ;
+                }
+                                
+                Point p = new Point(pos, normal);
+
+                //if (Math.Abs(originalPos.X - 1.5f) > 0.01 && Math.Abs(originalPos.X - 62.5f) > 0.01 && Math.Abs(originalPos.Y - 17.7f) > 0.01 && Math.Abs(originalPos.Z + 30.5f) > 0.01 && Math.Abs(originalPos.Z + 1.5f) > 0.01)
+                if(normal!=Vector3.Zero)
+                {
+                    kdTree.AddPoint(pos, p);
+                    points.Add(p);
+                    positions.Add(pos);
+                }
                 /*
                 pos = new Vector3(x, y, z);
                 pos += offset;

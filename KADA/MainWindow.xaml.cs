@@ -278,7 +278,7 @@ namespace KADA
         private void OnButtonKeyDown(object sender, KeyEventArgs e)
         {
             //_3Dprocessor.scanNormals();
-            _3Dprocessor.oldCenter = Vector3.Zero;
+            _3Dprocessor.reset();
 
             System.Diagnostics.Debug.WriteLine(e.Key.ToString());
         }

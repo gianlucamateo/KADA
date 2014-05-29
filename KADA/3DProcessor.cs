@@ -284,6 +284,7 @@ namespace KADA
             int iterations = 0;
             for (int i = 0; i < 15; i++)
             {
+                bool skip = false;
                 iterations = i;
                 currentICPInliers = 0;
                 currentICPOutliers = 0;
@@ -293,19 +294,49 @@ namespace KADA
                 
                 Matrix A = new Matrix(new double[6, 6]);
                 Vector B = new Vector(new double[6]);
+                XNAMatrix onlyRot = new XNAMatrix();
+                onlyRot.M11 = R.M11;
+                onlyRot.M12 = R.M12;
+                onlyRot.M13 = R.M13;
+                onlyRot.M21 = R.M21;
+                onlyRot.M22 = R.M22;
+                onlyRot.M23 = R.M23;
+                onlyRot.M31 = R.M31;
+                onlyRot.M32 = R.M32;
+                onlyRot.M33 = R.M33;
                 foreach (Vector3 v in qi)
                 {
 
                     Vector3 vC = v - center;
                     vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
                     double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
-                    NearestNeighbour<Point> neighbour = brick.NearestNeighbors(vArr, 1, fDistance: THRESHOLD);
+                    NearestNeighbour<Point> neighbour = brick.NearestNeighbors(vArr, 5, fDistance: THRESHOLD);
                     neighbour.MoveNext();
-                    Point p = neighbour.Current;
-                    //this.ICPMisalignment += b.CurrentDistance;
+                    Point p;
+                    Vector3 transformedNormal = Vector3.Zero;
+                    if (this.ICPRatio > 0.8f)
+                    {
+                        transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
+                        while (Vector3.Dot(transformedNormal, Vector3.UnitZ) > -0.1f)
+                        {
+                            if (neighbour.MoveNext() == false)
+                            {
+                                break;
+                            }
+                            transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
+                        }
+                    }
+                                        
+                    p = neighbour.Current;
+                    //transformedNormal = Vector3.Transform(p.normal, onlyRot);
+                    if (p.normal == Vector3.Zero)
+                    {
+                        continue;
+                    }
+
                     Vector3 pos = p.position;
-                    Vector3 n = p.normal;
-                    Vector3 c = Vector3.Cross(pos, p.normal);
+                    Vector3 n = p.normal; //+new Vector3(0.3f, 0.001f, 0.001f);
+                    Vector3 c = Vector3.Cross(pos, n);
 
                     if (neighbour.CurrentDistance > THRESHOLD)
                     {
@@ -353,38 +384,43 @@ namespace KADA
                 }
 
                 LinearEquations LE = new LinearEquations();
-                Vector X;
+                Vector X = null;
                 try
                 {
                     X = LE.Solve(A, B);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    System.Diagnostics.Debug.WriteLine(e.Message+"LE solver encountered an exception");
-                    this.reset();
-                    break;
+                    System.Diagnostics.Debug.WriteLine("LE solver encountered an exception");
+                    Vector3 prominentNormal = g.Normals[2];
+                    XNAMatrix rot = XNAMatrix.CreateFromAxisAngle(prominentNormal, 0.1f);
+                    R = XNAMatrix.Multiply(R, rot);
+                    //this.reset();
+                    skip = true;
                 }
 
-
-                X= X.Multiply(0.1);
-                double[] XArr = X.ToArray();
-                XNAMatrix RTemp = XNAMatrix.CreateRotationZ((float)XArr[2]);
-
-                XNAMatrix Rot = XNAMatrix.CreateRotationY((float)XArr[1]);
-                RTemp = XNAMatrix.Multiply(RTemp, Rot);
-                Rot = XNAMatrix.CreateRotationX((float)XArr[0]);
-                RTemp = XNAMatrix.Multiply(RTemp, Rot);
-                Vector3 trans = new Vector3((float)(XArr[3]), (float)(XArr[4]), (float)(XArr[5]));
-                if (trans.Length() > 2)
+                if (!skip)
                 {
-                    trans.Normalize();
+                    X = X.Multiply(0.1);
+                    double[] XArr = X.ToArray();
+                    XNAMatrix RTemp = XNAMatrix.CreateRotationZ((float)XArr[2]);
+
+                    XNAMatrix Rot = XNAMatrix.CreateRotationY((float)XArr[1]);
+                    RTemp = XNAMatrix.Multiply(RTemp, Rot);
+                    Rot = XNAMatrix.CreateRotationX((float)XArr[0]);
+                    RTemp = XNAMatrix.Multiply(RTemp, Rot);
+                    Vector3 trans = new Vector3((float)(XArr[3]), (float)(XArr[4]), (float)(XArr[5]));
+                    if (trans.Length() > 2)
+                    {
+                        trans.Normalize();
+                    }
+                    RTemp = XNAMatrix.Multiply(RTemp, XNAMatrix.CreateTranslation(trans));
+                    R = XNAMatrix.Multiply(R, RTemp);
+
                 }
-                RTemp = XNAMatrix.Multiply(RTemp, XNAMatrix.CreateTranslation(trans));
                 this.ICPInliers = currentICPInliers;
                 this.ICPOutliers = currentICPOutliers;
                 this.ICPRatio = this.ICPInliers / this.ICPOutliers;
-                R = XNAMatrix.Multiply(R, RTemp);
-                
             }
             //System.Diagnostics.Debug.WriteLine(R.Determinant());
             if (Math.Abs(R.Determinant() - 1)<0.001f)
@@ -411,7 +447,7 @@ namespace KADA
             System.Diagnostics.Debug.WriteLine(iterations);
         }
 
-        private void reset()
+        public void reset()
         {
             prevRKnown = false;
             this.oldCenter = Vector3.Zero;

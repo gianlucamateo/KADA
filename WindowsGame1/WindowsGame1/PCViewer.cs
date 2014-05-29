@@ -16,6 +16,7 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using KADA;
 using XYZFileLoader;
+using Point = XYZFileLoader.Point;
 
 
 namespace KADA
@@ -135,6 +136,7 @@ namespace KADA
         
         private void UpdateInstanceInformation()
         {
+            
             DepthColor[,] depth = null;
             bool frameLoaded = false;
 
@@ -168,16 +170,40 @@ namespace KADA
                     }
                 }
                 this.depthsPool.Enqueue(depth); 
-                foreach(Vector3 v in Reader.positions){
+                foreach(Point v in Reader.points){
                     Matrix transform = brickRotation * brickTranslation;
-                    Vector3 pos = Vector3.Transform(v, transform);
-                    if (i % 5 == 0)
+                    Vector3 pos = Vector3.Transform(v.position, transform);
+                    Matrix onlyRot = new Matrix();
+                    onlyRot.M11 = brickRotation.M11;
+                    onlyRot.M12 = brickRotation.M12;
+                    onlyRot.M13 = brickRotation.M13;
+                    onlyRot.M21 = brickRotation.M21;
+                    onlyRot.M22 = brickRotation.M22;
+                    onlyRot.M23 = brickRotation.M23;
+                    onlyRot.M31 = brickRotation.M31;
+                    onlyRot.M32 = brickRotation.M32;
+                    onlyRot.M33 = brickRotation.M33;
+                    float distZ = brickTranslation.M43 + brickRotation.M43;
+                    Vector3 transformedNormal = Vector3.Transform(v.normal, onlyRot);
+                    //if (i % 5 == 0)
+                    if (Vector3.Dot(transformedNormal, Vector3.UnitZ) > -0.1f)
                     {
                         instances[i].ScreenPos = pos;
-                        instances[i].Scale = 0.3f;  
+                        instances[i].Scale = 0.4f;
+                        instances[i].Color = new Vector3(0, 255, 100);
+                    }
+                    else
+                    {
+                        instances[i].ScreenPos = pos;
+                        instances[i].Scale = 0.2f;
                         instances[i].Color = new Vector3(255, 0, 100);
                     }
                     i++;
+                }
+                for (int o = i; o < instances.Length; o++)
+                {
+                    instances[o].ScreenPos.Z = float.MaxValue;
+                    instances[o].Scale = 0f;
                 }
                 Vector3 center = Vector3.Transform(Vector3.One, brickTranslation);
                 for (int o = 0; o < 3; o++)
