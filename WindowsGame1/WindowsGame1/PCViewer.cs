@@ -186,7 +186,7 @@ namespace KADA
                     float distZ = brickTranslation.M43 + brickRotation.M43;
                     Vector3 transformedNormal = Vector3.Transform(v.normal, onlyRot);
                     //if (i % 5 == 0)
-                    if (Vector3.Dot(transformedNormal, Vector3.UnitZ) > -0.1f)
+                    if (Vector3.Dot(transformedNormal, Vector3.UnitZ) > 0)//-0.1f)
                     {
                         instances[i].ScreenPos = pos;
                         instances[i].Scale = 0.4f;
