@@ -67,6 +67,9 @@ namespace KADA
         VertexDeclaration instanceVertexDeclaration;
         InstanceInfo[] instances;
 
+        private float frameTime = 0;
+        private DateTime lastTick = DateTime.Now;
+
         public Vector3 offset = new Vector3(-36.5f, -17f, 15f);
 
         private Matrix brickTranslation=Matrix.CreateTranslation(new Vector3(0,0,0));
@@ -99,6 +102,13 @@ namespace KADA
             public float Scale;
             public Vector3 Color;
         };
+
+        public void recordTick()
+        {
+            this.frameTime = (DateTime.Now - this.lastTick).Milliseconds+frameTime;
+            this.frameTime = frameTime / 2;
+            this.lastTick = DateTime.Now;
+        }
 
         public void SetBrickTranslate(Matrix b)
         {
@@ -186,7 +196,7 @@ namespace KADA
                     float distZ = brickTranslation.M43 + brickRotation.M43;
                     Vector3 transformedNormal = Vector3.Transform(v.normal, onlyRot);
                     //if (i % 5 == 0)
-                    if (Vector3.Dot(transformedNormal, Vector3.UnitZ) > 0)//-0.1f)
+                    if (Vector3.Dot(transformedNormal, Vector3.UnitZ) > 0.3f)//-0.1f)
                     {
                         instances[i].ScreenPos = pos;
                         instances[i].Scale = 0.4f;
@@ -345,7 +355,7 @@ namespace KADA
                 transformationUpdater = new Task(() => this.UpdateInstanceInformation());
                 transformationUpdater.Start();
             }
-            this.Window.Title = "Inliers: " + this.ICPInliers+", Outliers: "+ this.ICPOutliers +", Ratio: "+ this.ICPRatio;
+            this.Window.Title = "Inliers: " + this.ICPInliers+", Outliers: "+ this.ICPOutliers + " Total Points: " + (this.ICPInliers+this.ICPOutliers) +", Ratio: "+ Math.Round(this.ICPRatio,2) + " Frametime: " + this.frameTime + "ms";
 
             base.Update(gameTime);
         }  

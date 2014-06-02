@@ -239,7 +239,7 @@ namespace KADA
             if (processColors)
             {
                 System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(this._2Dprocessor.eliminateColor), depth);
-                _2DProcessor.resetEvent.WaitOne();
+                //_2DProcessor.resetEvent.WaitOne();
                 System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(this._3Dprocessor.generateCenter));
                 Vector3 center;
                 if (centers.TryDequeue(out center) == true)

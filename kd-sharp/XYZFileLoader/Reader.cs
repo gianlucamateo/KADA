@@ -21,6 +21,7 @@ namespace XYZFileLoader
 
     public class Reader
     {
+        private const float SCALE = 1;
         public static List<Vector3> positions;
         public static List<Point> points;
         public static KDTreeWrapper readFromFile(Vector3 offset)
@@ -34,12 +35,13 @@ namespace XYZFileLoader
             foreach (string line in lines)
             {
                 parts = line.Split(' ');
-                float x = float.Parse(parts[0]) * 10;// *2;
-                float y = float.Parse(parts[1]) * 10;// *2;
-                float z = float.Parse(parts[2]) * 10;// *2;
+                float x = float.Parse(parts[0]) * 10;
+                float y = float.Parse(parts[1]) * 10;
+                float z = float.Parse(parts[2]) * 10;
                 Vector3 pos = new Vector3(x, y, z);
                 Vector3 originalPos = pos;
-                pos += offset;// *2;
+                pos *= SCALE;
+                pos += offset*SCALE;
                 
                 /*Vector3 normal = new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5]));
                 normal.Normalize();*/
