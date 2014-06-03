@@ -17,6 +17,9 @@ namespace XYZFileLoader
             normal = nor;
             positionArr = new double[] { pos.X, pos.Y, pos.Z };
         }
+        public Point Copy(){
+            return new Point(this.position, this.normal);
+        }
     }
 
     public class Reader
@@ -24,8 +27,18 @@ namespace XYZFileLoader
         private const float SCALE = 1;
         public static List<Vector3> positions;
         public static List<Point> points;
-        public static KDTreeWrapper readFromFile(Vector3 offset)
+
+        public static List<Point> getPoints()
         {
+            if (points == null)
+            {
+                readFromFile();
+            }
+            return new List<Point>(points);
+        }
+        public static void readFromFile()
+        {
+            Vector3 offset = new Vector3(-36.5f, -17f, 15f);
             positions = new List<Vector3>();
             points = new List<Point>();
             KDTreeWrapper kdTree;
@@ -95,7 +108,7 @@ namespace XYZFileLoader
                 p = new Point(pos, new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5])));
                 kdTree.AddPoint(pos, p);*/
             }
-            return kdTree;
+            //return kdTree;
         }
     }
 }

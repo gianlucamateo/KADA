@@ -47,6 +47,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Brick.cs" />
+    <Compile Include="LocatedBrick.cs" />
+    <Compile Include="Model.cs" />
     <Compile Include="KDTreeWrapper.cs" />
     <Compile Include="Reader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

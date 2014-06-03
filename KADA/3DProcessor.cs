@@ -15,36 +15,36 @@ using Point = XYZFileLoader.Point;
 using DotNumerics.LinearAlgebra;
 using Matrix = DotNumerics.LinearAlgebra.Matrix;
 using XNAMatrix = Microsoft.Xna.Framework.Matrix;
+using Model = XYZFileLoader.Model;
 
 
 namespace KADA
 {
-    class _3DProcessor
+    public class _3DProcessor
     {
         private ConcurrentQueue<DepthColor[,]> renderQueue, processingQueue;
         private ConcurrentQueue<Vector3> centers;
         private ConcurrentQueue<XNAMatrix> rotations;
         public Vector3 oldCenter = Vector3.Zero;
         private readonly float THRESHOLD = 200;
-        private KDTreeWrapper brick;
+        private KDTreeWrapper brickWrapper;
         private static XNAMatrix prevR;
         private static bool prevRKnown = false;
         private List<Vector3> qi;
         public double ICPInliers = 0, ICPOutliers = 0, ICPRatio = 0;
         private PCViewer g;
         private XNAMatrix lastConfidentR;
-        
-      
-       
+        private Model model;
 
         private int normalCounter = 0;
 
         private const double MINICPRATIO = 3;
 
         public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue,
-            ConcurrentQueue<Vector3> centers, ConcurrentQueue<XNAMatrix> rotations, Vector3 offset, PCViewer g)
+            ConcurrentQueue<Vector3> centers, ConcurrentQueue<XNAMatrix> rotations, PCViewer g)
         {
-            this.brick = XYZFileLoader.Reader.readFromFile(offset);
+            this.model = new Model();
+            this.brickWrapper = model.getKDTree();
             this.renderQueue = renderQueue;
             this.processingQueue = processingQueue;
             this.rotations = rotations;
@@ -52,6 +52,8 @@ namespace KADA
             this.qi = new List<Vector3>();
             this.g = g;
             this.lastConfidentR = new XNAMatrix();
+
+
         }
           
 
@@ -170,7 +172,7 @@ namespace KADA
                     vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
 
                     double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
-                    NearestNeighbour<Point> b = brick.NearestNeighbors(vArr, 1, fDistance: THRESHOLD);
+                    NearestNeighbour<Point> b = brickWrapper.NearestNeighbors(vArr, 1, fDistance: THRESHOLD);
                     b.MoveNext();
                     Point p = b.Current;
                     //this.ICPMisalignment += b.CurrentDistance;
@@ -320,7 +322,7 @@ namespace KADA
                     Vector3 vC = v - center;
                     vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
                     double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
-                    NearestNeighbour<Point> neighbour = brick.NearestNeighbors(vArr, 5, fDistance: THRESHOLD);
+                    NearestNeighbour<Point> neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: THRESHOLD);
                     neighbour.MoveNext();
                     Point p;
                     Vector3 transformedNormal = Vector3.Zero;
@@ -508,7 +510,7 @@ namespace KADA
                     //this.reset();
                     //this.lastConfidentR = XNAMatrix.Identity;
                 }
-                if (resetCount > 15)
+                if (resetCount == 8)
                 {
                     System.Diagnostics.Debug.WriteLine("RESET");
                     this.reset();

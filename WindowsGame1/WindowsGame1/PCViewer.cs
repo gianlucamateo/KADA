@@ -14,9 +14,11 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.Collections.Concurrent;
-using KADA;
+
 using XYZFileLoader;
 using Point = XYZFileLoader.Point;
+using XNAModel = Microsoft.Xna.Framework.Graphics.Model;
+using Model = XYZFileLoader.Model;
 
 
 namespace KADA
@@ -52,7 +54,7 @@ namespace KADA
         Int32 count = 640 * 480 + 100000;
         Viewport PCViewport;
         Viewport BrickViewport;
-        Model brick;
+        XNAModel brick;
         Texture2D brickTexture;
 
         GraphicsDeviceManager graphics;
@@ -179,7 +181,8 @@ namespace KADA
                         i++;
                     }
                 }
-                this.depthsPool.Enqueue(depth); 
+                this.depthsPool.Enqueue(depth);
+                
                 foreach(Point v in Reader.points){
                     Matrix transform = brickRotation * brickTranslation;
                     Vector3 pos = Vector3.Transform(v.position, transform);
@@ -285,7 +288,9 @@ namespace KADA
             Content.RootDirectory = "Content";
             this.IsFixedTimeStep = true;
         }
-           
+
+        
+
         /// <summary>
         /// Allows the game to perform any initialization it needs to before starting to run.
         /// This is where it can query for any required services and load any non-graphic
@@ -313,7 +318,7 @@ namespace KADA
             GenerateInstanceVertexDeclaration();
             GenerateInstanceInformation();
             spriteFont = Content.Load<SpriteFont>("FPS");
-            brick = Content.Load<Model>("Models\\duploblock");
+            brick = Content.Load<XNAModel>("Models\\duploblock");
             brickTexture = Content.Load<Texture2D>("Textures\\Exploded_cube_map");
             
 
@@ -452,6 +457,23 @@ namespace KADA
             {
                 this.saveColors = true;
             }
+            if (kS.IsKeyDown(Keys.V))
+            {
+                CameraUp = new Vector3(0,1,1.2f);
+                CameraUp.Normalize();
+                CameraLookAt = new Vector3(-415, 270, -715);
+                CameraPosition = new Vector3(-750, 310, -580);
+            }
+
+            if (kS.IsKeyDown(Keys.K))
+            {
+                CameraUp = Vector3.UnitY;
+                CameraPosition = new Vector3(0, 0,0);
+                CameraLookAt = new Vector3(0, 0, -370);
+       
+            }
+
+           
             UpdateView();
         }
        

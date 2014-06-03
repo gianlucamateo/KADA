@@ -145,7 +145,7 @@ namespace KADA
 
 
                 g = new PCViewer(renderQueue, depthPool);//, this);
-
+                
                 pcviewer = Dispatcher.BeginInvoke(new Action(() =>
                 {
                     g.Run();
@@ -161,8 +161,9 @@ namespace KADA
                     this.kinect = null;
                     this.Title = "NOT READY";
                 }
-
-                _3Dprocessor = new _3DProcessor(processingQueue, renderQueue, centers, rotations, g.offset, g);
+                _3Dprocessor = new _3DProcessor(processingQueue, renderQueue, centers, rotations, g);
+                
+                
 
             }
 

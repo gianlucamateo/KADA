@@ -120,9 +120,9 @@
     <Content Include="GameThumbnail.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\kd-sharp\XYZFileLoader\XYZFileLoader.csproj">
+    <ProjectReference Include="..\..\kd-sharp\XYZFileLoader\ModelManager.csproj">
       <Project>{3E8764A8-729E-4E6F-84A7-D01608AAD9DA}</Project>
-      <Name>XYZFileLoader</Name>
+      <Name>ModelManager</Name>
     </ProjectReference>
     <ProjectReference Include="..\WindowsGame1Content\PCViewer_Content.contentproj">
       <Name>PCViewer_Content %28Content%29</Name>

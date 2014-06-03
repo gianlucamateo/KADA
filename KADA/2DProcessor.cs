@@ -315,7 +315,7 @@ namespace KADA
 									maxval = val;
 								}
 							}
-							if (maxval == 0)
+							if (maxval == 0 || color.X + color.Y + color.Z < 150)
 							{
 								//pixel.Position.Z = 0;
 								pixel.Depth = 0;
