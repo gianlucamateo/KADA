@@ -9,7 +9,7 @@ namespace XYZFileLoader
 
     public class Model
     {
-        private List<Point> points;
+        public List<Point> points;
         private Brick[, ,] voxelGrid = new Brick[40, 40, 40];
         private List<Point>[, ,] pointGrid = new List<Point>[40, 40, 40];
         private List<LocatedBrick> bricks;
@@ -18,6 +18,7 @@ namespace XYZFileLoader
         {
             this.bricks = new List<LocatedBrick>();
             this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0)));
+
 
             for (int x = 0; x < voxelGrid.GetLength(0); x++)
             {

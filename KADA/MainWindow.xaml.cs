@@ -11,7 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using System.Runtime.InteropServices;
+
 
 using System.IO;
 using Microsoft.Kinect;
@@ -58,10 +58,10 @@ namespace KADA
         private Thread bitmapFiller, depthUpdater, imageProcessorThread;
 
 
-        System.Windows.Threading.DispatcherOperation pcviewer;
+        
 
 
-        PCViewer g;
+       
 
         _2DProcessor _2Dprocessor;
 
@@ -144,12 +144,7 @@ namespace KADA
 
 
 
-                g = new PCViewer(renderQueue, depthPool);//, this);
                 
-                pcviewer = Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    g.Run();
-                }));
 
                 this.kinect.AllFramesReady += this.KinectAllFramesReady;
                 try
@@ -161,7 +156,7 @@ namespace KADA
                     this.kinect = null;
                     this.Title = "NOT READY";
                 }
-                _3Dprocessor = new _3DProcessor(processingQueue, renderQueue, centers, rotations, g);
+                _3Dprocessor = new _3DProcessor(processingQueue, renderQueue, centers, rotations, depthPool);
                 
                 
 
@@ -180,7 +175,8 @@ namespace KADA
             int x = this.image.Height;
             // Bitmap temp = new Bitmap(this.image);
             //temp.Save("file.png");
-            g.Exit();
+            _3Dprocessor.exit();
+            
         }
 
 
@@ -245,10 +241,10 @@ namespace KADA
                 Vector3 center;
                 if (centers.TryDequeue(out center) == true)
                 {
-                    this.g.SetBrickTranslate(Matrix.CreateTranslation(center));
+                    _3Dprocessor.g.SetBrickTranslate(Matrix.CreateTranslation(center));
                     Matrix R;
                     if(rotations.TryDequeue(out R)){
-                        this.g.SetBrickRotation(R);
+                        _3Dprocessor.g.SetBrickRotation(R);
                     }
                     //Debug.WriteLine(center);
                 }
@@ -316,12 +312,12 @@ namespace KADA
                 //this.kinect.CoordinateMapper.MapColorFrameToDepthFrame(ColorImageFormat.RgbResolution640x480Fps30, DepthImageFormat.Resolution640x480Fps30, this.depthPixels, this.depthPoints);
                 this.kinect.CoordinateMapper.MapDepthFrameToColorFrame(DepthImageFormat.Resolution640x480Fps30, this.depthPixels, ColorImageFormat.RgbResolution640x480Fps30, this.colorPoints);
 
-                Boolean processColors = g.saveColors;
+                Boolean processColors = _3Dprocessor.g.saveColors;
                 System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(UpdateDepthData), processColors);
                 /*depthUpdater = new Thread(new ThreadStart(() => UpdateDepthData(saveToFile)));
                 depthUpdater.Start();*/
 
-                if (!this._2Dprocessor.BackgroundReady() && this.g.generateBackground)
+                if (!this._2Dprocessor.BackgroundReady() && _3Dprocessor.g.generateBackground)
                 {
                     imageProcessorThread = new Thread(new ThreadStart(() => _2Dprocessor.GenerateBackground(depthPixels)));
                     imageProcessorThread.Start();

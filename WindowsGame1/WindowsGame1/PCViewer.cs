@@ -93,6 +93,7 @@ namespace KADA
         bool freeze = false;
         public bool generateBackground = false;
         public bool saveColors = false;
+        private Model model;
 
         Task transformationUpdater;
 
@@ -183,7 +184,7 @@ namespace KADA
                 }
                 this.depthsPool.Enqueue(depth);
                 
-                foreach(Point v in Reader.points){
+                foreach(Point v in model.points){
                     Matrix transform = brickRotation * brickTranslation;
                     Vector3 pos = Vector3.Transform(v.position, transform);
                     Matrix onlyRot = new Matrix();
@@ -289,7 +290,9 @@ namespace KADA
             this.IsFixedTimeStep = true;
         }
 
-        
+        public void setModel(Model m){
+            this.model = m;
+        }
 
         /// <summary>
         /// Allows the game to perform any initialization it needs to before starting to run.

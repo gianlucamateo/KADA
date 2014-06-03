@@ -18,6 +18,9 @@ using XNAMatrix = Microsoft.Xna.Framework.Matrix;
 using Model = XYZFileLoader.Model;
 
 
+using System.Windows.Threading;
+
+
 namespace KADA
 {
     public class _3DProcessor
@@ -32,16 +35,17 @@ namespace KADA
         private static bool prevRKnown = false;
         private List<Vector3> qi;
         public double ICPInliers = 0, ICPOutliers = 0, ICPRatio = 0;
-        private PCViewer g;
+        public PCViewer g;
         private XNAMatrix lastConfidentR;
         private Model model;
+        System.Windows.Threading.DispatcherOperation pcviewer;
 
         private int normalCounter = 0;
 
         private const double MINICPRATIO = 3;
 
         public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue,
-            ConcurrentQueue<Vector3> centers, ConcurrentQueue<XNAMatrix> rotations, PCViewer g)
+            ConcurrentQueue<Vector3> centers, ConcurrentQueue<XNAMatrix> rotations, ConcurrentQueue<DepthColor[,]> depthPool)
         {
             this.model = new Model();
             this.brickWrapper = model.getKDTree();
@@ -50,12 +54,21 @@ namespace KADA
             this.rotations = rotations;
             this.centers = centers;
             this.qi = new List<Vector3>();
-            this.g = g;
+            //this.g = g;
             this.lastConfidentR = new XNAMatrix();
 
+            this.g = new PCViewer(renderQueue, depthPool);//, this);
 
+            pcviewer = Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
+            {
+                g.Run();
+            }));
+            g.setModel(this.model);
         }
-          
+         
+        public void exit(){
+            g.Exit();
+        }
 
         public void generateCenter(Object dcIn)
         {

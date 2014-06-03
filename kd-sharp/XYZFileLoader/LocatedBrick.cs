@@ -13,7 +13,7 @@ namespace XYZFileLoader
         public Vector3 voxelOffset;
         private Brick brick;
         private Vector3 root = new Vector3(20, 20, 20);
-        private Vector3 voxelDimensions = new Vector3(63.0f / 4, 31.5f / 2, 19);
+        private Vector3 voxelDimensions = new Vector3(63.0f / 4,19f, 31.5f / 2);
 
         public LocatedBrick(bool rotated, Vector3 voxelOffset)
         {
@@ -30,11 +30,11 @@ namespace XYZFileLoader
                 {
                     if (rotated == false)
                     {
-                        voxelGrid[(int)voxelOffset.X + BrickX, (int)voxelOffset.Y + BrickY, (int)voxelOffset.Z] = this.brick;
+                        voxelGrid[(int)voxelOffset.X + BrickX,  (int)voxelOffset.Z,(int)voxelOffset.Y + BrickY] = this.brick;
                     }
                     else
                     {
-                        voxelGrid[(int)voxelOffset.X + BrickY, (int)voxelOffset.Y + BrickX, (int)voxelOffset.Z] = this.brick;
+                        voxelGrid[(int)voxelOffset.X + BrickY,  (int)voxelOffset.Z,(int)voxelOffset.Y + BrickX] = this.brick;
                     }
                 }
             }
@@ -45,10 +45,27 @@ namespace XYZFileLoader
                 int x = Math.Max((int)(p.position.X / voxelDimensions.X),3) + (int)voxelOffset.X;
                 int y = Math.Max((int)(p.position.Y / voxelDimensions.Y), 1) + (int)voxelOffset.Y;
                 int z = (int)voxelOffset.Z;
+                if (rotated)
+                {
+                    int save = x;
+                    x = y;
+                    y = save;
+                }
+                
                 Point pCopy = p.Copy();
                 pCopy.position.X += voxelOffset.X * voxelDimensions.X;
                 pCopy.position.Y += voxelOffset.Y * voxelDimensions.Y;
                 pCopy.position.Z += voxelOffset.Z * voxelDimensions.Z;
+                if (rotated)
+                {
+                    float save = pCopy.position.X;
+                    pCopy.position.X = pCopy.position.Z;
+                    pCopy.position.Z = save;
+
+                    save = pCopy.normal.X;
+                    pCopy.normal.X = pCopy.normal.Z;
+                    pCopy.normal.Z = save;
+                }
                 pointGrid[x, y, z].Add(pCopy); 
                 
             }
