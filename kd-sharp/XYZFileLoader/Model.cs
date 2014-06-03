@@ -18,7 +18,7 @@ namespace XYZFileLoader
         {
             this.bricks = new List<LocatedBrick>();
             this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0)));
-
+            this.bricks.Add(new LocatedBrick(true, new Vector3(3, 1, -3)));
 
             for (int x = 0; x < voxelGrid.GetLength(0); x++)
             {
@@ -26,6 +26,7 @@ namespace XYZFileLoader
                 {
                     for (int z = 0; z < voxelGrid.GetLength(2); z++)
                     {
+                        
                         pointGrid[x, y, z] = new List<Point>();
                     }
                 }

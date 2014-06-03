@@ -38,7 +38,7 @@ namespace XYZFileLoader
         }
         public static void readFromFile()
         {
-            Vector3 offset = new Vector3(-36.5f, -17f, 15f);
+            //Vector3 offset = new Vector3(-36.5f, -17f, 15f);
             positions = new List<Vector3>();
             points = new List<Point>();
             KDTreeWrapper kdTree;
@@ -54,7 +54,7 @@ namespace XYZFileLoader
                 Vector3 pos = new Vector3(x, y, z);
                 Vector3 originalPos = pos;
                 pos *= SCALE;
-                pos += offset*SCALE;
+                //pos += offset*SCALE;
                 
                 /*Vector3 normal = new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5]));
                 normal.Normalize();*/

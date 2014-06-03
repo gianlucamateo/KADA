@@ -20,6 +20,12 @@ namespace XYZFileLoader
             this.rotated = rotated;
             this.voxelOffset = voxelOffset;
             this.brick = new Brick();
+            if (rotated)
+            {
+                float save = this.voxelOffset.X;
+                this.voxelOffset.X = this.voxelOffset.Z;
+                this.voxelOffset.Z = save;
+            }
         }
 
         public void insert(List<Point>[, ,] pointGrid, Brick[, ,] voxelGrid)
@@ -30,21 +36,21 @@ namespace XYZFileLoader
                 {
                     if (rotated == false)
                     {
-                        voxelGrid[(int)voxelOffset.X + BrickX,  (int)voxelOffset.Z,(int)voxelOffset.Y + BrickY] = this.brick;
+                        voxelGrid[(int)voxelOffset.X + BrickX + (int)root.X, (int)voxelOffset.Z + (int)root.Z, (int)voxelOffset.Y + BrickY + (int)root.Z] = this.brick;
                     }
                     else
                     {
-                        voxelGrid[(int)voxelOffset.X + BrickY,  (int)voxelOffset.Z,(int)voxelOffset.Y + BrickX] = this.brick;
+                        voxelGrid[(int)voxelOffset.X + BrickY + (int)root.X, (int)voxelOffset.Z + (int)root.Y, (int)voxelOffset.Y + BrickX + (int)root.Z] = this.brick;
                     }
                 }
             }
             foreach (Point p in this.brick.points)
             {
 
-                //TODO: ROTATION
-                int x = Math.Max((int)(p.position.X / voxelDimensions.X),3) + (int)voxelOffset.X;
-                int y = Math.Max((int)(p.position.Y / voxelDimensions.Y), 1) + (int)voxelOffset.Y;
-                int z = (int)voxelOffset.Z;
+                //TODO: SWAP Y AND Z
+                int x = Math.Max((int)(p.position.X / voxelDimensions.X), 3) + (int)voxelOffset.X + (int)root.X;
+                int y = Math.Max((int)(p.position.Y / voxelDimensions.Y), 1) + (int)voxelOffset.Y + (int)root.Y;
+                int z = (int)voxelOffset.Z + (int)root.Z;
                 if (rotated)
                 {
                     int save = x;
@@ -66,6 +72,8 @@ namespace XYZFileLoader
                     pCopy.normal.X = pCopy.normal.Z;
                     pCopy.normal.Z = save;
                 }
+                Vector3 offset = new Vector3(-36.5f, -17f, 15f);
+                pCopy.position += offset;
                 pointGrid[x, y, z].Add(pCopy); 
                 
             }

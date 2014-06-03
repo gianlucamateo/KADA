@@ -144,9 +144,6 @@ namespace KADA
 
 
 
-                
-
-                this.kinect.AllFramesReady += this.KinectAllFramesReady;
                 try
                 {
                     this.kinect.Start();
@@ -157,7 +154,7 @@ namespace KADA
                     this.Title = "NOT READY";
                 }
                 _3Dprocessor = new _3DProcessor(processingQueue, renderQueue, centers, rotations, depthPool);
-                
+                this.kinect.AllFramesReady += this.KinectAllFramesReady;
                 
 
             }
