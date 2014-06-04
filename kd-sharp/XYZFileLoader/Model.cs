@@ -10,8 +10,9 @@ namespace XYZFileLoader
     public class Model
     {
         public List<Point> points;
-        private Brick[, ,] voxelGrid = new Brick[40, 40, 40];
-        private List<Point>[, ,] pointGrid = new List<Point>[40, 40, 40];
+        public const int DIMENSION = 10;
+        private Brick[, ,] voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
+        private List<Point>[, ,] pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
         private List<LocatedBrick> bricks;
 
         public Model()
@@ -19,6 +20,7 @@ namespace XYZFileLoader
             this.bricks = new List<LocatedBrick>();
             this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0)));
             this.bricks.Add(new LocatedBrick(true, new Vector3(3, 1, -3)));
+            //this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, -2)));
 
             for (int x = 0; x < voxelGrid.GetLength(0); x++)
             {
@@ -26,7 +28,6 @@ namespace XYZFileLoader
                 {
                     for (int z = 0; z < voxelGrid.GetLength(2); z++)
                     {
-                        
                         pointGrid[x, y, z] = new List<Point>();
                     }
                 }
@@ -57,6 +58,99 @@ namespace XYZFileLoader
         private void updatePoints()
         {
             this.points.Clear();
+
+            for (int x = 0; x < voxelGrid.GetLength(0); x++)
+            {
+                for (int y = 0; y < voxelGrid.GetLength(1); y++)
+                {
+                    for (int z = 0; z < voxelGrid.GetLength(2); z++)
+                    {
+                        if (voxelGrid[x, y, z] == null)
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            
+                            List<Point> newVoxel;
+
+                            #region check Z
+                            newVoxel = new List<Point>(pointGrid[x, y, z - 1]);
+                            foreach (Point p in pointGrid[x, y, z - 1])
+                            {
+                                
+                                if (p.normal.Z > 0)
+                                {
+                                    newVoxel.Remove(p);
+                                }
+                            }
+                            pointGrid[x, y, z - 1] = newVoxel;
+
+                            
+                            newVoxel = new List<Point>(pointGrid[x, y, z + 1]);
+                            foreach (Point p in pointGrid[x, y, z + 1])
+                            {
+                                
+                                if (p.normal.Z < 0)
+                                {
+                                    newVoxel.Remove(p);
+                                }
+                            }
+                            pointGrid[x, y, z + 1] = newVoxel;
+                            #endregion
+                            #region check X
+                            newVoxel = new List<Point>(pointGrid[x-1, y, z]);
+                            foreach (Point p in pointGrid[x-1, y, z])
+                            {
+                                
+                                if (p.normal.X > 0)
+                                {
+                                    newVoxel.Remove(p);
+                                }
+                            }
+                            pointGrid[x-1, y, z] = newVoxel;
+
+
+                            newVoxel = new List<Point>(pointGrid[x+1, y, z]);
+                            foreach (Point p in pointGrid[x+1, y, z])
+                            {
+                                
+                                if (p.normal.X < 0)
+                                {
+                                    newVoxel.Remove(p);
+                                }
+                            }
+                            pointGrid[x+1, y, z] = newVoxel;
+                            #endregion
+                            #region check Y
+                            newVoxel = new List<Point>(pointGrid[x, y-1, z]);
+                            foreach (Point p in pointGrid[x, y-1, z])
+                            {
+                                System.Diagnostics.Debug.WriteLine(p.normal);
+                                if (p.normal.Y > 0)
+                                {
+                                    newVoxel.Remove(p);
+                                }
+                            }
+                            pointGrid[x, y-1, z] = newVoxel;
+
+
+                            newVoxel = new List<Point>(pointGrid[x, y+1, z]);
+                            foreach (Point p in pointGrid[x, y+1, z])
+                            {
+                                
+                                if (p.normal.Y < 0)
+                                {
+                                    newVoxel.Remove(p);
+                                }
+                            }
+                            pointGrid[x, y+1, z] = newVoxel;
+                            #endregion
+                        }
+                    }
+                }
+            }
+
             foreach (List<Point> l in pointGrid)
             {
                 this.points.AddRange(l);

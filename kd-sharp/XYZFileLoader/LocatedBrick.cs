@@ -12,8 +12,8 @@ namespace XYZFileLoader
         public bool rotated;
         public Vector3 voxelOffset;
         private Brick brick;
-        private Vector3 root = new Vector3(20, 20, 20);
-        private Vector3 voxelDimensions = new Vector3(63.0f / 4,19f, 31.5f / 2);
+        private Vector3 root = new Vector3(Model.DIMENSION / 2, Model.DIMENSION / 2, Model.DIMENSION / 2);
+        private Vector3 voxelDimensions = new Vector3(64.0f / 4, 19.2f, 32.0f / 2);
 
         public LocatedBrick(bool rotated, Vector3 voxelOffset)
         {
@@ -32,32 +32,55 @@ namespace XYZFileLoader
         {
             for (int BrickX = 0; BrickX < 4; BrickX++)
             {
-                for (int BrickY = 0; BrickY < 2; BrickY++)
+                for (int BrickY = 0; BrickY > -2; BrickY--)
                 {
                     if (rotated == false)
                     {
-                        voxelGrid[(int)voxelOffset.X + BrickX + (int)root.X, (int)voxelOffset.Z + (int)root.Z, (int)voxelOffset.Y + BrickY + (int)root.Z] = this.brick;
+                        voxelGrid[(int)voxelOffset.X + BrickX + (int)root.X, (int)voxelOffset.Y + (int)root.Y, (int)voxelOffset.Z + BrickY + (int)root.Z] = this.brick;
                     }
                     else
                     {
-                        voxelGrid[(int)voxelOffset.X + BrickY + (int)root.X, (int)voxelOffset.Z + (int)root.Y, (int)voxelOffset.Y + BrickX + (int)root.Z] = this.brick;
+                        int x = (int)voxelOffset.Z + BrickY + (int)root.X-1;
+                        int y = (int)voxelOffset.Y + (int)root.Y;
+                        int z = (int)voxelOffset.X + BrickX + (int)root.Z+1;
+                        voxelGrid[x, y, z] = this.brick;
                     }
                 }
             }
             foreach (Point p in this.brick.points)
             {
 
-                //TODO: SWAP Y AND Z
-                int x = Math.Max((int)(p.position.X / voxelDimensions.X), 3) + (int)voxelOffset.X + (int)root.X;
-                int y = Math.Max((int)(p.position.Y / voxelDimensions.Y), 1) + (int)voxelOffset.Y + (int)root.Y;
-                int z = (int)voxelOffset.Z + (int)root.Z;
+                Vector3 position = p.position;
+
+                /*float swap = position.Y;
+                position.Y = position.Z;
+                position.Z = swap;*/
+
+                int x = (int)(position.X / voxelDimensions.X);
+
+                x = Math.Min(x, 3);
+                x += (int)voxelOffset.X + (int)root.X;
+
+                int y = (int)voxelOffset.Y + (int)root.Y;
+                int z = (int)(-position.Z / voxelDimensions.Z);
+
+
+                z = Math.Min(z, 1);
+
+                z *= -1;
+                z += (int)voxelOffset.Z + (int)root.Z;
+                /*int x = Math.Min((int)(p.position.X / voxelDimensions.X), 3) + (int)voxelOffset.X + (int)root.X;
+                int z = Math.Min((int)(p.position.Y / voxelDimensions.Z), 1) + (int)voxelOffset.Z + (int)root.Z;
+                int y = (int)voxelOffset.Y + (int)root.Y;*/
                 if (rotated)
                 {
                     int save = x;
-                    x = y;
-                    y = save;
+                    x = z;
+                    z = save;
+                    x--;
+                    z++;
                 }
-                
+
                 Point pCopy = p.Copy();
                 pCopy.position.X += voxelOffset.X * voxelDimensions.X;
                 pCopy.position.Y += voxelOffset.Y * voxelDimensions.Y;
@@ -74,8 +97,9 @@ namespace XYZFileLoader
                 }
                 Vector3 offset = new Vector3(-36.5f, -17f, 15f);
                 pCopy.position += offset;
-                pointGrid[x, y, z].Add(pCopy); 
-                
+                pointGrid[x, y, z].Add(pCopy);
+
+
             }
 
         }

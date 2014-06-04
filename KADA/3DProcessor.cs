@@ -25,6 +25,7 @@ namespace KADA
 {
     public class _3DProcessor
     {
+        public const float MAY_INLIERDISTANCE = 10;
         private ConcurrentQueue<DepthColor[,]> renderQueue, processingQueue;
         private ConcurrentQueue<Vector3> centers;
         private ConcurrentQueue<XNAMatrix> rotations;
@@ -203,7 +204,7 @@ namespace KADA
                     if (b.CurrentDistance < 500)
                     {
                         H.AddInplace(HTemp);
-                        if (b.CurrentDistance < 5)
+                        if (b.CurrentDistance < MAY_INLIERDISTANCE)
                         {
                             currentICPInliers++;
                         }
