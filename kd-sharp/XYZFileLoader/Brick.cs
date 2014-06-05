@@ -6,7 +6,7 @@ using System.Text;
 namespace XYZFileLoader
 {
 
-    class Brick
+    public class Brick
     {
         public List<Point> points;
         public Brick()

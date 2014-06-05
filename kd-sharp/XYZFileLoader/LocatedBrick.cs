@@ -7,8 +7,9 @@ using Microsoft.Xna.Framework;
 namespace XYZFileLoader
 {
 
-    class LocatedBrick
+    public class LocatedBrick
     {
+        private Matrix Transformation;
         public bool rotated;
         public Vector3 voxelOffset;
         private Brick brick;
@@ -26,10 +27,31 @@ namespace XYZFileLoader
                 this.voxelOffset.X = this.voxelOffset.Z;
                 this.voxelOffset.Z = save;
             }
+            this.Transformation = Matrix.Identity;
+        }
+
+        public Matrix getTransformation()
+        {
+            return this.Transformation;
         }
 
         public void insert(List<Point>[, ,] pointGrid, Brick[, ,] voxelGrid)
         {
+            
+            Vector3 translation = new Vector3();
+            translation.X = voxelDimensions.X * voxelOffset.X;
+            translation.Y = voxelDimensions.Y * voxelOffset.Y;
+            translation.Z = voxelDimensions.Z * voxelOffset.Z;
+
+            if (this.rotated)
+            {
+                this.Transformation = Matrix.Multiply(this.Transformation, Matrix.CreateRotationY((float)Math.PI / 2));
+                translation.X += 6*voxelDimensions.X;
+                translation.Z -= 2 * voxelDimensions.Z;
+            }
+
+
+            this.Transformation = Matrix.Multiply(this.Transformation, Matrix.CreateTranslation(translation));
             for (int BrickX = 0; BrickX < 4; BrickX++)
             {
                 for (int BrickY = 0; BrickY > -2; BrickY--)

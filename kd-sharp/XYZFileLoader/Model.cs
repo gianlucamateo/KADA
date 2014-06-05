@@ -10,16 +10,17 @@ namespace XYZFileLoader
     public class Model
     {
         public List<Point> points;
-        public const int DIMENSION = 10;
+        public const int DIMENSION = 20;
         private Brick[, ,] voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
         private List<Point>[, ,] pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
-        private List<LocatedBrick> bricks;
+        public List<LocatedBrick> bricks;
 
         public Model()
         {
             this.bricks = new List<LocatedBrick>();
             this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0)));
             this.bricks.Add(new LocatedBrick(true, new Vector3(3, 1, -3)));
+            this.bricks.Add(new LocatedBrick(true, new Vector3(3, -1, -3)));
             //this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, -2)));
 
             for (int x = 0; x < voxelGrid.GetLength(0); x++)

@@ -602,21 +602,23 @@ namespace KADA
             Matrix[] transforms = new Matrix[brick.Bones.Count];
             brick.CopyAbsoluteBoneTransformsTo(transforms);
 
-           
-            foreach (ModelMesh mesh in brick.Meshes)
+            foreach (LocatedBrick b in model.bricks)
             {
-                
-                foreach (BasicEffect eff in mesh.Effects)
+                foreach (ModelMesh mesh in brick.Meshes)
                 {
-                    eff.TextureEnabled = false;
-                    eff.EnableDefaultLighting();
-                    eff.World = transforms[mesh.ParentBone.Index]* Matrix.CreateScale(10f) *Matrix.CreateTranslation(this.offset) * brickRotation * brickTranslation;// *
-                    
-                    eff.View =View;
-                    eff.Projection =Projection;
+
+                    foreach (BasicEffect eff in mesh.Effects)
+                    {
+                        eff.TextureEnabled = false;
+                        eff.EnableDefaultLighting();
+                        eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * b.getTransformation() * Matrix.CreateTranslation(this.offset) * brickRotation * brickTranslation;// *
+
+                        eff.View = View;
+                        eff.Projection = Projection;
+                    }
+
+                    mesh.Draw();
                 }
-       
-                mesh.Draw();
             }
 
             
