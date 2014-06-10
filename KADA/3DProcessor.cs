@@ -31,11 +31,13 @@ namespace KADA
         private ConcurrentQueue<XNAMatrix> rotations;
         public Vector3 oldCenter = Vector3.Zero;
         private readonly float THRESHOLD = 200;
+        private readonly bool REQUIRE_HIGH_QUALITY_RESULT = true;
         private KDTreeWrapper brickWrapper;
         private static XNAMatrix prevR;
         private static bool prevRKnown = false;
         private List<Vector3> qi;
         public double ICPInliers = 0, ICPOutliers = 0, ICPRatio = 0;
+        private Vector3 ICPTranslation = Vector3.Zero;
         public PCViewer g;
         private XNAMatrix lastConfidentR;
         private Model model;
@@ -43,7 +45,7 @@ namespace KADA
 
         private int normalCounter = 0;
 
-        private const double MINICPRATIO = 3;
+        private const double MINICPRATIO = 2.5;
 
         public _3DProcessor(ConcurrentQueue<DepthColor[,]> processingQueue, ConcurrentQueue<DepthColor[,]> renderQueue,
             ConcurrentQueue<Vector3> centers, ConcurrentQueue<XNAMatrix> rotations, ConcurrentQueue<DepthColor[,]> depthPool)
@@ -73,6 +75,11 @@ namespace KADA
 
         public void generateCenter(Object dcIn)
         {
+            if (this.ICPInliers == 0)
+            {
+                trackingLostCount++;
+                this.reset();
+            }
             List<Vector3> qi = new List<Vector3>(this.qi);
             DepthColor[,] dc;
             if (processingQueue.TryDequeue(out dc) == false)
@@ -136,6 +143,11 @@ namespace KADA
             y /= counter;
             z /= counter;
             center = new Vector3(x, y, z);
+            if (ICPTranslation.Length() > 20)
+            {
+                this.reset();
+            }
+            center += ICPTranslation;
             oldCenter = center;
 
             //ICP
@@ -279,6 +291,9 @@ namespace KADA
             System.Diagnostics.Debug.WriteLine(iterations);
         }
 
+
+
+
         private int trackingLostCount = 0, resetCount = 0;
         public void PtPlaneICP(Object input)
         {
@@ -364,6 +379,8 @@ namespace KADA
                     }
 
                     Vector3 pos = p.position;
+                    pos /= 20;
+                    vC /= 20;
                     Vector3 n = p.normal; //+new Vector3(0.3f, 0.001f, 0.001f);
                     Vector3 c = Vector3.Cross(pos, n);
 
@@ -444,7 +461,13 @@ namespace KADA
 
                 if (!skip)
                 {
-                    X = X.Multiply(0.4);
+                    float factor = 0.4f;
+                    /*if (g.ICPRatio < MINICPRATIO)
+                    {
+                        factor = 0.1f;
+                    }*/
+                    double[] XArrTrans = X.ToArray();
+                    X = X.Multiply(factor);
                     double[] XArr = X.ToArray();
                     XNAMatrix RTemp = XNAMatrix.CreateRotationZ((float)XArr[2]);
 
@@ -452,7 +475,8 @@ namespace KADA
                     RTemp = XNAMatrix.Multiply(RTemp, Rot);
                     Rot = XNAMatrix.CreateRotationX((float)XArr[0]);
                     RTemp = XNAMatrix.Multiply(RTemp, Rot);
-                    Vector3 trans = new Vector3((float)(XArr[3]), (float)(XArr[4]), (float)(XArr[5]));
+                    Vector3 trans = new Vector3((float)(XArrTrans[3]), (float)(XArrTrans[4]), (float)(XArrTrans[5]));
+                    this.ICPTranslation += trans;
                     if (trans.Length() > 2)
                     {
                         trans.Normalize();
@@ -473,7 +497,7 @@ namespace KADA
             if (Math.Abs(R.Determinant() - 1) < 0.001f && !skip)
             {
                 normalCounter++;
-                if (this.ICPRatio > MINICPRATIO)
+                if (this.ICPRatio > MINICPRATIO || !this.REQUIRE_HIGH_QUALITY_RESULT)
                 {
                     //normalCounter = 0;
                     this.rotations.Enqueue(R);
@@ -540,6 +564,7 @@ namespace KADA
 
         public void reset()
         {
+            this.ICPTranslation = Vector3.Zero;
             prevRKnown = false;
             this.oldCenter = Vector3.Zero;
         }

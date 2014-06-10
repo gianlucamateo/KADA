@@ -19,9 +19,10 @@ namespace XYZFileLoader
         {
             this.bricks = new List<LocatedBrick>();
             this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0)));
-            this.bricks.Add(new LocatedBrick(true, new Vector3(3, 1, -3)));
-            this.bricks.Add(new LocatedBrick(true, new Vector3(3, -1, -3)));
-            //this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, -2)));
+            //this.bricks.Add(new LocatedBrick(true, new Vector3(3, 1, -3)));
+            //this.bricks.Add(new LocatedBrick(true, new Vector3(3, -1, -3)));
+            //this.bricks.Add(new LocatedBrick(false, new Vector3(0, 2, 0)));
+            //this.bricks.Add(new LocatedBrick(false, new Vector3(0, -2, 0)));
 
             for (int x = 0; x < voxelGrid.GetLength(0); x++)
             {
