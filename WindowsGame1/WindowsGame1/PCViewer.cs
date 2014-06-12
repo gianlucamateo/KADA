@@ -77,6 +77,8 @@ namespace KADA
         private Matrix brickTranslation=Matrix.CreateTranslation(new Vector3(0,0,0));
         private Matrix brickRotation = Matrix.CreateTranslation(Vector3.Zero);
 
+        public readonly float NORMAL_CULLING_LIMIT = 0f;
+
 
         Effect effect;
         private Vector3 CameraPosition = new Vector3(0, 0,0);
@@ -200,7 +202,7 @@ namespace KADA
                     float distZ = brickTranslation.M43 + brickRotation.M43;
                     Vector3 transformedNormal = Vector3.Transform(v.normal, onlyRot);
                     //if (i % 5 == 0)
-                    if (Vector3.Dot(transformedNormal, Vector3.UnitZ) > 0.3f)//-0.1f)
+                    if (Vector3.Dot(transformedNormal, Vector3.UnitZ) > NORMAL_CULLING_LIMIT)//-0.1f)
                     {
                         instances[i].ScreenPos = pos;
                         instances[i].Scale = 0.4f;
@@ -610,6 +612,7 @@ namespace KADA
                     foreach (BasicEffect eff in mesh.Effects)
                     {
                         eff.TextureEnabled = false;
+                        eff.DiffuseColor = b.getColor()*0.7f;
                         eff.EnableDefaultLighting();
                         eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * b.getTransformation() * Matrix.CreateTranslation(this.offset) * brickRotation * brickTranslation;// *
 

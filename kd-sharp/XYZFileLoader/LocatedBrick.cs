@@ -16,11 +16,11 @@ namespace XYZFileLoader
         private Vector3 root = new Vector3(Model.DIMENSION / 2, Model.DIMENSION / 2, Model.DIMENSION / 2);
         private Vector3 voxelDimensions = new Vector3(64.0f / 4, 19.2f, 32.0f / 2);
 
-        public LocatedBrick(bool rotated, Vector3 voxelOffset)
+        public LocatedBrick(bool rotated, Vector3 voxelOffset, Color color)
         {
             this.rotated = rotated;
             this.voxelOffset = voxelOffset;
-            this.brick = new Brick();
+            this.brick = new Brick(color);
             if (rotated)
             {
                 float save = this.voxelOffset.X;
@@ -35,6 +35,12 @@ namespace XYZFileLoader
             return this.Transformation;
         }
 
+        public Vector3 getColor()
+        {
+            Vector3 val = new Vector3(this.brick.color.R, this.brick.color.G, this.brick.color.B);
+            return val/255f;
+        }
+
         public void insert(List<Point>[, ,] pointGrid, Brick[, ,] voxelGrid)
         {
             
@@ -46,8 +52,12 @@ namespace XYZFileLoader
             if (this.rotated)
             {
                 this.Transformation = Matrix.Multiply(this.Transformation, Matrix.CreateRotationY((float)Math.PI / 2));
-                translation.X += 6*voxelDimensions.X;
-                translation.Z -= 2 * voxelDimensions.Z;
+                
+                float save = translation.X;
+                translation.X = translation.Z;
+                translation.Z = save;
+                //translation.X += 8 * voxelDimensions.X;
+                translation.Z += 4 * voxelDimensions.Z;
             }
 
 

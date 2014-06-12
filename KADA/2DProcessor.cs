@@ -45,11 +45,11 @@ namespace KADA
 			Histograms.Add(r);
 
 			Bitmap green = (Bitmap)Image.FromFile("../../ressources/histogram/Green_cleaned_filled.png", true);
-			Histogram g = new Histogram(green, 12, 16);
+			Histogram g = new Histogram(green, 8, 16);
 			Histograms.Add(g);
 
 			Bitmap blue = (Bitmap)Image.FromFile("../../ressources/histogram/Blue_cleaned_filled.png", true);
-			Histogram b = new Histogram(blue, 12, 16);
+			Histogram b = new Histogram(blue, 8, 16);
 			Histograms.Add(b);
 
 			Bitmap yellow = (Bitmap)Image.FromFile("../../ressources/histogram/Yellow_cleaned_filled.png", true);
@@ -317,7 +317,7 @@ namespace KADA
 							}
 							if (maxval == 0 || color.X + color.Y + color.Z < 150)
 							{
-								//pixel.Position.Z = 0;
+								pixel.Position.Z = 0;
 								pixel.Depth = 0;
 								
 							}

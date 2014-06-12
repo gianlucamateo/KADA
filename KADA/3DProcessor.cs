@@ -25,18 +25,19 @@ namespace KADA
 {
     public class _3DProcessor
     {
-        public const float MAY_INLIERDISTANCE = 10;
+        public const float MAX_INLIERDISTANCE = 5;
         private ConcurrentQueue<DepthColor[,]> renderQueue, processingQueue;
         private ConcurrentQueue<Vector3> centers;
         private ConcurrentQueue<XNAMatrix> rotations;
         public Vector3 oldCenter = Vector3.Zero;
         private readonly float THRESHOLD = 200;
-        private readonly bool REQUIRE_HIGH_QUALITY_RESULT = true;
+        private readonly bool REQUIRE_HIGH_QUALITY_RESULT = false;
+        
         private KDTreeWrapper brickWrapper;
         private static XNAMatrix prevR;
         private static bool prevRKnown = false;
         private List<Vector3> qi;
-        public double ICPInliers = 0, ICPOutliers = 0, ICPRatio = 0;
+        public double ICPInliers = 1, ICPOutliers = 0, ICPRatio = 0;
         private Vector3 ICPTranslation = Vector3.Zero;
         public PCViewer g;
         private XNAMatrix lastConfidentR;
@@ -75,11 +76,11 @@ namespace KADA
 
         public void generateCenter(Object dcIn)
         {
-            if (this.ICPInliers == 0)
+            /*if (this.ICPInliers == 0)
             {
                 trackingLostCount++;
                 this.reset();
-            }
+            }*/
             List<Vector3> qi = new List<Vector3>(this.qi);
             DepthColor[,] dc;
             if (processingQueue.TryDequeue(out dc) == false)
@@ -143,10 +144,10 @@ namespace KADA
             y /= counter;
             z /= counter;
             center = new Vector3(x, y, z);
-            if (ICPTranslation.Length() > 20)
+           /* if (ICPTranslation.Length() > 100)
             {
                 this.reset();
-            }
+            }*/
             center += ICPTranslation;
             oldCenter = center;
 
@@ -213,10 +214,10 @@ namespace KADA
                     HArr[2, 1] = vC.Y * pos.Z;
                     HArr[2, 2] = vC.Z * pos.Z;
                     HTemp = new Matrix(HArr);
-                    if (b.CurrentDistance < 500)
+                    if (b.CurrentDistance < THRESHOLD)
                     {
                         H.AddInplace(HTemp);
-                        if (b.CurrentDistance < MAY_INLIERDISTANCE)
+                        if (b.CurrentDistance < MAX_INLIERDISTANCE)
                         {
                             currentICPInliers++;
                         }
@@ -356,10 +357,10 @@ namespace KADA
                     Point p;
                     Vector3 transformedNormal = Vector3.Zero;
                     Point firstGuess = neighbour.Current;
-                    if (this.ICPRatio > 1f)
+                    if (this.ICPRatio > 0.2f)
                     {
                         transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
-                        while (Vector3.Dot(transformedNormal, Vector3.UnitZ) < 0.3f)//-0.1f)
+                        while (Vector3.Dot(transformedNormal, Vector3.UnitZ) < g.NORMAL_CULLING_LIMIT)//-0.1f)
                         {
                             if (neighbour.MoveNext() == false)
                             {
@@ -414,7 +415,7 @@ namespace KADA
 
 
                     B = B.Subtract(new Vector(tempB));
-                    if (neighbour.CurrentDistance < 5)
+                    if (neighbour.CurrentDistance < MAX_INLIERDISTANCE)
                     {
                         currentICPInliers++;
                     }
@@ -521,8 +522,8 @@ namespace KADA
             }
             if (this.ICPInliers == 0)
             {
-                trackingLostCount++;
-                this.reset();
+                /*trackingLostCount++;
+                this.reset();*/
             }
             else if(this.ICPRatio<0.5f)
             {
@@ -550,7 +551,6 @@ namespace KADA
                 }
                 if (resetCount == 8)
                 {
-                    System.Diagnostics.Debug.WriteLine("RESET");
                     this.reset();
                 }
                 //this.reset();
@@ -564,6 +564,7 @@ namespace KADA
 
         public void reset()
         {
+            System.Diagnostics.Debug.WriteLine("RESET");
             this.ICPTranslation = Vector3.Zero;
             prevRKnown = false;
             this.oldCenter = Vector3.Zero;

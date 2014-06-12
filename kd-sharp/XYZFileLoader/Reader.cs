@@ -17,7 +17,8 @@ namespace XYZFileLoader
             normal = nor;
             positionArr = new double[] { pos.X, pos.Y, pos.Z };
         }
-        public Point Copy(){
+        public Point Copy()
+        {
             return new Point(this.position, this.normal);
         }
     }
@@ -38,6 +39,7 @@ namespace XYZFileLoader
         }
         public static void readFromFile()
         {
+            Random r = new Random();
             //Vector3 offset = new Vector3(-36.5f, -17f, 15f);
             positions = new List<Vector3>();
             points = new List<Point>();
@@ -55,7 +57,7 @@ namespace XYZFileLoader
                 Vector3 originalPos = pos;
                 pos *= SCALE;
                 //pos += offset*SCALE;
-                
+
                 /*Vector3 normal = new Vector3(float.Parse(parts[3]), float.Parse(parts[4]), float.Parse(parts[5]));
                 normal.Normalize();*/
 
@@ -84,15 +86,18 @@ namespace XYZFileLoader
                 {
                     normal = -Vector3.UnitZ;
                 }
-                                
+
                 Point p = new Point(pos, normal);
 
                 //if (Math.Abs(originalPos.X - 1.5f) > 0.01 && Math.Abs(originalPos.X - 62.5f) > 0.01 && Math.Abs(originalPos.Y - 17.7f) > 0.01 && Math.Abs(originalPos.Z + 30.5f) > 0.01 && Math.Abs(originalPos.Z + 1.5f) > 0.01)
-                if(normal!=Vector3.Zero)
+                if (normal != Vector3.Zero)
                 {
-                    kdTree.AddPoint(pos, p);
-                    points.Add(p);
-                    positions.Add(pos);
+                    if (r.NextDouble() > 0)
+                    {
+                        kdTree.AddPoint(pos, p);
+                        points.Add(p);
+                        positions.Add(pos);
+                    }
                 }
                 /*
                 pos = new Vector3(x, y, z);
