@@ -97,6 +97,8 @@ namespace KADA
         public bool saveColors = false;
         private Model model;
 
+        private List<Vector3> edgePositions = new List<Vector3>();
+
         Task transformationUpdater;
 
         #endregion
@@ -148,7 +150,12 @@ namespace KADA
             instanceBuffer = new VertexBuffer(GraphicsDevice, instanceVertexDeclaration, count, BufferUsage.WriteOnly);
             instanceBuffer.SetData(instances);
         }
-        
+
+        public void setEdges(List<Vector3> edges)
+        {
+            this.edgePositions = edges;
+        }
+
         private void UpdateInstanceInformation()
         {
             
@@ -249,11 +256,20 @@ namespace KADA
                         }
                     }
                 }
-                
+
+                foreach (Vector3 v in this.edgePositions)
+                {
+                    instances[i].ScreenPos = v;
+                    instances[i].Scale = 1;
+                    instances[i].Color = new Vector3(255, 255, 255);
+                    i++;
+                }
+
                 instances[i].ScreenPos = center;
                 instances[i].Scale = 1;
                 instances[i].Color = new Vector3(0, 255, 0);
             }
+            
         }
       
         public PCViewer(ConcurrentQueue<DepthColor[,]> depths, ConcurrentQueue<DepthColor[,]> depthsPool)

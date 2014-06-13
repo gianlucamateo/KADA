@@ -21,6 +21,8 @@ namespace KADA
 		private DepthImagePixel[] background;
 		private bool backgroundReady = false, colorReady = false;
 
+        public static List<Vector2> edgeCoordinates;
+
 		private int backgroundFrameCount = 0;
 		private static Object Semaphor, Normalizer;
 		private static DepthImagePixel[][] singleImages;
@@ -407,50 +409,110 @@ namespace KADA
 				grid = (bool[,])outputGrid.Clone();
 				
 			}
-			for (int i = 0; i < 3; i++)
+            bool[,] lastGrid = null;
+			for (int i = 0; i < 4; i++)
 			{
-				for (int x = 1; x < width - 1; x++)
-				{
-					for (int y = 1; y < height - 1; y++)
-					{
-						if (outputGrid[x - 1, y - 1] == true)
-						{
-							grid[x, y] = true;
-						}
-						if (outputGrid[x - 1, y + 1] == true)
-						{
-							grid[x, y] = true;
-						}
-						if (outputGrid[x + 1, y - 1] == true)
-						{
-							grid[x, y] = true;
-						}
-						if (outputGrid[x + 1, y + 1] == true)
-						{
-							grid[x, y] = true;
-						}
+                if (i == 3)
+                {
+                    edgeCoordinates = new List<Vector2>();
+                    for (int x = 1; x < width - 1; x++)
+                    {
+                        for (int y = 1; y < height - 1; y++)
+                        {
+                            if (outputGrid[x - 1, y - 1] == true && lastGrid[x - 1, y - 1] == false)
+                            {
+                                edgeCoordinates.Add(new Vector2(x, y));
+                                continue;
+                            }
+                            /*if (outputGrid[x - 1, y + 1] == true)
+                            {
+                                edgePositions.Add(new Vector2(x, y));
+                                continue;
+                            }
+                            if (outputGrid[x + 1, y - 1] == true)
+                            {
+                                edgePositions.Add(new Vector2(x, y));
+                                continue;
+                            }
+                            if (outputGrid[x + 1, y + 1] == true)
+                            {
+                                edgePositions.Add(new Vector2(x, y));
+                                continue;
+                            }
 
-						if (outputGrid[x, y + 1] == true)
-						{
-							grid[x, y] = true;
-						}
+                            if (outputGrid[x, y + 1] == true)
+                            {
+                                edgePositions.Add(new Vector2(x, y));
+                                continue;
+                            }
 
-						if (outputGrid[x, y - 1] == true)
-						{
-							grid[x, y] = true;
-						}
+                            if (outputGrid[x, y - 1] == true)
+                            {
+                                edgePositions.Add(new Vector2(x, y));
+                                continue;
+                            }
 
-						if (outputGrid[x + 1, y] == true)
-						{
-							grid[x, y] = true;
-						}
+                            if (outputGrid[x + 1, y] == true)
+                            {
+                                edgePositions.Add(new Vector2(x, y));
+                                continue;
+                            }
 
-						if (outputGrid[x - 1, y] == true)
-						{
-							grid[x, y] = true;
-						}
-					}
-				}
+                            if (outputGrid[x - 1, y] == true)
+                            {
+                                edgePositions.Add(new Vector2(x, y));
+                                continue;
+                            }*/
+                        }
+                    }
+
+                }
+                else
+                {
+                    for (int x = 1; x < width - 1; x++)
+                    {
+                        for (int y = 1; y < height - 1; y++)
+                        {
+                            if (outputGrid[x - 1, y - 1] == true)
+                            {
+                                grid[x, y] = true;
+                            }
+                            if (outputGrid[x - 1, y + 1] == true)
+                            {
+                                grid[x, y] = true;
+                            }
+                            if (outputGrid[x + 1, y - 1] == true)
+                            {
+                                grid[x, y] = true;
+                            }
+                            if (outputGrid[x + 1, y + 1] == true)
+                            {
+                                grid[x, y] = true;
+                            }
+
+                            if (outputGrid[x, y + 1] == true)
+                            {
+                                grid[x, y] = true;
+                            }
+
+                            if (outputGrid[x, y - 1] == true)
+                            {
+                                grid[x, y] = true;
+                            }
+
+                            if (outputGrid[x + 1, y] == true)
+                            {
+                                grid[x, y] = true;
+                            }
+
+                            if (outputGrid[x - 1, y] == true)
+                            {
+                                grid[x, y] = true;
+                            }
+                        }
+                    }
+                }
+                lastGrid = outputGrid;
 				outputGrid = (bool[,])grid.Clone();
 			}
 

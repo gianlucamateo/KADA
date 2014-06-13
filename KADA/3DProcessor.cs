@@ -85,7 +85,12 @@ namespace KADA
             DepthColor[,] dc;
             if (processingQueue.TryDequeue(out dc) == false)
                 return;
-
+            List<Vector3> edgePositions = new List<Vector3>();
+            foreach (Vector2 v in _2DProcessor.edgeCoordinates)
+            {
+                edgePositions.Add(dc[(int)v.X, (int)v.Y].Position);
+            }
+            g.setEdges(edgePositions);
             float x = 0, y = 0, z = 0;
             int counter = 0;
             DepthColor c;
@@ -276,7 +281,7 @@ namespace KADA
                     //normalCounter = 0;
                     this.rotations.Enqueue(R);
                 }
-                if (normalCounter > 30)
+                if (normalCounter > 2)
                 {
                     //normalCounter++;
                     normalCounter = 0;
@@ -489,10 +494,10 @@ namespace KADA
                 this.ICPInliers = currentICPInliers;
                 this.ICPOutliers = currentICPOutliers;
                 this.ICPRatio = this.ICPInliers / this.ICPOutliers;
-                if (iterations > 3)
+                /*if (iterations > 3)
                 {
                     System.Diagnostics.Debug.WriteLine("ICP took " + (DateTime.Now - elapsed) + "("+iterations+" iterations)");
-                }
+                }*/
             }
             //System.Diagnostics.Debug.WriteLine(R.Determinant());
             if (Math.Abs(R.Determinant() - 1) < 0.001f && !skip)
