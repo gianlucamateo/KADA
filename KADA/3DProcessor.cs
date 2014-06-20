@@ -25,14 +25,16 @@ namespace KADA
 {
     public class _3DProcessor
     {
-        public const float MAX_INLIERDISTANCE = 5;
+        public const float MAX_INLIERDISTANCE = 8;
         private ConcurrentQueue<DepthColor[,]> renderQueue, processingQueue;
         private ConcurrentQueue<Vector3> centers;
         private ConcurrentQueue<XNAMatrix> rotations;
         public Vector3 oldCenter = Vector3.Zero;
         private readonly float THRESHOLD = 200;
         private readonly bool REQUIRE_HIGH_QUALITY_RESULT = false;
-        
+
+        private static object ICPSemaphore = new object();
+
         private KDTreeWrapper brickWrapper;
         private static XNAMatrix prevR;
         private static bool prevRKnown = false;
@@ -69,8 +71,9 @@ namespace KADA
             }));
             g.setModel(this.model);
         }
-         
-        public void exit(){
+
+        public void exit()
+        {
             g.Exit();
         }
 
@@ -85,16 +88,36 @@ namespace KADA
             DepthColor[,] dc;
             if (processingQueue.TryDequeue(out dc) == false)
                 return;
-            List<Vector3> edgePositions = new List<Vector3>();
-            foreach (Vector2 v in _2DProcessor.edgeCoordinates)
+           /* List<Vector3> edgePositions = new List<Vector3>();
+
+            List<Vector2> edgeCoords = new List<Vector2>(1000);
+           
+            edgeCoords.AddRange(_2DProcessor.edgeCoordinates);//new List<Vector3>(_2DProcessor.edgeCoordinates);
+            for (int i = 0; i < edgeCoords.Count; i++)
             {
-                edgePositions.Add(dc[(int)v.X, (int)v.Y].Position);
+                Vector2 v = edgeCoords[i];
+                Vector3 edgePixel = dc[(int)v.X, (int)v.Y].Position;
+                Vector3 direction = g.NormalMap[640 - (int)v.X , 480 -(int)v.Y ];//g.Normals[2];//g.mostConfidentNormal;
+                if (direction != Vector3.Zero)
+                {
+                    bool meg = false;
+                }
+                if (edgePixel.Z != 0)
+                {
+                    for (int o = 0; o < 10; o++)
+                    {
+                        edgePixel -= direction;
+                        edgePositions.Add(edgePixel);
+                        qi.Add(edgePixel);
+                    }
+                }
             }
-            g.setEdges(edgePositions);
+            g.setEdges(edgePositions);*/
             float x = 0, y = 0, z = 0;
             int counter = 0;
             DepthColor c;
             Vector3 center;
+            
             if (oldCenter == Vector3.Zero)
             {
                 for (int xP = 0; xP < dc.GetLength(0); xP++)
@@ -149,10 +172,10 @@ namespace KADA
             y /= counter;
             z /= counter;
             center = new Vector3(x, y, z);
-           /* if (ICPTranslation.Length() > 100)
-            {
-                this.reset();
-            }*/
+            /* if (ICPTranslation.Length() > 100)
+             {
+                 this.reset();
+             }*/
             center += ICPTranslation;
             oldCenter = center;
 
@@ -163,7 +186,7 @@ namespace KADA
             //this.ICP(center, dc, qi);
         }
 
-        public void PtPointICP(Object input)
+    /*    public void PtPointICP(Object input)
         {
             ICPDataContainer container = (ICPDataContainer)input;
             Vector3 center = container.center;
@@ -297,17 +320,16 @@ namespace KADA
             System.Diagnostics.Debug.WriteLine(iterations);
         }
 
-
+        */
 
 
         private int trackingLostCount = 0, resetCount = 0;
         public void PtPlaneICP(Object input)
         {
-            
             DateTime elapsed = DateTime.Now;
             ICPDataContainer container = (ICPDataContainer)input;
             Vector3 center = container.center;
-           
+
             //DepthColor[,] dc = container.dc;
             List<Vector3> qi = container.qi;
             this.ICPInliers = 0;
@@ -507,15 +529,22 @@ namespace KADA
                 {
                     //normalCounter = 0;
                     this.rotations.Enqueue(R);
+                }
+                if (this.ICPRatio > MINICPRATIO)
+                {
                     this.lastConfidentR = R;
+                }
+
+                if (this.ICPRatio > 0.8f)
+                {
                     if (trackingLostCount > 0)
                     {
                         System.Diagnostics.Debug.WriteLine("regained tracking!");
                     }
                     trackingLostCount = 0;
                     resetCount = 0;
-                    
                 }
+
                 if (normalCounter > 10)
                 {
                     //normalCounter++;
@@ -530,14 +559,30 @@ namespace KADA
                 /*trackingLostCount++;
                 this.reset();*/
             }
-            else if(this.ICPRatio<0.5f)
+            else if (this.ICPRatio < 0.8f)
             {
                 trackingLostCount++;
-                if (this.trackingLostCount > 2&&resetCount<6 && lastConfidentR!=XNAMatrix.Identity)
+                if (trackingLostCount == 15)
                 {
-                    
-                    int factor = resetCount%2==1 ? 1: -1;
-                    prevR = XNAMatrix.Multiply(this.lastConfidentR,XNAMatrix.CreateFromAxisAngle(g.Normals[2],factor*MathHelper.Pi/4*((float)resetCount/6f)));
+                    System.Diagnostics.Debug.WriteLine("Soft RESET");
+                    this.ICPTranslation = Vector3.Zero;
+
+                }
+                if (trackingLostCount > 50)
+                {
+                    this.reset();
+                }
+                if (trackingLostCount > 53)
+                {
+                    trackingLostCount = 0;
+                
+                }
+
+                /*if (this.trackingLostCount > 2 && resetCount < 6 && lastConfidentR != XNAMatrix.Identity)
+                {
+
+                    int factor = resetCount % 2 == 1 ? 1 : -1;
+                    prevR = XNAMatrix.Multiply(this.lastConfidentR, XNAMatrix.CreateFromAxisAngle(g.Normals[2], factor * MathHelper.Pi / 4 * ((float)resetCount / 6f)));
                     //this.rotations.Enqueue(prevR);
                     trackingLostCount = 0;
                     resetCount++;
@@ -559,6 +604,7 @@ namespace KADA
                     this.reset();
                 }
                 //this.reset();
+                */
             }
             g.ICPInliers = this.ICPInliers;
             g.ICPOutliers = this.ICPOutliers;
@@ -571,7 +617,15 @@ namespace KADA
         {
             System.Diagnostics.Debug.WriteLine("RESET");
             this.ICPTranslation = Vector3.Zero;
-            prevRKnown = false;
+            if (Math.Abs(lastConfidentR.Determinant() - 1) < 0.001f)
+            {
+                prevR = lastConfidentR;
+            }
+            else
+            {
+                prevRKnown = false;
+            }
+            this.ICPTranslation = Vector3.Zero;
             this.oldCenter = Vector3.Zero;
         }
 
@@ -607,7 +661,7 @@ namespace KADA
                         int cluster = int.MaxValue;
                         for (int i = 0; i < clusters.Length; i++)
                         {
-                           float temp_distance = float.MaxValue;
+                            float temp_distance = float.MaxValue;
                             Vector3.Distance(ref currentNormal, ref centroids[i], out temp_distance);
                             if (temp_distance < distance)
                             {
@@ -643,23 +697,28 @@ namespace KADA
                     }
                 }
             }
+            
             estimatedNormals[2] = centroids[2]; // Assuming the Normal pointing directly at the camera to be the most reliable
             int confidentIndex = 0;
             if (clusters[1].Count > clusters[0].Count)
             {
                 confidentIndex = 1;
             }
+            int maxIndex = 0;
+            maxIndex = clusters[1].Count > clusters[2].Count ? 1 : 2;
+            maxIndex = clusters[0].Count > Math.Max(clusters[1].Count, clusters[2].Count) ? 0 : maxIndex;
+            g.mostConfidentNormal = estimatedNormals[maxIndex];
             int lessConfidentIndex = 1 - confidentIndex;
             estimatedNormals[lessConfidentIndex] = Vector3.Cross(centroids[confidentIndex], estimatedNormals[2]);
             estimatedNormals[confidentIndex] = Vector3.Cross(estimatedNormals[2], estimatedNormals[lessConfidentIndex]);
 
             //System.Diagnostics.Debug.Write("vector");
-            for (int i = 0; i < clusters.Length; i++)
+            /*for (int i = 0; i < clusters.Length; i++)
             {
                 //centroids[i] *= -1;
                 //System.Diagnostics.Debug.Write("{" + centroids[i].X + "," + centroids[i].Y + "," + centroids[i].Z + "},");
                 //System.Diagnostics.Debug.Write("{" + estimatedNormals[i].X + "," + estimatedNormals[i].Y + "," + estimatedNormals[i].Z + "},");
-            }
+            }*/
             //norm.Save("normals_clustered.png");
             g.Normals = estimatedNormals;
         }
@@ -735,6 +794,7 @@ namespace KADA
 
 
             //bitmap.Save("normals.png");
+            g.NormalMap = normals;
             this.kMeans(normals);
             //return bitmap;
 

@@ -21,7 +21,7 @@ namespace KADA
 		private DepthImagePixel[] background;
 		private bool backgroundReady = false, colorReady = false;
 
-        public static List<Vector2> edgeCoordinates;
+		public static List<Vector2> edgeCoordinates;
 
 		private int backgroundFrameCount = 0;
 		private static Object Semaphor, Normalizer;
@@ -298,13 +298,13 @@ namespace KADA
 		{
 			DepthColor[,] dc = (DepthColor[,])dcIn;
 			lock (Semaphor)
-			{                
+			{
 				for (int x = 0; x < dc.GetLength(0); x++)
 				{
 					for (int y = 0; y < dc.GetLength(1); y++)
 					{
 						DepthColor pixel = dc[x, y];
-						Vector3 color = pixel.Color*256;
+						Vector3 color = pixel.Color * 256;
 
 						if (pixel.Position.Z != 0)
 						{
@@ -321,17 +321,18 @@ namespace KADA
 							{
 								pixel.Position.Z = 0;
 								pixel.Depth = 0;
-								
+
 							}
 							dc[x, y] = pixel;
 						}
 					}
 				}
-			}            
-			deNoise(dc);
+			}
+            System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(deNoise),dc);
+			//deNoise(dc);
 
 			//this.processingQueue.Enqueue(dc);
-			
+
 			//resetEvent.Set();
 		}
 
@@ -347,7 +348,7 @@ namespace KADA
 			{
 				for (int y = 0; y < height; y++)
 				{
-					if (dc[x, y].Depth>0)
+					if (dc[x, y].Depth > 0)
 					{
 						grid[x, y] = true;
 					}
@@ -407,112 +408,111 @@ namespace KADA
 					}
 				}
 				grid = (bool[,])outputGrid.Clone();
-				
+
 			}
-            bool[,] lastGrid = null;
-			for (int i = 0; i < 4; i++)
+			bool[,] lastGrid = null;
+			for (int i = 0; i < 3; i++)
 			{
-                if (i == 3)
-                {
-                    edgeCoordinates = new List<Vector2>();
-                    for (int x = 1; x < width - 1; x++)
-                    {
-                        for (int y = 1; y < height - 1; y++)
-                        {
-                            if (outputGrid[x - 1, y - 1] == true && lastGrid[x - 1, y - 1] == false)
-                            {
-                                edgeCoordinates.Add(new Vector2(x, y));
-                                continue;
-                            }
-                            /*if (outputGrid[x - 1, y + 1] == true)
-                            {
-                                edgePositions.Add(new Vector2(x, y));
-                                continue;
-                            }
-                            if (outputGrid[x + 1, y - 1] == true)
-                            {
-                                edgePositions.Add(new Vector2(x, y));
-                                continue;
-                            }
-                            if (outputGrid[x + 1, y + 1] == true)
-                            {
-                                edgePositions.Add(new Vector2(x, y));
-                                continue;
-                            }
+				if (i == 2)
+				{
+					edgeCoordinates = new List<Vector2>(1000);
+					for (int x = 1; x < width - 1; x++)
+					{
+						for (int y = 1; y < height - 1; y++)
+						{
+							if (outputGrid[x - 1, y - 1] == true && lastGrid[x - 1, y - 1] == false)
+							{
+								edgeCoordinates.Add(new Vector2(x, y));
+								continue;
+							}
+							if (outputGrid[x - 1, y + 1] == true && lastGrid[x - 1, y + 1] == false)
+							{
+								edgeCoordinates.Add(new Vector2(x, y));
+								continue;
+							}
+							if (outputGrid[x + 1, y - 1] == true && lastGrid[x + 1, y - 1] == false)
+							{
+								edgeCoordinates.Add(new Vector2(x, y));
+								continue;
+							}
+							if (outputGrid[x + 1, y + 1] == true && lastGrid[x + 1, y + 1] == false)
+							{
+								edgeCoordinates.Add(new Vector2(x, y));
+								continue;
+							}
 
-                            if (outputGrid[x, y + 1] == true)
-                            {
-                                edgePositions.Add(new Vector2(x, y));
-                                continue;
-                            }
+							if (outputGrid[x, y + 1] == true && lastGrid[x, y + 1] == false)
+							{
+								edgeCoordinates.Add(new Vector2(x, y));
+								continue;
+							}
 
-                            if (outputGrid[x, y - 1] == true)
-                            {
-                                edgePositions.Add(new Vector2(x, y));
-                                continue;
-                            }
+							if (outputGrid[x, y - 1] == true && lastGrid[x, y - 1] == false)
+							{
+								edgeCoordinates.Add(new Vector2(x, y));
+								continue;
+							}
 
-                            if (outputGrid[x + 1, y] == true)
-                            {
-                                edgePositions.Add(new Vector2(x, y));
-                                continue;
-                            }
+							if (outputGrid[x + 1, y] == true && lastGrid[x + 1, y] == false)
+							{
+								edgeCoordinates.Add(new Vector2(x, y));
+								continue;
+							}
 
-                            if (outputGrid[x - 1, y] == true)
-                            {
-                                edgePositions.Add(new Vector2(x, y));
-                                continue;
-                            }*/
-                        }
-                    }
+							if (outputGrid[x - 1, y] == true && lastGrid[x - 1, y] == false)
+							{
+								edgeCoordinates.Add(new Vector2(x, y));
+								continue;
+							}
+						}
+					}
 
-                }
-                else
-                {
-                    for (int x = 1; x < width - 1; x++)
-                    {
-                        for (int y = 1; y < height - 1; y++)
-                        {
-                            if (outputGrid[x - 1, y - 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-                            if (outputGrid[x - 1, y + 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-                            if (outputGrid[x + 1, y - 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-                            if (outputGrid[x + 1, y + 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
+				}
 
-                            if (outputGrid[x, y + 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
+				for (int x = 1; x < width - 1; x++)
+				{
+					for (int y = 1; y < height - 1; y++)
+					{
+						if (outputGrid[x - 1, y - 1] == true)
+						{
+							grid[x, y] = true;
+						}
+						if (outputGrid[x - 1, y + 1] == true)
+						{
+							grid[x, y] = true;
+						}
+						if (outputGrid[x + 1, y - 1] == true)
+						{
+							grid[x, y] = true;
+						}
+						if (outputGrid[x + 1, y + 1] == true)
+						{
+							grid[x, y] = true;
+						}
 
-                            if (outputGrid[x, y - 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
+						if (outputGrid[x, y + 1] == true)
+						{
+							grid[x, y] = true;
+						}
 
-                            if (outputGrid[x + 1, y] == true)
-                            {
-                                grid[x, y] = true;
-                            }
+						if (outputGrid[x, y - 1] == true)
+						{
+							grid[x, y] = true;
+						}
 
-                            if (outputGrid[x - 1, y] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-                        }
-                    }
-                }
-                lastGrid = outputGrid;
+						if (outputGrid[x + 1, y] == true)
+						{
+							grid[x, y] = true;
+						}
+
+						if (outputGrid[x - 1, y] == true)
+						{
+							grid[x, y] = true;
+						}
+					}
+				}
+
+				lastGrid = outputGrid;
 				outputGrid = (bool[,])grid.Clone();
 			}
 
@@ -532,7 +532,7 @@ namespace KADA
 					}
 				}
 			}
-			
+
 			//Console.WriteLine(System.DateTime.Now - start);
 			//System.Threading.Thread.Sleep(1000);
 			//output.Save("../../output_denoising.png");
@@ -541,7 +541,7 @@ namespace KADA
 			this.processingQueue.Enqueue(dc);
 
 			resetEvent.Set();
-		}       
+		}
 
 	}
 }

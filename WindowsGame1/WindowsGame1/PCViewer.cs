@@ -50,6 +50,9 @@ namespace KADA
         public double ICPInliers, ICPOutliers, ICPRatio;
 
         public Vector3[] Normals = new Vector3[3];
+        public Vector3 mostConfidentNormal = Vector3.UnitZ;
+
+        public Vector3[,] NormalMap = new Vector3[640,480];
 
         Int32 count = 640 * 480 + 100000;
         Viewport PCViewport;
