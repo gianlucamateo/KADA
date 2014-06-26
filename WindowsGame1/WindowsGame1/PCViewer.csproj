@@ -5,10 +5,10 @@
     <ProjectTypeGuids>{6D335F3A-9D43-41b4-9D22-F6F17C4BE596};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <OutputType>Library</OutputType>
+    <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>WindowsGame1</RootNamespace>
-    <AssemblyName>WindowsGame1</AssemblyName>
+    <RootNamespace>KADA</RootNamespace>
+    <AssemblyName>PCViewer</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
     <XnaFrameworkVersion>v4.0</XnaFrameworkVersion>
@@ -112,14 +112,41 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="2DProcessor.cs" />
+    <Compile Include="3DProcessor.cs" />
+    <Compile Include="FrameCreator.cs" />
+    <Compile Include="PipelineContainer.cs" />
+    <Compile Include="Histogram.cs" />
+    <Compile Include="PipelineDataContainer.cs" />
+    <Compile Include="PipelineManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PCViewer.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Game.ico" />
     <Content Include="GameThumbnail.png" />
+    <None Include="ressources\histogram\Blue_cleaned_filled.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="ressources\histogram\Green_cleaned_filled.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="ressources\histogram\Red_cleaned_filled.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="ressources\histogram\Yellow_cleaned_filled.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\dotNumerics\DotNumerics\DotNumerics VS2008.csproj">
+      <Project>{48185EF1-B73B-457B-AA37-0BCE567C5AB1}</Project>
+      <Name>DotNumerics VS2008</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\kd-sharp\KDTree\KDTree.csproj">
+      <Project>{33A00A90-C02E-474B-A8C0-3B0559873EA0}</Project>
+      <Name>KDTree</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\kd-sharp\XYZFileLoader\ModelManager.csproj">
       <Project>{3E8764A8-729E-4E6F-84A7-D01608AAD9DA}</Project>
       <Name>ModelManager</Name>
@@ -156,6 +183,21 @@
       <ProductName>Microsoft XNA Framework Redistributable 4.0</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ressources\pointcloud\Duplo_5000samples.xyz">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ressources\pointcloud\Duplo_5000samples_stratified_triangle.xyz">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ressources\pointcloud\Duplo_cleaned_2500samples_stratified_triangle.xyz">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" />

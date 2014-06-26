@@ -47,10 +47,7 @@ namespace KADA
     {
         #region Class Variables
 
-        public double ICPInliers, ICPOutliers, ICPRatio;
-
-        public Vector3[] Normals = new Vector3[3];
-        public Vector3 mostConfidentNormal = Vector3.UnitZ;
+        
 
         public Vector3[,] NormalMap = new Vector3[640,480];
 
@@ -72,15 +69,14 @@ namespace KADA
         VertexDeclaration instanceVertexDeclaration;
         InstanceInfo[] instances;
 
-        private float frameTime = 0;
-        private DateTime lastTick = DateTime.Now;
+        
 
         public Vector3 offset = new Vector3(-36.5f, -17f, 15f);
 
         private Matrix brickTranslation=Matrix.CreateTranslation(new Vector3(0,0,0));
         private Matrix brickRotation = Matrix.CreateTranslation(Vector3.Zero);
 
-        public readonly float NORMAL_CULLING_LIMIT = 0f;
+       
 
 
         Effect effect;
@@ -99,6 +95,9 @@ namespace KADA
         public bool generateBackground = false;
         public bool saveColors = false;
         private Model model;
+        private PipelineManager manager;
+
+        private PipelineDataContainer dataContainer;
 
         private List<Vector3> edgePositions = new List<Vector3>();
 
@@ -113,12 +112,7 @@ namespace KADA
             public Vector3 Color;
         };
 
-        public void recordTick()
-        {
-            this.frameTime = (DateTime.Now - this.lastTick).Milliseconds+frameTime;
-            this.frameTime = frameTime / 2;
-            this.lastTick = DateTime.Now;
-        }
+        
 
         public void SetBrickTranslate(Matrix b)
         {
@@ -158,29 +152,29 @@ namespace KADA
         {
             this.edgePositions = edges;
         }
-
+        //Stage 6
         private void UpdateInstanceInformation()
         {
-            
-            DepthColor[,] depth = null;
-            bool frameLoaded = false;
-
-            if (this.depths.Count > 1)
+            int stage = 6;
+            while (true)
             {
-                this.depths.TryDequeue(out depth);
-            }
-            if (depth != null)
-                frameLoaded = true;
-
-            if (frameLoaded)
-            {
+                PipelineContainer container = null;
+                while (container == null)
+                {
+                    container = manager.dequeue(stage);
+                    if (container == null)
+                    {
+                        Thread.Sleep(3);
+                    }
+                }
+                DepthColor[,] depth = container.dc;
                 int i = 0;
                 for (int x = 0; x < depth.GetLength(0); x++)
                 {
                     for (int y = 0; y < depth.GetLength(1); y++)
                     {
                         DepthColor d = depth[x, y];
-                        if (d.Depth != 0&&d.Position.Z!=0)
+                        if (d.Depth != 0 && d.Position.Z != 0)
                         {
                             instances[i].ScreenPos = d.Position;
                             instances[i].Scale = 1;
@@ -194,9 +188,10 @@ namespace KADA
                         i++;
                     }
                 }
-                this.depthsPool.Enqueue(depth);
-                
-                foreach(Point v in model.points){
+
+                this.model = dataContainer.model;
+                foreach (Point v in model.points)
+                {
                     Matrix transform = brickRotation * brickTranslation;
                     Vector3 pos = Vector3.Transform(v.position, transform);
                     Matrix onlyRot = new Matrix();
@@ -212,7 +207,7 @@ namespace KADA
                     float distZ = brickTranslation.M43 + brickRotation.M43;
                     Vector3 transformedNormal = Vector3.Transform(v.normal, onlyRot);
                     //if (i % 5 == 0)
-                    if (Vector3.Dot(transformedNormal, Vector3.UnitZ) > NORMAL_CULLING_LIMIT)//-0.1f)
+                    if (Vector3.Dot(transformedNormal, Vector3.UnitZ) > this.dataContainer.NORMAL_CULLING_LIMIT)//-0.1f)
                     {
                         instances[i].ScreenPos = pos;
                         instances[i].Scale = 0.4f;
@@ -234,9 +229,9 @@ namespace KADA
                 Vector3 center = Vector3.Transform(Vector3.One, brickTranslation);
                 for (int o = 0; o < 3; o++)
                 {
-                    if (this.Normals[o] != null)
+                    if (this.dataContainer.Normals[o] != null)
                     {
-                        Vector3 normal = this.Normals[o];
+                        Vector3 normal = this.dataContainer.Normals[o];
                         for (int segment = 0; segment < 90; segment++)
                         {
                             instances[i].ScreenPos = center + normal * segment;
@@ -260,23 +255,27 @@ namespace KADA
                     }
                 }
 
-                foreach (Vector3 v in this.edgePositions)
-                {
-                    instances[i].ScreenPos = v;
-                    instances[i].Scale = 1;
-                    instances[i].Color = new Vector3(255, 255, 255);
-                    i++;
-                }
+                
 
                 instances[i].ScreenPos = center;
                 instances[i].Scale = 1;
                 instances[i].Color = new Vector3(0, 255, 0);
+                this.manager.enqueue(container);
             }
+
             
         }
-      
-        public PCViewer(ConcurrentQueue<DepthColor[,]> depths, ConcurrentQueue<DepthColor[,]> depthsPool)
+
+        public static void Main(String[] args)
         {
+            Game g = new PCViewer();
+            g.Run();
+        }
+        public PCViewer()
+        {
+            
+            this.manager = new PipelineManager();
+            
             PCViewport = new Viewport();
             PCViewport.X = 0;
             PCViewport.Y = 0;
@@ -290,8 +289,7 @@ namespace KADA
             BrickViewport.Height = 480;
             
             
-            this.depths = depths;
-            this.depthsPool = depthsPool;
+            
             
             graphics = new GraphicsDeviceManager(this);
             graphics.IsFullScreen = false;
@@ -309,6 +307,11 @@ namespace KADA
 
             Content.RootDirectory = "Content";
             this.IsFixedTimeStep = true;
+            graphics.SynchronizeWithVerticalRetrace = true;
+            this.dataContainer = new PipelineDataContainer();
+            this.model = dataContainer.model;
+            Thread Stage6 = new Thread(new ThreadStart(() => UpdateInstanceInformation()));
+            Stage6.Start();
         }
 
         public void setModel(Model m){
@@ -384,7 +387,7 @@ namespace KADA
                 transformationUpdater = new Task(() => this.UpdateInstanceInformation());
                 transformationUpdater.Start();
             }
-            this.Window.Title = "Inliers: " + this.ICPInliers+", Outliers: "+ this.ICPOutliers + " Total Points: " + (this.ICPInliers+this.ICPOutliers) +", Ratio: "+ Math.Round(this.ICPRatio,2) + " Frametime: " + this.frameTime + "ms";
+            this.Window.Title = "Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms";
 
             base.Update(gameTime);
         }  
