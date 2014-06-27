@@ -19,11 +19,11 @@ namespace XYZFileLoader
         {
             this.bricks = new List<LocatedBrick>();
             this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0),Color.Green));
-            
+            /*
             this.bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), Color.Red));
             this.bricks.Add(new LocatedBrick(false, new Vector3(-1, 2, -1), Color.Blue));
             this.bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), Color.Blue));
-            this.bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), Color.Blue));
+            this.bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), Color.Blue));*/
             
             //this.bricks.Add(new LocatedBrick(true, new Vector3(3, -1, -3)));
             //this.bricks.Add(new LocatedBrick(false, new Vector3(0, 2, 0)));
@@ -133,7 +133,7 @@ namespace XYZFileLoader
                             newVoxel = new List<Point>(pointGrid[x, y-1, z]);
                             foreach (Point p in pointGrid[x, y-1, z])
                             {
-                                System.Diagnostics.Debug.WriteLine(p.normal);
+                               // System.Diagnostics.Debug.WriteLine(p.normal);
                                 if (p.normal.Y > 0)
                                 {
                                     newVoxel.Remove(p);

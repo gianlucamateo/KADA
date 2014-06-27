@@ -28,7 +28,6 @@ namespace KADA
             if (this.kinect != null)
             {
 
-
                 this.kinect.ColorStream.Enable(ColorImageFormat.RgbResolution640x480Fps30);
                 this.kinect.DepthStream.Enable(DepthImageFormat.Resolution640x480Fps30);
                 this.dataContainer.COLORLENGTH = this.kinect.ColorStream.FramePixelDataLength;
@@ -50,9 +49,17 @@ namespace KADA
             }
         }
         //Stage 0
+        PipelineContainer container;
         private void KinectAllFramesReady(object sender, AllFramesReadyEventArgs e)
         {
-            PipelineContainer container = new PipelineContainer(this.dataContainer);
+            
+            this.manager.recycle.TryDequeue(out container);
+            
+            if (container == null||dataContainer.COLORLENGTH == 0 || dataContainer.DEPTHLENGTH == 0)
+            {
+                return;
+            }
+            container.stage = 0;
 
             using (ColorImageFrame colorFrame = e.OpenColorImageFrame())
             {
@@ -97,8 +104,9 @@ namespace KADA
                     // this.processor.GenerateBackground(this.depthPixels);
                 }*/
             }
-
-            manager.enqueue(container);
+            dataContainer.recordGenerationTick();
+           // manager.enqueue(container);
+            manager.processingQueues[++container.stage].Enqueue(container);
         }
     }
 }

@@ -30,11 +30,13 @@ namespace KADA
         //private Vector3[] colors = new Vector3[4];
         List<Histogram> Histograms;
         Bitmap bitmap = new Bitmap(640, 480);
+        private PipelineDataContainer dataContainer;
         public static ManualResetEvent resetEvent = new ManualResetEvent(false);
 
 
-        public _2DProcessor(PipelineManager manager)//(ConcurrentQueue<DepthColor[,]> processingQueue)
+        public _2DProcessor(PipelineManager manager, PipelineDataContainer dataContainer)//(ConcurrentQueue<DepthColor[,]> processingQueue)
         {
+            this.dataContainer = dataContainer;
             this.manager = manager;
             singleImages = new DepthImagePixel[5][];
             this.depthValues = new short[5];
@@ -60,12 +62,22 @@ namespace KADA
 
             Thread Stage1 = new Thread(new ThreadStart(() => UpdateDepthData()));
             Stage1.Start();
+            Thread Stage12 = new Thread(new ThreadStart(() => UpdateDepthData()));
+            Stage12.Start();
+
+
 
             Thread Stage2 = new Thread(new ThreadStart(() => eliminateColor()));
             Stage2.Start();
-            Thread Stage3 = new Thread(new ThreadStart(() => deNoise()));
-            Stage3.Start();
-            
+            Thread Stage31 = new Thread(new ThreadStart(() => deNoise()));
+            Stage31.Start();
+            Thread Stage32 = new Thread(new ThreadStart(() => deNoise()));
+            Stage32.Start();
+            Thread Stage33 = new Thread(new ThreadStart(() => deNoise()));
+            Stage33.Start();
+            Thread Stage34 = new Thread(new ThreadStart(() => deNoise()));
+            Stage34.Start();
+
 
         }
 
@@ -78,10 +90,12 @@ namespace KADA
                 PipelineContainer container = null;
                 while (container == null)
                 {
-                    container = manager.dequeue(stage);
+                    //container = manager.dequeue(stage);
+                    container = null;
+                    manager.processingQueues[stage].TryDequeue(out container);
                     if (container == null)
                     {
-                        Thread.Sleep(3);
+                        Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
                 }
                 DepthImagePixel[] dPixels = container.depthPixels;
@@ -91,8 +105,10 @@ namespace KADA
                 byte[] colorPixels = container.colorPixels;
 
                 DepthImagePixel[] background = null;
-
-                this.GenerateBackground(dPixels);
+                if (this.dataContainer.generateBackground)
+                {
+                    this.GenerateBackground(dPixels);
+                }
                 if (this.BackgroundReady())
                 {
                     background = getBackground();
@@ -133,7 +149,8 @@ namespace KADA
                     }
 
                 }
-                manager.enqueue(container);
+                //manager.enqueue(container);
+                manager.processingQueues[++container.stage].Enqueue(container);
             }
         }
 
@@ -211,48 +228,54 @@ namespace KADA
                 PipelineContainer container = null;
                 while (container == null)
                 {
-                    container = manager.dequeue(stage);
+                    //container = manager.dequeue(stage);
+                    container = null;
+                    manager.processingQueues[stage].TryDequeue(out container);
                     if (container == null)
                     {
-                        Thread.Sleep(3);
+                        Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
                 }
-                DepthColor[,] dc = container.dc;
-                for (int x = 0; x < dc.GetLength(0); x++)
+                if (this.dataContainer.deNoiseAndICP)
                 {
-                    for (int y = 0; y < dc.GetLength(1); y++)
+                    DepthColor[,] dc = container.dc;
+                    for (int x = 0; x < dc.GetLength(0); x++)
                     {
-                        DepthColor pixel = dc[x, y];
-                        Vector3 color = pixel.Color * 256;
-
-                        if (pixel.Position.Z != 0)
+                        for (int y = 0; y < dc.GetLength(1); y++)
                         {
-                            int maxval = 0;
-                            foreach (Histogram h in this.Histograms)
-                            {
-                                int val = h.getValue(color);
-                                if (maxval < val)
-                                {
-                                    maxval = val;
-                                }
-                            }
-                            if (maxval == 0 || color.X + color.Y + color.Z < 150)
-                            {
-                                pixel.Position.Z = 0;
-                                pixel.Depth = 0;
+                            DepthColor pixel = dc[x, y];
+                            Vector3 color = pixel.Color * 256;
 
+                            if (pixel.Position.Z != 0)
+                            {
+                                int maxval = 0;
+                                foreach (Histogram h in this.Histograms)
+                                {
+                                    int val = h.getValue(color);
+                                    if (maxval < val)
+                                    {
+                                        maxval = val;
+                                    }
+                                }
+                                if (maxval == 0 || color.X + color.Y + color.Z < 150)
+                                {
+                                    pixel.Position.Z = 0;
+                                    pixel.Depth = 0;
+
+                                }
+                                dc[x, y] = pixel;
                             }
-                            dc[x, y] = pixel;
                         }
                     }
                 }
-                manager.enqueue(container);
+                manager.processingQueues[++container.stage].Enqueue(container);
+                //manager.enqueue(container);
             }
-            
+
 
         }
 
-        
+
 
         //Stage 3
         public void deNoise()
@@ -263,156 +286,143 @@ namespace KADA
                 PipelineContainer container = null;
                 while (container == null)
                 {
-                    container = manager.dequeue(stage);
+                    //container = manager.dequeue(stage);
+                    container = null;
+                    manager.processingQueues[stage].TryDequeue(out container);
                     if (container == null)
                     {
-                        Thread.Sleep(3);
+                        Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
                 }
-                DepthColor[,] dc = container.dc;
-
-                int width = dc.GetLength(0), height = dc.GetLength(1);
-
-                bool[,] grid = new bool[width, height];
-                bool[,] outputGrid = null;
-
-                for (int x = 0; x < width; x++)
+                if (this.dataContainer.deNoiseAndICP)
                 {
-                    for (int y = 0; y < height; y++)
+                    DepthColor[,] dc = container.dc;
+
+                    int width = dc.GetLength(0), height = dc.GetLength(1);
+
+                    bool[,] grid = new bool[width, height];
+                    bool[,] outputGrid = null;
+
+                    for (int x = 0; x < width; x++)
                     {
-                        if (dc[x, y].Depth > 0)
+                        for (int y = 0; y < height; y++)
                         {
-                            grid[x, y] = true;
+                            if (dc[x, y].Depth > 0)
+                            {
+                                grid[x, y] = true;
+                            }
                         }
                     }
-                }
-                for (int i = 0; i < 2; i++)
-                {
-                    outputGrid = new bool[width, height];
+                    for (int i = 0; i < 2; i++)
+                    {
+                        outputGrid = new bool[width, height];
+                        for (int x = 1; x < width - 1; x++)
+                        {
+                            for (int y = 1; y < height - 1; y++)
+                            {
+                                int diagonalContact = 0;
+                                if (grid[x - 1, y - 1] == true)
+                                {
+                                    diagonalContact++;
+                                }
+
+                                if (grid[x - 1, y + 1] == true)
+                                {
+                                    diagonalContact++;
+                                }
+
+                                if (grid[x + 1, y - 1] == true)
+                                {
+                                    diagonalContact++;
+                                }
+
+                                if (grid[x + 1, y + 1] == true)
+                                {
+                                    diagonalContact++;
+                                }
+
+
+                                if (grid[x, y] && diagonalContact > 3) // && directContact > 3 &&
+                                {
+                                    outputGrid[x, y] = true;
+                                }
+                            }
+                        }
+                        grid = (bool[,])outputGrid.Clone();
+
+                    }
+                    bool[,] lastGrid = null;
+                    for (int i = 0; i < 3; i++)
+                    {
+
+                        for (int x = 1; x < width - 1; x++)
+                        {
+                            for (int y = 1; y < height - 1; y++)
+                            {
+                                if (outputGrid[x - 1, y - 1] == true)
+                                {
+                                    grid[x, y] = true;
+                                }
+                                if (outputGrid[x - 1, y + 1] == true)
+                                {
+                                    grid[x, y] = true;
+                                }
+                                if (outputGrid[x + 1, y - 1] == true)
+                                {
+                                    grid[x, y] = true;
+                                }
+                                if (outputGrid[x + 1, y + 1] == true)
+                                {
+                                    grid[x, y] = true;
+                                }
+
+                                if (outputGrid[x, y + 1] == true)
+                                {
+                                    grid[x, y] = true;
+                                }
+
+                                if (outputGrid[x, y - 1] == true)
+                                {
+                                    grid[x, y] = true;
+                                }
+
+                                if (outputGrid[x + 1, y] == true)
+                                {
+                                    grid[x, y] = true;
+                                }
+
+                                if (outputGrid[x - 1, y] == true)
+                                {
+                                    grid[x, y] = true;
+                                }
+                            }
+                        }
+
+                        lastGrid = outputGrid;
+                        outputGrid = (bool[,])grid.Clone();
+                    }
+
                     for (int x = 1; x < width - 1; x++)
                     {
                         for (int y = 1; y < height - 1; y++)
                         {
-                            int diagonalContact = 0;
-                            if (grid[x - 1, y - 1] == true)
+                            if (grid[x, y] == true)
                             {
-                                diagonalContact++;
+                                dc[x, y].Depth = 1;
+                                //output.SetPixel(x, y, Color.Black);
                             }
-
-                            if (grid[x - 1, y + 1] == true)
+                            else
                             {
-                                diagonalContact++;
-                            }
-
-                            if (grid[x + 1, y - 1] == true)
-                            {
-                                diagonalContact++;
-                            }
-
-                            if (grid[x + 1, y + 1] == true)
-                            {
-                                diagonalContact++;
-                            }
-
-                            /*if (grid[x + 1, y + 0] == true)
-                            {
-                                directContact++;
-                            }
-
-                            if (grid[x - 1, y + 0] == true)
-                            {
-                                directContact++;
-                            }
-
-                            if (grid[x + 0, y + 1] == true)
-                            {
-                                directContact++;
-                            }
-
-                            if (grid[x + 0, y - 1] == true)
-                            {
-                                directContact++;
-                            }*/
-                            if (grid[x, y] && diagonalContact > 3) // && directContact > 3 &&
-                            {
-                                outputGrid[x, y] = true;
+                                dc[x, y].Depth = 0;
+                                dc[x, y].Position.Z = 0;
                             }
                         }
                     }
-                    grid = (bool[,])outputGrid.Clone();
-
                 }
-                bool[,] lastGrid = null;
-                for (int i = 0; i < 3; i++)
-                {
-                    
-                    for (int x = 1; x < width - 1; x++)
-                    {
-                        for (int y = 1; y < height - 1; y++)
-                        {
-                            if (outputGrid[x - 1, y - 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-                            if (outputGrid[x - 1, y + 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-                            if (outputGrid[x + 1, y - 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-                            if (outputGrid[x + 1, y + 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-
-                            if (outputGrid[x, y + 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-
-                            if (outputGrid[x, y - 1] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-
-                            if (outputGrid[x + 1, y] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-
-                            if (outputGrid[x - 1, y] == true)
-                            {
-                                grid[x, y] = true;
-                            }
-                        }
-                    }
-
-                    lastGrid = outputGrid;
-                    outputGrid = (bool[,])grid.Clone();
-                }
-
-                for (int x = 1; x < width - 1; x++)
-                {
-                    for (int y = 1; y < height - 1; y++)
-                    {
-                        if (grid[x, y] == true)
-                        {
-                            dc[x, y].Depth = 1;
-                            //output.SetPixel(x, y, Color.Black);
-                        }
-                        else
-                        {
-                            dc[x, y].Depth = 0;
-                            dc[x, y].Position.Z = 0;
-                        }
-                    }
-                }
-
-                manager.enqueue(container);
+                //manager.enqueue(container);
+                manager.processingQueues[++container.stage].Enqueue(container);
             }
-            
+
         }
 
     }

@@ -37,10 +37,10 @@ namespace KADA
         private KDTreeWrapper brickWrapper;
         private static XNAMatrix prevR;
         private static bool prevRKnown = false;
-        
+
         public double ICPInliers = 1, ICPOutliers = 0, ICPRatio = 0;
         private Vector3 ICPTranslation = Vector3.Zero;
-        
+
         private XNAMatrix lastConfidentR;
         private Model model;
 
@@ -60,15 +60,24 @@ namespace KADA
             this.model = dataContainer.model;
             this.brickWrapper = dataContainer.getKDTree();
 
-            
+
             //this.g = g;
             this.lastConfidentR = new XNAMatrix();
 
             Thread Stage4 = new Thread(new ThreadStart(() => generateCenter()));
             Stage4.Start();
-            Thread Stage5 = new Thread(new ThreadStart(() => PtPlaneICP()));
-            Stage5.Start();
             
+            Thread Stage51 = new Thread(new ThreadStart(() => PtPlaneICP()));
+            Stage51.Start();
+            Thread Stage52 = new Thread(new ThreadStart(() => PtPlaneICP()));
+            Stage52.Start();
+            Thread Stage53 = new Thread(new ThreadStart(() => PtPlaneICP()));
+            Stage53.Start();
+            Thread Stage54 = new Thread(new ThreadStart(() => PtPlaneICP()));
+            Stage54.Start();
+            Thread Stage55 = new Thread(new ThreadStart(() => PtPlaneICP()));
+            Stage55.Start();
+
 
         }
 
@@ -86,22 +95,53 @@ namespace KADA
                 PipelineContainer container = null;
                 while (container == null)
                 {
-                    container = manager.dequeue(stage);
+                    //container = manager.dequeue(stage);
+                    container = null;
+                    manager.processingQueues[stage].TryDequeue(out container);
                     if (container == null)
                     {
-                        Thread.Sleep(3);
+                        Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
                 }
-                DepthColor[,] dc = container.dc;
-                List<Vector3> qi = container.qi;
-
-                float x = 0, y = 0, z = 0;
-                int counter = 0;
-                DepthColor c;
-                Vector3 center;
-
-                if (oldCenter == Vector3.Zero)
+                if (this.dataContainer.deNoiseAndICP)
                 {
+                    DepthColor[,] dc = container.dc;
+                    List<Vector3> qi = container.qi;
+
+                    float x = 0, y = 0, z = 0;
+                    int counter = 0;
+                    DepthColor c;
+                    Vector3 center;
+
+                    if (oldCenter == Vector3.Zero)
+                    {
+                        for (int xP = 0; xP < dc.GetLength(0); xP++)
+                        {
+                            for (int yP = 0; yP < dc.GetLength(1); yP++)
+                            {
+                                c = dc[xP, yP];
+                                if (c.Position.Z != 0)
+                                {
+                                    x += c.Position.X;
+                                    y += c.Position.Y;
+                                    z += c.Position.Z;
+                                    counter++;
+                                }
+                            }
+                        }
+                        x /= counter;
+                        y /= counter;
+                        z /= counter;
+                        center = new Vector3(x, y, z);
+                    }
+                    else
+                    {
+                        center = oldCenter;
+                    }
+                    x = 0;
+                    y = 0;
+                    z = 0;
+                    counter = 0;
                     for (int xP = 0; xP < dc.GetLength(0); xP++)
                     {
                         for (int yP = 0; yP < dc.GetLength(1); yP++)
@@ -109,10 +149,17 @@ namespace KADA
                             c = dc[xP, yP];
                             if (c.Position.Z != 0)
                             {
-                                x += c.Position.X;
-                                y += c.Position.Y;
-                                z += c.Position.Z;
-                                counter++;
+                                float dist;
+                                Vector3.Distance(ref center, ref c.Position, out dist);
+                                if (dist < THRESHOLD)
+                                {
+                                    x += c.Position.X;
+                                    y += c.Position.Y;
+                                    z += c.Position.Z;
+                                    counter++;
+                                    double[] arr = { c.Position.X, c.Position.Y, c.Position.Z };
+                                    qi.Add(c.Position);
+                                }
                             }
                         }
                     }
@@ -120,51 +167,19 @@ namespace KADA
                     y /= counter;
                     z /= counter;
                     center = new Vector3(x, y, z);
-                }
-                else
-                {
-                    center = oldCenter;
-                }
-                x = 0;
-                y = 0;
-                z = 0;
-                counter = 0;
-                for (int xP = 0; xP < dc.GetLength(0); xP++)
-                {
-                    for (int yP = 0; yP < dc.GetLength(1); yP++)
-                    {
-                        c = dc[xP, yP];
-                        if (c.Position.Z != 0)
-                        {
-                            float dist;
-                            Vector3.Distance(ref center, ref c.Position, out dist);
-                            if (dist < THRESHOLD)
-                            {
-                                x += c.Position.X;
-                                y += c.Position.Y;
-                                z += c.Position.Z;
-                                counter++;
-                                double[] arr = { c.Position.X, c.Position.Y, c.Position.Z };
-                                qi.Add(c.Position);
-                            }
-                        }
-                    }
-                }
-                x /= counter;
-                y /= counter;
-                z /= counter;
-                center = new Vector3(x, y, z);
-                /* if (ICPTranslation.Length() > 100)
-                 {
-                     this.reset();
-                 }*/
-                center += ICPTranslation;
-                oldCenter = center;
+                    /* if (ICPTranslation.Length() > 100)
+                     {
+                         this.reset();
+                     }*/
+                    //center += ICPTranslation;
+                    oldCenter = center;
 
-                //ICP
+                    //ICP
 
-                container.center = center;
-                manager.enqueue(container);
+                    container.center = center;
+                }
+                //manager.enqueue(container);
+                manager.processingQueues[++container.stage].Enqueue(container);
             }
             /*if (this.ICPInliers == 0)
             {
@@ -349,304 +364,310 @@ namespace KADA
                 PipelineContainer container = null;
                 while (container == null)
                 {
-                    container = manager.dequeue(stage);
+                    //container = manager.dequeue(stage);
+                    container = null;
+                    manager.processingQueues[stage].TryDequeue(out container);
                     if (container == null)
                     {
-                        Thread.Sleep(3);
+                        Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
                 }
-                DepthColor[,] dc = container.dc;
-                List<Vector3> qi = container.qi;
-
-                DateTime elapsed = DateTime.Now;                
-                Vector3 center = container.center;               
-                
-                this.ICPInliers = 0;
-                int currentICPInliers = 0, currentICPOutliers = 0;
-
-                Matrix H = new Matrix(3, 3);
-                double[,] HArr = new double[3, 3];
-                Matrix HTemp = new Matrix(3, 3);
-                XNAMatrix R;
-                if (!prevRKnown)
+                if (this.dataContainer.deNoiseAndICP)
                 {
-                    R = XNAMatrix.CreateRotationX(0);
-                }
-                else
-                {
-                    R = prevR;
-                }
-                XNAMatrix RInv = XNAMatrix.CreateRotationX(0);
-                this.ICPRatio = 0;
-                int iterations = 0;
-                bool skip = false;
-                for (int i = 0; i < 4; i++)
-                {
-                    skip = false;
-                    iterations = i;
-                    currentICPInliers = 0;
-                    currentICPOutliers = 0;
+                    DepthColor[,] dc = container.dc;
+                    List<Vector3> qi = container.qi;
 
+                    DateTime elapsed = DateTime.Now;
+                    Vector3 center = container.center;
 
-                    XNAMatrix.Invert(ref R, out RInv);
+                    this.ICPInliers = 0;
+                    int currentICPInliers = 0, currentICPOutliers = 0;
 
-                    Matrix A = new Matrix(new double[6, 6]);
-                    Vector B = new Vector(new double[6]);
-                    XNAMatrix onlyRot = new XNAMatrix();
-                    onlyRot.M11 = R.M11;
-                    onlyRot.M12 = R.M12;
-                    onlyRot.M13 = R.M13;
-                    onlyRot.M21 = R.M21;
-                    onlyRot.M22 = R.M22;
-                    onlyRot.M23 = R.M23;
-                    onlyRot.M31 = R.M31;
-                    onlyRot.M32 = R.M32;
-                    onlyRot.M33 = R.M33;
-                    foreach (Vector3 v in qi)
+                    Matrix H = new Matrix(3, 3);
+                    double[,] HArr = new double[3, 3];
+                    Matrix HTemp = new Matrix(3, 3);
+                    XNAMatrix R;
+                    if (!prevRKnown)
                     {
+                        R = XNAMatrix.CreateRotationX(0);
+                    }
+                    else
+                    {
+                        R = prevR;
+                    }
+                    XNAMatrix RInv = XNAMatrix.CreateRotationX(0);
+                    this.ICPRatio = 0;
+                    int iterations = 0;
+                    bool skip = false;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        skip = false;
+                        iterations = i;
+                        currentICPInliers = 0;
+                        currentICPOutliers = 0;
 
-                        Vector3 vC = v - center;
-                        vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
-                        double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
-                        NearestNeighbour<Point> neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: THRESHOLD);
-                        neighbour.MoveNext();
-                        Point p;
-                        Vector3 transformedNormal = Vector3.Zero;
-                        Point firstGuess = neighbour.Current;
-                        if (this.ICPRatio > 0.2f)
+
+                        XNAMatrix.Invert(ref R, out RInv);
+
+                        Matrix A = new Matrix(new double[6, 6]);
+                        Vector B = new Vector(new double[6]);
+                        XNAMatrix onlyRot = new XNAMatrix();
+                        onlyRot.M11 = R.M11;
+                        onlyRot.M12 = R.M12;
+                        onlyRot.M13 = R.M13;
+                        onlyRot.M21 = R.M21;
+                        onlyRot.M22 = R.M22;
+                        onlyRot.M23 = R.M23;
+                        onlyRot.M31 = R.M31;
+                        onlyRot.M32 = R.M32;
+                        onlyRot.M33 = R.M33;
+                        foreach (Vector3 v in qi)
                         {
-                            transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
-                            while (Vector3.Dot(transformedNormal, Vector3.UnitZ) < this.dataContainer.NORMAL_CULLING_LIMIT)//-0.1f)
+
+                            Vector3 vC = v - center;
+                            vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
+                            double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
+                            NearestNeighbour<Point> neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: THRESHOLD);
+                            neighbour.MoveNext();
+                            Point p;
+                            Vector3 transformedNormal = Vector3.Zero;
+                            Point firstGuess = neighbour.Current;
+                            if (this.ICPRatio > 0.2f)
                             {
-                                if (neighbour.MoveNext() == false)
-                                {
-                                    break;
-                                }
                                 transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
+                                while (Vector3.Dot(transformedNormal, Vector3.UnitZ) < this.dataContainer.NORMAL_CULLING_LIMIT)//-0.1f)
+                                {
+                                    if (neighbour.MoveNext() == false)
+                                    {
+                                        break;
+                                    }
+                                    transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
+                                }
+                            }
+
+                            p = neighbour.Current;
+                            //transformedNormal = Vector3.Transform(p.normal, onlyRot);
+                            if (p.normal == Vector3.Zero)
+                            {
+                                //p = firstGuess;
+                                ICPOutliers++;
+                                continue;
+                            }
+
+                            Vector3 pos = p.position;
+                            pos /= 20;
+                            vC /= 20;
+                            Vector3 n = p.normal; //+new Vector3(0.3f, 0.001f, 0.001f);
+                            Vector3 c = Vector3.Cross(pos, n);
+
+                            if (neighbour.CurrentDistance > THRESHOLD)
+                            {
+                                ICPOutliers++;
+                                continue;
+                            }
+
+                            double[,] tmA = new double[6, 6];
+                            tmA[0, 0] = c.X * c.X; tmA[0, 1] = c.X * c.Y; tmA[0, 2] = c.X * c.Z; tmA[0, 3] = c.X * n.X; tmA[0, 4] = c.X * n.Y; tmA[0, 5] = c.X * n.Z;
+                            tmA[1, 0] = tmA[0, 1]; tmA[1, 1] = c.Y * c.Y; tmA[1, 2] = c.Y * c.Z; tmA[1, 3] = c.Y * n.X; tmA[1, 4] = c.Y * n.Y; tmA[1, 5] = c.Y * n.Z;
+                            tmA[2, 0] = tmA[0, 2]; tmA[2, 1] = tmA[1, 2]; tmA[2, 2] = c.Z * c.Z; tmA[2, 3] = c.Z * n.X; tmA[2, 4] = c.Z * n.Y; tmA[2, 5] = c.Z * n.Z;
+                            tmA[3, 0] = tmA[0, 3]; tmA[3, 1] = tmA[1, 3]; tmA[3, 2] = tmA[2, 3]; tmA[3, 3] = n.X * n.X; tmA[3, 4] = n.X * n.Y; tmA[3, 5] = n.X * n.Z;
+                            tmA[4, 0] = tmA[0, 4]; tmA[4, 1] = tmA[1, 4]; tmA[4, 2] = tmA[2, 4]; tmA[4, 3] = tmA[3, 4]; tmA[4, 4] = n.Y * n.Y; tmA[4, 5] = n.Y * n.Z;
+                            tmA[5, 0] = tmA[0, 5]; tmA[5, 1] = tmA[1, 5]; tmA[5, 2] = tmA[2, 5]; tmA[5, 3] = tmA[3, 5]; tmA[5, 4] = tmA[4, 5]; tmA[5, 5] = n.Z * n.Z;
+
+                            double[] tempB = new double[6];
+
+                            float pMinqTimesN = Vector3.Dot(pos - vC, n);
+
+                            tempB[0] = pMinqTimesN * c.X;
+                            tempB[1] = pMinqTimesN * c.Y;
+                            tempB[2] = pMinqTimesN * c.Z;
+                            tempB[3] = pMinqTimesN * n.X;
+                            tempB[4] = pMinqTimesN * n.Y;
+                            tempB[5] = pMinqTimesN * n.Z;
+
+                            A = A.Add(new Matrix(tmA));
+
+
+
+                            B = B.Subtract(new Vector(tempB));
+                            if (neighbour.CurrentDistance < MAX_INLIERDISTANCE)
+                            {
+                                currentICPInliers++;
+                            }
+                            else
+                            {
+                                currentICPOutliers++;
                             }
                         }
 
-                        p = neighbour.Current;
-                        //transformedNormal = Vector3.Transform(p.normal, onlyRot);
-                        if (p.normal == Vector3.Zero)
+                        if (this.ICPRatio > MINICPRATIO && i > 0)
                         {
-                            //p = firstGuess;
-                            ICPOutliers++;
-                            continue;
+                            break;
                         }
 
-                        Vector3 pos = p.position;
-                        pos /= 20;
-                        vC /= 20;
-                        Vector3 n = p.normal; //+new Vector3(0.3f, 0.001f, 0.001f);
-                        Vector3 c = Vector3.Cross(pos, n);
-
-                        if (neighbour.CurrentDistance > THRESHOLD)
+                        for (int row = 0; row < 6; row++)
                         {
-                            ICPOutliers++;
-                            continue;
+                            Vector tot = A.GetRowVector(row);
+                            if (tot.Norm() < 1)
+                            {
+                                double[,] addArr = new double[6, 6];
+                                addArr = A.CopyToArray();
+                                addArr[row, row] = 1;
+                                A = new Matrix(addArr);
+                            }
                         }
 
-                        double[,] tmA = new double[6, 6];
-                        tmA[0, 0] = c.X * c.X; tmA[0, 1] = c.X * c.Y; tmA[0, 2] = c.X * c.Z; tmA[0, 3] = c.X * n.X; tmA[0, 4] = c.X * n.Y; tmA[0, 5] = c.X * n.Z;
-                        tmA[1, 0] = tmA[0, 1]; tmA[1, 1] = c.Y * c.Y; tmA[1, 2] = c.Y * c.Z; tmA[1, 3] = c.Y * n.X; tmA[1, 4] = c.Y * n.Y; tmA[1, 5] = c.Y * n.Z;
-                        tmA[2, 0] = tmA[0, 2]; tmA[2, 1] = tmA[1, 2]; tmA[2, 2] = c.Z * c.Z; tmA[2, 3] = c.Z * n.X; tmA[2, 4] = c.Z * n.Y; tmA[2, 5] = c.Z * n.Z;
-                        tmA[3, 0] = tmA[0, 3]; tmA[3, 1] = tmA[1, 3]; tmA[3, 2] = tmA[2, 3]; tmA[3, 3] = n.X * n.X; tmA[3, 4] = n.X * n.Y; tmA[3, 5] = n.X * n.Z;
-                        tmA[4, 0] = tmA[0, 4]; tmA[4, 1] = tmA[1, 4]; tmA[4, 2] = tmA[2, 4]; tmA[4, 3] = tmA[3, 4]; tmA[4, 4] = n.Y * n.Y; tmA[4, 5] = n.Y * n.Z;
-                        tmA[5, 0] = tmA[0, 5]; tmA[5, 1] = tmA[1, 5]; tmA[5, 2] = tmA[2, 5]; tmA[5, 3] = tmA[3, 5]; tmA[5, 4] = tmA[4, 5]; tmA[5, 5] = n.Z * n.Z;
-
-                        double[] tempB = new double[6];
-
-                        float pMinqTimesN = Vector3.Dot(pos - vC, n);
-
-                        tempB[0] = pMinqTimesN * c.X;
-                        tempB[1] = pMinqTimesN * c.Y;
-                        tempB[2] = pMinqTimesN * c.Z;
-                        tempB[3] = pMinqTimesN * n.X;
-                        tempB[4] = pMinqTimesN * n.Y;
-                        tempB[5] = pMinqTimesN * n.Z;
-
-                        A = A.Add(new Matrix(tmA));
-
-
-
-                        B = B.Subtract(new Vector(tempB));
-                        if (neighbour.CurrentDistance < MAX_INLIERDISTANCE)
+                        LinearEquations LE = new LinearEquations();
+                        Vector X = null;
+                        try
                         {
-                            currentICPInliers++;
+                            X = LE.Solve(A, B);
                         }
-                        else
+                        catch (Exception)
                         {
-                            currentICPOutliers++;
+                            System.Diagnostics.Debug.WriteLine("LE solver encountered an exception");
+                            Vector3 prominentNormal = this.dataContainer.Normals[2];
+                            XNAMatrix rot = XNAMatrix.CreateFromAxisAngle(prominentNormal, 0.5f);
+                            R = XNAMatrix.Multiply(R, rot);
+                            prevR = R;
+                            skip = true;
+                            //this.reset();
+                            break;
                         }
-                    }
 
-                    if (this.ICPRatio > MINICPRATIO && i > 0)
-                    {
-                        break;
-                    }
-
-                    for (int row = 0; row < 6; row++)
-                    {
-                        Vector tot = A.GetRowVector(row);
-                        if (tot.Norm() < 1)
+                        if (!skip)
                         {
-                            double[,] addArr = new double[6, 6];
-                            addArr = A.CopyToArray();
-                            addArr[row, row] = 1;
-                            A = new Matrix(addArr);
+                            float factor = 0.4f;
+                            /*if (g.ICPRatio < MINICPRATIO)
+                            {
+                                factor = 0.1f;
+                            }*/
+                            double[] XArrTrans = X.ToArray();
+                            X = X.Multiply(factor);
+                            double[] XArr = X.ToArray();
+                            XNAMatrix RTemp = XNAMatrix.CreateRotationZ((float)XArr[2]);
+
+                            XNAMatrix Rot = XNAMatrix.CreateRotationY((float)XArr[1]);
+                            RTemp = XNAMatrix.Multiply(RTemp, Rot);
+                            Rot = XNAMatrix.CreateRotationX((float)XArr[0]);
+                            RTemp = XNAMatrix.Multiply(RTemp, Rot);
+                            Vector3 trans = new Vector3((float)(XArrTrans[3]), (float)(XArrTrans[4]), (float)(XArrTrans[5]));
+                            this.ICPTranslation += trans;
+                            if (trans.Length() > 2)
+                            {
+                                trans.Normalize();
+                            }
+                            RTemp = XNAMatrix.Multiply(RTemp, XNAMatrix.CreateTranslation(trans));
+                            R = XNAMatrix.Multiply(R, RTemp);
+
                         }
-                    }
-
-                    LinearEquations LE = new LinearEquations();
-                    Vector X = null;
-                    try
-                    {
-                        X = LE.Solve(A, B);
-                    }
-                    catch (Exception)
-                    {
-                        System.Diagnostics.Debug.WriteLine("LE solver encountered an exception");
-                        Vector3 prominentNormal = this.dataContainer.Normals[2];
-                        XNAMatrix rot = XNAMatrix.CreateFromAxisAngle(prominentNormal, 0.5f);
-                        R = XNAMatrix.Multiply(R, rot);
-                        prevR = R;
-                        skip = true;
-                        //this.reset();
-                        break;
-                    }
-
-                    if (!skip)
-                    {
-                        float factor = 0.4f;
-                        /*if (g.ICPRatio < MINICPRATIO)
+                        this.ICPInliers = currentICPInliers;
+                        this.ICPOutliers = currentICPOutliers;
+                        this.ICPRatio = this.ICPInliers / this.ICPOutliers;
+                        /*if (iterations > 3)
                         {
-                            factor = 0.1f;
+                            System.Diagnostics.Debug.WriteLine("ICP took " + (DateTime.Now - elapsed) + "("+iterations+" iterations)");
                         }*/
-                        double[] XArrTrans = X.ToArray();
-                        X = X.Multiply(factor);
-                        double[] XArr = X.ToArray();
-                        XNAMatrix RTemp = XNAMatrix.CreateRotationZ((float)XArr[2]);
-
-                        XNAMatrix Rot = XNAMatrix.CreateRotationY((float)XArr[1]);
-                        RTemp = XNAMatrix.Multiply(RTemp, Rot);
-                        Rot = XNAMatrix.CreateRotationX((float)XArr[0]);
-                        RTemp = XNAMatrix.Multiply(RTemp, Rot);
-                        Vector3 trans = new Vector3((float)(XArrTrans[3]), (float)(XArrTrans[4]), (float)(XArrTrans[5]));
-                        this.ICPTranslation += trans;
-                        if (trans.Length() > 2)
+                    }
+                    //System.Diagnostics.Debug.WriteLine(R.Determinant());
+                    if (Math.Abs(R.Determinant() - 1) < 0.001f && !skip)
+                    {
+                        normalCounter++;
+                        if (this.ICPRatio > MINICPRATIO || !this.REQUIRE_HIGH_QUALITY_RESULT)
                         {
-                            trans.Normalize();
+                            //normalCounter = 0;
+                            //this.rotations.Enqueue(R);
+                            container.R = R;
                         }
-                        RTemp = XNAMatrix.Multiply(RTemp, XNAMatrix.CreateTranslation(trans));
-                        R = XNAMatrix.Multiply(R, RTemp);
-
-                    }
-                    this.ICPInliers = currentICPInliers;
-                    this.ICPOutliers = currentICPOutliers;
-                    this.ICPRatio = this.ICPInliers / this.ICPOutliers;
-                    /*if (iterations > 3)
-                    {
-                        System.Diagnostics.Debug.WriteLine("ICP took " + (DateTime.Now - elapsed) + "("+iterations+" iterations)");
-                    }*/
-                }
-                //System.Diagnostics.Debug.WriteLine(R.Determinant());
-                if (Math.Abs(R.Determinant() - 1) < 0.001f && !skip)
-                {
-                    normalCounter++;
-                    if (this.ICPRatio > MINICPRATIO || !this.REQUIRE_HIGH_QUALITY_RESULT)
-                    {
-                        //normalCounter = 0;
-                        //this.rotations.Enqueue(R);
-                        container.R = R;
-                    }
-                    if (this.ICPRatio > MINICPRATIO)
-                    {
-                        this.lastConfidentR = R;
-                    }
-
-                    if (this.ICPRatio > 0.8f)
-                    {
-                        if (trackingLostCount > 0)
+                        if (this.ICPRatio > MINICPRATIO)
                         {
-                            System.Diagnostics.Debug.WriteLine("regained tracking!");
+                            this.lastConfidentR = R;
                         }
-                        trackingLostCount = 0;
-                        resetCount = 0;
-                    }
 
-                    if (normalCounter > 10)
-                    {
-                        //normalCounter++;
-                        normalCounter = 0;
-                       // this.scanNormals();
-                    }
-                    prevRKnown = true;
-                    prevR = R;
-                }
-                if (this.ICPInliers == 0)
-                {
-                    /*trackingLostCount++;
-                    this.reset();*/
-                }
-                else if (this.ICPRatio < 0.8f)
-                {
-                    trackingLostCount++;
-                    if (trackingLostCount == 15)
-                    {
-                        System.Diagnostics.Debug.WriteLine("Soft RESET");
-                        this.ICPTranslation = Vector3.Zero;
-
-                    }
-                    if (trackingLostCount > 50)
-                    {
-                        this.reset();
-                    }
-                    if (trackingLostCount > 53)
-                    {
-                        trackingLostCount = 0;
-
-                    }
-
-                    /*if (this.trackingLostCount > 2 && resetCount < 6 && lastConfidentR != XNAMatrix.Identity)
-                    {
-
-                        int factor = resetCount % 2 == 1 ? 1 : -1;
-                        prevR = XNAMatrix.Multiply(this.lastConfidentR, XNAMatrix.CreateFromAxisAngle(g.Normals[2], factor * MathHelper.Pi / 4 * ((float)resetCount / 6f)));
-                        //this.rotations.Enqueue(prevR);
-                        trackingLostCount = 0;
-                        resetCount++;
-                        System.Diagnostics.Debug.WriteLine("soft reset");
-                    }
-                    if (resetCount > 5)
-                    {
-                        if (resetCount == 5)
+                        if (this.ICPRatio > 0.8f)
                         {
-                            System.Diagnostics.Debug.WriteLine("giving up");
+                            if (trackingLostCount > 0)
+                            {
+                                System.Diagnostics.Debug.WriteLine("regained tracking!");
+                            }
+                            trackingLostCount = 0;
+                            resetCount = 0;
                         }
-                        resetCount++;
-                        //resetCount = 0;
+
+                        if (normalCounter > 10)
+                        {
+                            //normalCounter++;
+                            normalCounter = 0;
+                            // this.scanNormals();
+                        }
+                        prevRKnown = true;
+                        prevR = R;
+                    }
+                    if (this.ICPInliers == 0)
+                    {
+                        /*trackingLostCount++;
+                        this.reset();*/
+                    }
+                    else if (this.ICPRatio < 0.8f)
+                    {
+                        trackingLostCount++;
+                        if (trackingLostCount == 15)
+                        {
+                            System.Diagnostics.Debug.WriteLine("Soft RESET");
+                            this.ICPTranslation = Vector3.Zero;
+
+                        }
+                        if (trackingLostCount > 50)
+                        {
+                            this.reset();
+                        }
+                        if (trackingLostCount > 53)
+                        {
+                            trackingLostCount = 0;
+
+                        }
+
+                        /*if (this.trackingLostCount > 2 && resetCount < 6 && lastConfidentR != XNAMatrix.Identity)
+                        {
+
+                            int factor = resetCount % 2 == 1 ? 1 : -1;
+                            prevR = XNAMatrix.Multiply(this.lastConfidentR, XNAMatrix.CreateFromAxisAngle(g.Normals[2], factor * MathHelper.Pi / 4 * ((float)resetCount / 6f)));
+                            //this.rotations.Enqueue(prevR);
+                            trackingLostCount = 0;
+                            resetCount++;
+                            System.Diagnostics.Debug.WriteLine("soft reset");
+                        }
+                        if (resetCount > 5)
+                        {
+                            if (resetCount == 5)
+                            {
+                                System.Diagnostics.Debug.WriteLine("giving up");
+                            }
+                            resetCount++;
+                            //resetCount = 0;
+                            //this.reset();
+                            //this.lastConfidentR = XNAMatrix.Identity;
+                        }
+                        if (resetCount == 8)
+                        {
+                            this.reset();
+                        }
                         //this.reset();
-                        //this.lastConfidentR = XNAMatrix.Identity;
+                        */
                     }
-                    if (resetCount == 8)
-                    {
-                        this.reset();
-                    }
-                    //this.reset();
-                    */
-                }
-                this.dataContainer.ICPInliers = this.ICPInliers;
-                this.dataContainer.ICPOutliers = this.ICPOutliers;
-                this.dataContainer.ICPRatio = this.ICPRatio;
-                this.dataContainer.recordTick();
-                //System.Diagnostics.Debug.WriteLine(iterations);
+                    this.dataContainer.ICPInliers = this.ICPInliers;
+                    this.dataContainer.ICPOutliers = this.ICPOutliers;
+                    this.dataContainer.ICPRatio = this.ICPRatio;
+                    //this.dataContainer.recordTick();
+                    //System.Diagnostics.Debug.WriteLine(iterations);
 
-                container.center = center;
-                manager.enqueue(container);
+                    container.center = center;
+                }
+                //manager.enqueue(container);
+                manager.processingQueues[++container.stage].Enqueue(container);
             }
 
-            
+
         }
 
         public void reset()

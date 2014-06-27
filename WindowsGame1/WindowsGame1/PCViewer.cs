@@ -92,8 +92,7 @@ namespace KADA
         SpriteFont spriteFont;        
         int oldScroll;        
         bool freeze = false;
-        public bool generateBackground = false;
-        public bool saveColors = false;
+        
         private Model model;
         private PipelineManager manager;
 
@@ -161,10 +160,13 @@ namespace KADA
                 PipelineContainer container = null;
                 while (container == null)
                 {
-                    container = manager.dequeue(stage);
+                    //container = manager.dequeue(stage);
+                    container = null;
+                    manager.processingQueues[stage].TryDequeue(out container);
                     if (container == null)
                     {
-                        Thread.Sleep(3);
+                        Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        return;
                     }
                 }
                 DepthColor[,] depth = container.dc;
@@ -190,6 +192,9 @@ namespace KADA
                 }
 
                 this.model = dataContainer.model;
+                System.Diagnostics.Debug.WriteLine(container.center);
+                this.SetBrickTranslate(Matrix.CreateTranslation(container.center));
+                this.SetBrickRotation(container.R);
                 foreach (Point v in model.points)
                 {
                     Matrix transform = brickRotation * brickTranslation;
@@ -260,7 +265,13 @@ namespace KADA
                 instances[i].ScreenPos = center;
                 instances[i].Scale = 1;
                 instances[i].Color = new Vector3(0, 255, 0);
-                this.manager.enqueue(container);
+
+                
+                this.manager.recycle.Enqueue(container);
+                this.dataContainer.recordTick();
+                //this.manager.enqueue(container);
+                //manager.processingQueues[++container.stage].Enqueue(container);
+                //container = null;
             }
 
             
@@ -271,10 +282,13 @@ namespace KADA
             Game g = new PCViewer();
             g.Run();
         }
+        
+        
+
         public PCViewer()
         {
-            
-            this.manager = new PipelineManager();
+            this.dataContainer = new PipelineDataContainer();
+            this.manager = new PipelineManager(this.dataContainer);
             
             PCViewport = new Viewport();
             PCViewport.X = 0;
@@ -308,7 +322,7 @@ namespace KADA
             Content.RootDirectory = "Content";
             this.IsFixedTimeStep = true;
             graphics.SynchronizeWithVerticalRetrace = true;
-            this.dataContainer = new PipelineDataContainer();
+            
             this.model = dataContainer.model;
             Thread Stage6 = new Thread(new ThreadStart(() => UpdateInstanceInformation()));
             Stage6.Start();
@@ -378,7 +392,7 @@ namespace KADA
                 totalFrames = 0;
                 elapsedTime = 0;
             }*/
-
+            //.UpdateInstanceInformation();
 
             HandleInput(Keyboard.GetState(), Mouse.GetState());
 
@@ -387,7 +401,7 @@ namespace KADA
                 transformationUpdater = new Task(() => this.UpdateInstanceInformation());
                 transformationUpdater.Start();
             }
-            this.Window.Title = "Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms";
+            this.Window.Title = "Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
 
             base.Update(gameTime);
         }  
@@ -478,11 +492,11 @@ namespace KADA
             }
             if (kS.IsKeyDown(Keys.B))
             {
-                this.generateBackground = true;
+                this.dataContainer.generateBackground = true;
             }
             if (kS.IsKeyDown(Keys.I))
             {
-                this.saveColors = true;
+                this.dataContainer.deNoiseAndICP = true;
             }
             if (kS.IsKeyDown(Keys.V))
             {
@@ -636,7 +650,7 @@ namespace KADA
                         eff.TextureEnabled = false;
                         eff.DiffuseColor = b.getColor()*0.7f;
                         eff.EnableDefaultLighting();
-                        eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * b.getTransformation() * Matrix.CreateTranslation(this.offset) * brickRotation * brickTranslation;// *
+                        eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * b.getTransformation() * Matrix.CreateTranslation(this.offset) * this.brickRotation * brickTranslation;// *
 
                         eff.View = View;
                         eff.Projection = Projection;
