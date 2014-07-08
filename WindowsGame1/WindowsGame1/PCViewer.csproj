@@ -115,6 +115,7 @@
     <Compile Include="2DProcessor.cs" />
     <Compile Include="3DProcessor.cs" />
     <Compile Include="FrameCreator.cs" />
+    <Compile Include="ICPWorker.cs" />
     <Compile Include="PipelineContainer.cs" />
     <Compile Include="Histogram.cs" />
     <Compile Include="PipelineDataContainer.cs" />

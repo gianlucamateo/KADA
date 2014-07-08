@@ -43,8 +43,25 @@ namespace XYZFileLoader
             //points = Reader.getPoints();
         }
 
+        private void reset()
+        {
+            this.voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
+            this.pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
+            this.points = new List<Point>();
+            for (int x = 0; x < voxelGrid.GetLength(0); x++)
+            {
+                for (int y = 0; y < voxelGrid.GetLength(1); y++)
+                {
+                    for (int z = 0; z < voxelGrid.GetLength(2); z++)
+                    {
+                        pointGrid[x, y, z] = new List<Point>();
+                    }
+                }
+            }
+        }
         public KDTreeWrapper getKDTree()
         {
+            this.reset();
             foreach (LocatedBrick b in bricks)
             {
                 b.insert(this.pointGrid, this.voxelGrid);
@@ -57,7 +74,7 @@ namespace XYZFileLoader
             {
                 if (p.normal != Vector3.Zero)
                 {
-                    kdTree.AddPoint(p.position, p);
+                    kdTree.AddPoint(p.position, p.Copy());
                 }
             }
             return kdTree;

@@ -60,12 +60,13 @@ namespace KADA
                 return;
             }
             container.stage = 0;
+            container.qi.Clear();
 
             using (ColorImageFrame colorFrame = e.OpenColorImageFrame())
             {
                 if (colorFrame != null)
                 {
-                    container.colorPixels = new byte[dataContainer.COLORLENGTH];
+                    
                     colorFrame.CopyPixelDataTo(container.colorPixels);
                     /*this.imageBitmap.WritePixels(
                         new Int32Rect(0, 0, this.imageBitmap.PixelWidth, this.imageBitmap.PixelHeight),
@@ -79,7 +80,7 @@ namespace KADA
             {
                 if (depthFrame != null)
                 {
-                    container.depthPixels = new DepthImagePixel[this.dataContainer.DEPTHLENGTH];
+                    
                     depthFrame.CopyDepthImagePixelDataTo(container.depthPixels);
 
                     /*this.depthBitmap.WritePixels(

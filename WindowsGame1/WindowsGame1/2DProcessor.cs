@@ -64,6 +64,8 @@ namespace KADA
             Stage1.Start();
             Thread Stage12 = new Thread(new ThreadStart(() => UpdateDepthData()));
             Stage12.Start();
+            Thread Stage13 = new Thread(new ThreadStart(() => UpdateDepthData()));
+            Stage13.Start();
 
 
 

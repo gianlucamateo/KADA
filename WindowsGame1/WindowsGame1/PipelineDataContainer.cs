@@ -9,7 +9,7 @@ namespace KADA
 {
     public class PipelineDataContainer
     {
-        public double ICPInliers, ICPOutliers, ICPRatio;
+        public float ICPInliers, ICPOutliers, ICPRatio;
         public readonly float NORMAL_CULLING_LIMIT = 0f;
         public Vector3[] Normals = new Vector3[3];
         public Vector3 mostConfidentNormal = Vector3.UnitZ;
@@ -19,7 +19,7 @@ namespace KADA
         public Model model;
         public bool generateBackground = false;
         public bool deNoiseAndICP = false;
-        public int SLEEPTIME = 3;
+        public int SLEEPTIME = 1;
 
         public PipelineDataContainer()
         {

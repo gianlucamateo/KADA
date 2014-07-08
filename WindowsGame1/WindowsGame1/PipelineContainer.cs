@@ -17,6 +17,10 @@ namespace KADA
         public DepthImagePixel[] depthPixels;
         public byte[] colorPixels;
         public ColorImagePoint[] colorPoints;
+        public int ICPInliers = 0;
+        public int ICPOutliers = 0;
+        public float ICPRatio = 0f;
+        
 
         public PipelineContainer(PipelineDataContainer dataContainer)
         {

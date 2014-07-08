@@ -192,7 +192,7 @@ namespace KADA
                 }
 
                 this.model = dataContainer.model;
-                System.Diagnostics.Debug.WriteLine(container.center);
+                
                 this.SetBrickTranslate(Matrix.CreateTranslation(container.center));
                 this.SetBrickRotation(container.R);
                 foreach (Point v in model.points)
@@ -224,6 +224,13 @@ namespace KADA
                         instances[i].Scale = 0.2f;
                         instances[i].Color = new Vector3(255, 0, 100);
                     }
+                    i++;
+                }
+                foreach (Vector3 v in container.qi)
+                {
+                    instances[i].ScreenPos = v;
+                    instances[i].Scale = 0.1f;
+                    instances[i].Color = new Vector3(255, 0, 0);
                     i++;
                 }
                 for (int o = i; o < instances.Length; o++)
@@ -269,6 +276,9 @@ namespace KADA
                 
                 this.manager.recycle.Enqueue(container);
                 this.dataContainer.recordTick();
+                this.dataContainer.ICPInliers = container.ICPInliers;
+                this.dataContainer.ICPOutliers = container.ICPOutliers;
+                this.dataContainer.ICPRatio = container.ICPRatio;
                 //this.manager.enqueue(container);
                 //manager.processingQueues[++container.stage].Enqueue(container);
                 //container = null;
@@ -512,6 +522,10 @@ namespace KADA
                 CameraPosition = new Vector3(0, 0,0);
                 CameraLookAt = new Vector3(0, 0, -370);
        
+            }
+            if (kS.IsKeyDown(Keys.R))
+            {
+                this.manager.processor3D.reset();
             }
 
            
