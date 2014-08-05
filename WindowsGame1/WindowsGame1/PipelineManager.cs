@@ -29,7 +29,7 @@ namespace KADA
             this.processor2D = new _2DProcessor(this, this.dataContainer);
             this.processor3D = new _3DProcessor(this,this.dataContainer);
             this.frameCreator = new FrameCreator(this.dataContainer,this);
-            for (int i = 0; i < 90; i++)
+            for (int i = 0; i < 50; i++)
             {
                 recycle.Enqueue(new PipelineContainer(dataContainer));
             }
@@ -99,7 +99,7 @@ namespace KADA
                 }
                 System.Diagnostics.Debug.Write("\n");
                 System.Diagnostics.Debug.WriteLine("recycling: " + this.recycle.Count);
-                Thread.Sleep(1000);
+                Thread.Sleep(10000);
             }
         }
         

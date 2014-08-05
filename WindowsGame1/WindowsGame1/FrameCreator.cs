@@ -82,7 +82,7 @@ namespace KADA
                     }
                     colorFrame.CopyPixelDataTo(container.colorPixels);                    
                 }
-                using (DepthImageFrame depthFrame = kinect.DepthStream.OpenNextFrame(0))
+                using (DepthImageFrame depthFrame = kinect.DepthStream.OpenNextFrame(50))
                 {
                     if (depthFrame == null)
                     {
@@ -96,7 +96,7 @@ namespace KADA
                 DateTime previous = DateTime.MinValue;
                 if (dataContainer.deNoiseAndICP)
                 {
-                    this.file.Write(container.number + ": ");
+                    this.file.Write(container.number + " ");
                     foreach (DateTime t in container.timings)
                     {
                         current = t.Subtract(previous);

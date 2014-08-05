@@ -62,7 +62,7 @@ namespace KADA
 
             List<Thread> Stage1 = new List<Thread>();
 
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 5; i++)
             {
                 Thread x = new Thread(new ThreadStart(() => UpdateDepthData()));
                 x.Start();
@@ -81,7 +81,7 @@ namespace KADA
 
             List<Thread> Stage3 = new List<Thread>();
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 7; i++)
             {
                 Thread x = new Thread(new ThreadStart(() => deNoise()));
                 x.Start();
@@ -115,13 +115,13 @@ namespace KADA
                     {
                         Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
-                    
+
                 }
                 DepthImagePixel[] dPixels = container.depthPixels;
                 int baseindex;
                 DepthColor[,] depth = container.dc;
                 ColorImagePoint[] colorPoints = container.colorPoints;
-                byte[] colorPixels = container.colorPixels;                
+                byte[] colorPixels = container.colorPixels;
                 if (this.dataContainer.generateBackground && background == null)
                 {
                     this.GenerateBackground(dPixels);
@@ -168,7 +168,7 @@ namespace KADA
                 }
                 //manager.enqueue(container);
                 container.timings.Add(DateTime.Now);
-                
+
                 manager.processingQueues[++container.stage].Enqueue(container);
             }
         }
@@ -243,7 +243,7 @@ namespace KADA
         public void eliminateColor()
         {
             int stage = 2;
-            bool work = true;
+            bool work = false;
             while (true)
             {
                 PipelineContainer container = null;
@@ -264,9 +264,9 @@ namespace KADA
                         Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
                 }
-                if (this.dataContainer.deNoiseAndICP||work)
+                if (this.dataContainer.deNoiseAndICP || work)
                 {
-                    
+
                     DepthColor[,] dc = container.dc;
                     for (int x = 0; x < dc.GetLength(0); x++)
                     {
@@ -312,6 +312,9 @@ namespace KADA
         {
             bool work = false;
             int stage = 3;
+            int width = 640, height = 480;
+            bool[,] grid = new bool[width, height];
+            bool[,] outputGrid = new bool[width, height];
             while (true)
             {
                 PipelineContainer container = null;
@@ -328,19 +331,27 @@ namespace KADA
                         }
                     }
                     else
-                        {
-                            Thread.Sleep(this.dataContainer.SLEEPTIME);
-                        }
+                    {
+                        Thread.Sleep(this.dataContainer.SLEEPTIME);
+                    }
                 }
-                if (this.dataContainer.deNoiseAndICP||work)
+                if (this.dataContainer.deNoiseAndICP || work)
                 {
                     work = true;
                     DepthColor[,] dc = container.dc;
 
-                    int width = dc.GetLength(0), height = dc.GetLength(1);
+                    //int width = dc.GetLength(0), height = dc.GetLength(1);
 
-                    bool[,] grid = new bool[width, height];
-                    bool[,] outputGrid = null;
+                    //bool[,] grid = new bool[width, height];
+                    //bool[,] outputGrid = null;
+
+                    for (int x = 0; x < width; x++)
+                    {
+                        for (int y = 0; y < height; y++)
+                        {
+                            grid[x, y] = false;
+                        }
+                    }
 
                     for (int x = 0; x < width; x++)
                     {
@@ -354,7 +365,15 @@ namespace KADA
                     }
                     for (int i = 0; i < 2; i++)
                     {
-                        outputGrid = new bool[width, height];
+
+                        for (int x = 0; x < width; x++)
+                        {
+                            for (int y = 0; y < height; y++)
+                            {
+                                outputGrid[x, y] = false;
+                            }
+                        }
+
                         for (int x = 1; x < width - 1; x++)
                         {
                             for (int y = 1; y < height - 1; y++)
@@ -387,8 +406,13 @@ namespace KADA
                                 }
                             }
                         }
-                        grid = (bool[,])outputGrid.Clone();
-
+                        for (int x = 0; x < width; x++)
+                        {
+                            for (int y = 0; y < height; y++)
+                            {
+                                grid[x, y] = outputGrid[x,y];
+                            }
+                        }
                     }
                     bool[,] lastGrid = null;
                     for (int i = 0; i < 3; i++)
@@ -438,7 +462,14 @@ namespace KADA
                         }
 
                         lastGrid = outputGrid;
-                        outputGrid = (bool[,])grid.Clone();
+                        for (int x = 0; x < width; x++)
+                        {
+                            for (int y = 0; y < height; y++)
+                            {
+                                outputGrid[x, y] = grid[x,y];
+                            }
+                        }
+                        
                     }
 
                     for (int x = 1; x < width - 1; x++)

@@ -19,8 +19,8 @@ namespace XYZFileLoader
         {
             this.bricks = new List<LocatedBrick>();
             this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0),Color.Green));
-            /*
-            this.bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), Color.Red));
+            
+            /*this.bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), Color.Red));
             this.bricks.Add(new LocatedBrick(false, new Vector3(-1, 2, -1), Color.Blue));
             this.bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), Color.Blue));
             this.bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), Color.Blue));*/

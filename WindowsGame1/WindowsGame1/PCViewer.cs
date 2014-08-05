@@ -156,12 +156,17 @@ namespace KADA
         //Stage 6
         private void UpdateInstanceInformation()
         {
+            
             int stage = 6;
             int lastFrame = 0;
             bool fromOutOfOrder = false;
             SortedList<int, PipelineContainer> outOfOrder = new SortedList<int, PipelineContainer>();
             while (true)
             {
+                if (instances == null)
+                {
+                    continue;
+                }
                 PipelineContainer container = null;
                 
                 while (container == null)

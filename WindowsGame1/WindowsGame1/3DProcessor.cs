@@ -69,15 +69,17 @@ namespace KADA
 
             Thread Stage4 = new Thread(new ThreadStart(() => generateCenter()));
             Stage4.Start();
+            //Thread Stage4a = new Thread(new ThreadStart(() => generateCenter()));
+            //Stage4a.Start();
 
             KDTreeWrapper tree = dataContainer.model.getKDTree();
             ConcurrentQueue<ICPWorker> workers1;
             workers1 = new ConcurrentQueue<ICPWorker>();
             ConcurrentQueue<ICPWorker> workers2;
             workers2 = new ConcurrentQueue<ICPWorker>();
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 10; i++)
             {
-                ICPWorker w = new ICPWorker();
+                ICPWorker w = new ICPWorker(i);
                 w.brickWrapper = tree;
                 workers1.Enqueue(w);
             }
@@ -153,12 +155,39 @@ namespace KADA
                     outOfOrder.Add(container.number, container);
                     if (outOfOrder.Count > 10)
                     {
-                        System.Diagnostics.Debug.WriteLine("PCVIEWER has " + outOfOrder.Count + ", " + lastFrame);
+                        System.Diagnostics.Debug.WriteLine("GenerateCenter has " + outOfOrder.Count + ", " + lastFrame);
                         lastFrame++;
+                        lastFrame = container.number;
+                        foreach (PipelineContainer c in outOfOrder.Values)
+                        {
+                            manager.recycle.Enqueue(c);
+                        }
+                        outOfOrder.Clear();
                     }
                     continue;
                 }
 
+
+                //Removed anti-frame-mess-logic
+                /*
+                while (container == null)
+                {
+                    //container = manager.dequeue(stage);
+                    container = null;
+                    if (manager.processingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
+                    {
+                        manager.processingQueues[stage].TryDequeue(out container);
+                        if (container == null)
+                        {
+                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        }
+                    }
+                    else
+                    {
+                        Thread.Sleep(this.dataContainer.SLEEPTIME);
+                    }
+                }
+                */
                 if (this.dataContainer.deNoiseAndICP)
                 {
                     DepthColor[,] dc = container.dc;
@@ -320,6 +349,7 @@ namespace KADA
 
                 if (this.dataContainer.deNoiseAndICP)
                 {
+                    DateTime now = DateTime.Now;
                     DepthColor[,] dc = container.dc;
                     List<Vector3> qi = container.qi;
                     //System.Diagnostics.Debug.WriteLine(qi.Count);
@@ -497,12 +527,12 @@ namespace KADA
                              }
                              Thread.Sleep(1);
                          }*/
-
+                        
                         while (workers.ElementAt(workers.Count - 1).input.Count > 0)
                         {
                             //Thread.Sleep(1);
                         }
-
+                       // System.Diagnostics.Debug.WriteLine(DateTime.Now - now);
                         foreach (ICPWorker w in workers)
                         {
                             A = A.Add(w.A);
@@ -680,9 +710,9 @@ namespace KADA
                 //manager.enqueue(container);
                 container.timings.Add(DateTime.Now);
                 manager.processingQueues[++container.stage].Enqueue(container);
-                if (icpCount++ % 30 == 0)
+                if (icpCount++ % 90 == 0)
                 {
-                    float time = total / 30;
+                    float time = total / 90;
 
                     System.Diagnostics.Debug.WriteLine("ICP TOOK ON AVG: " + time);
                     total = 0;

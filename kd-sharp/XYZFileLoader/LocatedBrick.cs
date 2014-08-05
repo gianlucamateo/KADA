@@ -42,7 +42,8 @@ namespace XYZFileLoader
         }
 
         public void insert(List<Point>[, ,] pointGrid, Brick[, ,] voxelGrid)
-        {            
+        {
+            this.Transformation = Matrix.Identity;
             Vector3 translation = new Vector3();
             translation.X = voxelDimensions.X * voxelOffset.X;
             translation.Y = voxelDimensions.Y * voxelOffset.Y;
