@@ -15,7 +15,7 @@ namespace XYZFileLoader
         public List<Vector> qi_prime;
 
         public KDTreeWrapper(){
-            kdTree = new KDTree.KDTree<Point>(3);
+            kdTree = new KDTree.KDTree<Point>(3,1);
             points = new List<Point>();
             qi_prime = new List<Vector>();
         }

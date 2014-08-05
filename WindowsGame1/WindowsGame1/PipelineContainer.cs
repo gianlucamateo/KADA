@@ -20,10 +20,13 @@ namespace KADA
         public int ICPInliers = 0;
         public int ICPOutliers = 0;
         public float ICPRatio = 0f;
+        public int number;
+        public List<DateTime> timings;
         
 
         public PipelineContainer(PipelineDataContainer dataContainer)
         {
+            this.timings = new List<DateTime>();
             this.stage = 0;
             this.dc = new DepthColor[640, 480];
             this.R = Matrix.Identity;

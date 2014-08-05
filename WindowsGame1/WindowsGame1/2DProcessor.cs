@@ -60,25 +60,33 @@ namespace KADA
             Histogram ye = new Histogram(yellow, 12, 16);
             //Histograms.Add(ye);
 
-            Thread Stage1 = new Thread(new ThreadStart(() => UpdateDepthData()));
-            Stage1.Start();
-            Thread Stage12 = new Thread(new ThreadStart(() => UpdateDepthData()));
-            Stage12.Start();
-            Thread Stage13 = new Thread(new ThreadStart(() => UpdateDepthData()));
-            Stage13.Start();
+            List<Thread> Stage1 = new List<Thread>();
+
+            for (int i = 0; i < 3; i++)
+            {
+                Thread x = new Thread(new ThreadStart(() => UpdateDepthData()));
+                x.Start();
+                Stage1.Add(x);
+            }
 
 
+            List<Thread> Stage2 = new List<Thread>();
 
-            Thread Stage2 = new Thread(new ThreadStart(() => eliminateColor()));
-            Stage2.Start();
-            Thread Stage31 = new Thread(new ThreadStart(() => deNoise()));
-            Stage31.Start();
-            Thread Stage32 = new Thread(new ThreadStart(() => deNoise()));
-            Stage32.Start();
-            Thread Stage33 = new Thread(new ThreadStart(() => deNoise()));
-            Stage33.Start();
-            Thread Stage34 = new Thread(new ThreadStart(() => deNoise()));
-            Stage34.Start();
+            for (int i = 0; i < 3; i++)
+            {
+                Thread x = new Thread(new ThreadStart(() => eliminateColor()));
+                x.Start();
+                Stage2.Add(x);
+            }
+
+            List<Thread> Stage3 = new List<Thread>();
+
+            for (int i = 0; i < 4; i++)
+            {
+                Thread x = new Thread(new ThreadStart(() => deNoise()));
+                x.Start();
+                Stage3.Add(x);
+            }
 
 
         }
@@ -86,6 +94,7 @@ namespace KADA
         //Stage 1
         private void UpdateDepthData()
         {
+            DepthImagePixel[] background = null;
             int stage = 1;
             while (true)
             {
@@ -94,24 +103,30 @@ namespace KADA
                 {
                     //container = manager.dequeue(stage);
                     container = null;
-                    manager.processingQueues[stage].TryDequeue(out container);
-                    if (container == null)
+                    if (manager.processingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
+                    {
+                        manager.processingQueues[stage].TryDequeue(out container);
+                        if (container == null)
+                        {
+                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        }
+                    }
+                    else
                     {
                         Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
+                    
                 }
                 DepthImagePixel[] dPixels = container.depthPixels;
                 int baseindex;
                 DepthColor[,] depth = container.dc;
                 ColorImagePoint[] colorPoints = container.colorPoints;
-                byte[] colorPixels = container.colorPixels;
-
-                DepthImagePixel[] background = null;
-                if (this.dataContainer.generateBackground)
+                byte[] colorPixels = container.colorPixels;                
+                if (this.dataContainer.generateBackground && background == null)
                 {
                     this.GenerateBackground(dPixels);
                 }
-                if (this.BackgroundReady())
+                if (background == null)
                 {
                     background = getBackground();
                 }
@@ -152,6 +167,8 @@ namespace KADA
 
                 }
                 //manager.enqueue(container);
+                container.timings.Add(DateTime.Now);
+                
                 manager.processingQueues[++container.stage].Enqueue(container);
             }
         }
@@ -187,6 +204,7 @@ namespace KADA
                         background[i].Depth = (short)(localDepth);
                     }
                 }
+                this.dataContainer.generateBackground = false;
                 this.backgroundReady = true;
                 return true;
             }
@@ -225,6 +243,7 @@ namespace KADA
         public void eliminateColor()
         {
             int stage = 2;
+            bool work = true;
             while (true)
             {
                 PipelineContainer container = null;
@@ -232,14 +251,22 @@ namespace KADA
                 {
                     //container = manager.dequeue(stage);
                     container = null;
-                    manager.processingQueues[stage].TryDequeue(out container);
-                    if (container == null)
+                    if (manager.processingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
+                    {
+                        manager.processingQueues[stage].TryDequeue(out container);
+                        if (container == null)
+                        {
+                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        }
+                    }
+                    else
                     {
                         Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
                 }
-                if (this.dataContainer.deNoiseAndICP)
+                if (this.dataContainer.deNoiseAndICP||work)
                 {
+                    
                     DepthColor[,] dc = container.dc;
                     for (int x = 0; x < dc.GetLength(0); x++)
                     {
@@ -270,6 +297,7 @@ namespace KADA
                         }
                     }
                 }
+                container.timings.Add(DateTime.Now);
                 manager.processingQueues[++container.stage].Enqueue(container);
                 //manager.enqueue(container);
             }
@@ -282,6 +310,7 @@ namespace KADA
         //Stage 3
         public void deNoise()
         {
+            bool work = false;
             int stage = 3;
             while (true)
             {
@@ -290,14 +319,22 @@ namespace KADA
                 {
                     //container = manager.dequeue(stage);
                     container = null;
-                    manager.processingQueues[stage].TryDequeue(out container);
-                    if (container == null)
+                    if (manager.processingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
                     {
-                        Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        manager.processingQueues[stage].TryDequeue(out container);
+                        if (container == null)
+                        {
+                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        }
                     }
+                    else
+                        {
+                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        }
                 }
-                if (this.dataContainer.deNoiseAndICP)
+                if (this.dataContainer.deNoiseAndICP||work)
                 {
+                    work = true;
                     DepthColor[,] dc = container.dc;
 
                     int width = dc.GetLength(0), height = dc.GetLength(1);
@@ -422,6 +459,7 @@ namespace KADA
                     }
                 }
                 //manager.enqueue(container);
+                container.timings.Add(DateTime.Now);
                 manager.processingQueues[++container.stage].Enqueue(container);
             }
 

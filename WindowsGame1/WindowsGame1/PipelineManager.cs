@@ -29,7 +29,7 @@ namespace KADA
             this.processor2D = new _2DProcessor(this, this.dataContainer);
             this.processor3D = new _3DProcessor(this,this.dataContainer);
             this.frameCreator = new FrameCreator(this.dataContainer,this);
-            for (int i = 0; i < 20; i++)
+            for (int i = 0; i < 90; i++)
             {
                 recycle.Enqueue(new PipelineContainer(dataContainer));
             }
@@ -50,15 +50,9 @@ namespace KADA
             {
                 foreach (ConcurrentQueue<PipelineContainer> q in processingQueues)
                 {
-                    if (q.Count > 5)
-                    {
-                        if (q.TryDequeue(out pc))
-                        {
-                            this.recycle.Enqueue(pc);
-                        }
-
-                    }
+                    q.OrderBy(element => element.number);
                 }
+                Thread.Sleep(1);
             }
         }
         private void enqueue(PipelineContainer container)

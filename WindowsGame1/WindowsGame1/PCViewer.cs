@@ -24,7 +24,7 @@ using Model = XYZFileLoader.Model;
 namespace KADA
 {
     #region DepthColor Struct
-    
+
     public struct DepthColor
     {
         public Vector3 Color;
@@ -42,14 +42,16 @@ namespace KADA
     }
     #endregion
     #region PCViewer
-    
+
     public class PCViewer : Microsoft.Xna.Framework.Game
     {
         #region Class Variables
 
-        
 
-        public Vector3[,] NormalMap = new Vector3[640,480];
+
+        public Vector3[,] NormalMap = new Vector3[640, 480];
+
+
 
         Int32 count = 640 * 480 + 100000;
         Viewport PCViewport;
@@ -69,30 +71,30 @@ namespace KADA
         VertexDeclaration instanceVertexDeclaration;
         InstanceInfo[] instances;
 
-        
+
 
         public Vector3 offset = new Vector3(-36.5f, -17f, 15f);
 
-        private Matrix brickTranslation=Matrix.CreateTranslation(new Vector3(0,0,0));
+        private Matrix brickTranslation = Matrix.CreateTranslation(new Vector3(0, 0, 0));
         private Matrix brickRotation = Matrix.CreateTranslation(Vector3.Zero);
 
-       
+
 
 
         Effect effect;
-        private Vector3 CameraPosition = new Vector3(0, 0,0);
+        private Vector3 CameraPosition = new Vector3(0, 0, 0);
         private Vector3 CameraLookAt = new Vector3(0, 0, -370);
         private Vector3 CameraUp;
-         
+
         public Matrix World;
         public Matrix View;
         public Matrix Projection;
 
         private ConcurrentQueue<DepthColor[,]> depths, depthsPool;
-        SpriteFont spriteFont;        
-        int oldScroll;        
+        SpriteFont spriteFont;
+        int oldScroll;
         bool freeze = false;
-        
+
         private Model model;
         private PipelineManager manager;
 
@@ -103,7 +105,7 @@ namespace KADA
         Task transformationUpdater;
 
         #endregion
-     
+
         struct InstanceInfo
         {
             public Vector3 ScreenPos;
@@ -111,7 +113,7 @@ namespace KADA
             public Vector3 Color;
         };
 
-        
+
 
         public void SetBrickTranslate(Matrix b)
         {
@@ -155,20 +157,61 @@ namespace KADA
         private void UpdateInstanceInformation()
         {
             int stage = 6;
+            int lastFrame = 0;
+            bool fromOutOfOrder = false;
+            SortedList<int, PipelineContainer> outOfOrder = new SortedList<int, PipelineContainer>();
             while (true)
             {
                 PipelineContainer container = null;
+                
                 while (container == null)
                 {
                     //container = manager.dequeue(stage);
                     container = null;
-                    manager.processingQueues[stage].TryDequeue(out container);
-                    if (container == null)
+                    if (manager.processingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
+                    {
+                        manager.processingQueues[stage].TryDequeue(out container);
+                        if (container == null)
+                        {
+                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        }
+                    }
+                    else
                     {
                         Thread.Sleep(this.dataContainer.SLEEPTIME);
-                        return;
                     }
+
                 }
+
+
+                //System.Diagnostics.Debug.WriteLine(container.number + ", " + lastFrame);
+                /*if (Math.Abs(container.number - lastFrame) > 20)
+                {
+                    lastFrame = container.number;
+                    
+                    foreach (PipelineContainer p in outOfOrder.Values)
+                    {
+                        manager.recycle.Enqueue(p);
+                    }
+                    outOfOrder.Clear();
+                }
+
+                if (container.number == lastFrame + 1)
+                {
+                    lastFrame++;
+                }
+                else if (fromOutOfOrder == false)
+                {
+                    outOfOrder.Add(container.number, container);
+                    if (outOfOrder.Count > 10)
+                    {
+                        System.Diagnostics.Debug.WriteLine("PCVIEWER has " + outOfOrder.Count + ", " + lastFrame + ", " + container.number);
+                        lastFrame++;
+                    }
+                    continue; //causes lockup
+                }*/
+                
+
                 DepthColor[,] depth = container.dc;
                 int i = 0;
                 for (int x = 0; x < depth.GetLength(0); x++)
@@ -192,7 +235,7 @@ namespace KADA
                 }
 
                 this.model = dataContainer.model;
-                
+
                 this.SetBrickTranslate(Matrix.CreateTranslation(container.center));
                 this.SetBrickRotation(container.R);
                 foreach (Point v in model.points)
@@ -267,24 +310,26 @@ namespace KADA
                     }
                 }
 
-                
+
 
                 instances[i].ScreenPos = center;
                 instances[i].Scale = 1;
                 instances[i].Color = new Vector3(0, 255, 0);
 
-                
+                container.timings.Add(DateTime.Now);
                 this.manager.recycle.Enqueue(container);
                 this.dataContainer.recordTick();
                 this.dataContainer.ICPInliers = container.ICPInliers;
                 this.dataContainer.ICPOutliers = container.ICPOutliers;
                 this.dataContainer.ICPRatio = container.ICPRatio;
+                //System.Diagnostics.Debug.WriteLine(container.number);
+                Thread.Sleep(5);
                 //this.manager.enqueue(container);
                 //manager.processingQueues[++container.stage].Enqueue(container);
                 //container = null;
             }
 
-            
+
         }
 
         public static void Main(String[] args)
@@ -292,14 +337,15 @@ namespace KADA
             Game g = new PCViewer();
             g.Run();
         }
-        
-        
+
+
 
         public PCViewer()
         {
+            transformationUpdater = new Task(() => this.UpdateInstanceInformation());
             this.dataContainer = new PipelineDataContainer();
             this.manager = new PipelineManager(this.dataContainer);
-            
+
             PCViewport = new Viewport();
             PCViewport.X = 0;
             PCViewport.Y = 0;
@@ -311,10 +357,10 @@ namespace KADA
             BrickViewport.Y = 0;
             BrickViewport.Width = 640;
             BrickViewport.Height = 480;
-            
-            
-            
-            
+
+
+
+
             graphics = new GraphicsDeviceManager(this);
             graphics.IsFullScreen = false;
             graphics.PreferredBackBufferWidth = 1280;
@@ -332,13 +378,14 @@ namespace KADA
             Content.RootDirectory = "Content";
             this.IsFixedTimeStep = true;
             graphics.SynchronizeWithVerticalRetrace = true;
-            
+
             this.model = dataContainer.model;
             Thread Stage6 = new Thread(new ThreadStart(() => UpdateInstanceInformation()));
             Stage6.Start();
         }
 
-        public void setModel(Model m){
+        public void setModel(Model m)
+        {
             this.model = m;
         }
 
@@ -353,7 +400,7 @@ namespace KADA
             // TODO: Add your initialization logic here
             World = Matrix.Identity;
             UpdateView();
-            Projection = Matrix.CreatePerspectiveFieldOfView(43f/180f*MathHelper.Pi, 640f/480f, 10, 1500);
+            Projection = Matrix.CreatePerspectiveFieldOfView(43f / 180f * MathHelper.Pi, 640f / 480f, 10, 1500);
             base.Initialize();
         }
 
@@ -371,7 +418,7 @@ namespace KADA
             spriteFont = Content.Load<SpriteFont>("FPS");
             brick = Content.Load<XNAModel>("Models\\duploblock");
             brickTexture = Content.Load<Texture2D>("Textures\\Exploded_cube_map");
-            
+
 
             bindings = new VertexBufferBinding[2];
             bindings[0] = new VertexBufferBinding(geometryBuffer);
@@ -382,7 +429,7 @@ namespace KADA
 
             effect.CurrentTechnique = effect.Techniques["Instancing"];
             effect.Parameters["WVP"].SetValue(View * Projection);
-        }   
+        }
 
         /// <summary>
         /// Allows the game to run logic such as updating the world,
@@ -408,13 +455,15 @@ namespace KADA
 
             if (!freeze)
             {
-                transformationUpdater = new Task(() => this.UpdateInstanceInformation());
-                transformationUpdater.Start();
+                if (transformationUpdater.Status != TaskStatus.Running)
+                {
+                    transformationUpdater.Start();
+                }
             }
             this.Window.Title = "Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
 
             base.Update(gameTime);
-        }  
+        }
 
         protected void UpdateView()
         {
@@ -510,7 +559,7 @@ namespace KADA
             }
             if (kS.IsKeyDown(Keys.V))
             {
-                CameraUp = new Vector3(0,1,1.2f);
+                CameraUp = new Vector3(0, 1, 1.2f);
                 CameraUp.Normalize();
                 CameraLookAt = new Vector3(-415, 270, -715);
                 CameraPosition = new Vector3(-750, 310, -580);
@@ -519,19 +568,19 @@ namespace KADA
             if (kS.IsKeyDown(Keys.K))
             {
                 CameraUp = Vector3.UnitY;
-                CameraPosition = new Vector3(0, 0,0);
+                CameraPosition = new Vector3(0, 0, 0);
                 CameraLookAt = new Vector3(0, 0, -370);
-       
+
             }
             if (kS.IsKeyDown(Keys.R))
             {
                 this.manager.processor3D.reset();
             }
 
-           
+
             UpdateView();
         }
-       
+
         private void GenerateGeometryBuffers()
         {
             VertexPositionTexture[] vertices = new VertexPositionTexture[24];
@@ -632,8 +681,8 @@ namespace KADA
         {
             GraphicsDevice.Viewport = PCViewport;
             GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.CornflowerBlue);
-            
-            
+
+
             effect.CurrentTechnique = effect.Techniques["Instancing"];
             effect.Parameters["WVP"].SetValue(View * Projection);
 
@@ -662,7 +711,7 @@ namespace KADA
                     foreach (BasicEffect eff in mesh.Effects)
                     {
                         eff.TextureEnabled = false;
-                        eff.DiffuseColor = b.getColor()*0.7f;
+                        eff.DiffuseColor = b.getColor() * 0.7f;
                         eff.EnableDefaultLighting();
                         eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * b.getTransformation() * Matrix.CreateTranslation(this.offset) * this.brickRotation * brickTranslation;// *
 
@@ -674,11 +723,11 @@ namespace KADA
                 }
             }
 
-            
+
             base.Draw(gameTime);
 
         }
 
     }
 }
-#endregion
+    #endregion
