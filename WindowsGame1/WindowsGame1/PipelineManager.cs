@@ -90,7 +90,7 @@ namespace KADA
 
         private void printStats()
         {
-            while (true)
+            while (this.dataContainer.run)
             {
                 System.Diagnostics.Debug.Write("Usage:");
                 for (int i = 0; i < this.processingQueues.Length; i++)

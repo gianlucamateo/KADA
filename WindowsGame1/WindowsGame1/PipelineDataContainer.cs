@@ -22,11 +22,11 @@ namespace KADA
         public bool deNoiseAndICP = false;
         public int SLEEPTIME = 1;
         public int MINFRAMESINCONTAINER = 1;
+        public bool run = true;
 
         public PipelineDataContainer()
         {
-            this.model = new Model();
-            
+            this.model = new Model();            
         }
 
         public void recordTick()

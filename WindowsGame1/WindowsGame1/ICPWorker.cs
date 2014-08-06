@@ -32,8 +32,9 @@ namespace KADA
         private int number;
         private StreamWriter file;
 
-        public ICPWorker(int number)
+        public ICPWorker(int number, PipelineDataContainer dataContainer)
         {
+            this.dataContainer = dataContainer;
             this.file = new StreamWriter("ICP_worker" + number+ ".txt");
             this.number = number;
             this.reset();
@@ -58,27 +59,30 @@ namespace KADA
             int count = 0;
             int i = 0;
             double[] vArr = new double[3];
-            while (true)
+            while (this.dataContainer.run)
             {
                 if (this.input.Count > maxCount)
                 {
                     maxCount = this.input.Count;
                 }
                 v = Vector3.Zero;
-                while (!input.TryDequeue(out v))
+                while (!input.TryDequeue(out v) && this.dataContainer.run)
                 {
                     i++;
                     if (count > 0)
                     {
-                        file.WriteLine(count + " Samples took:" + (DateTime.Now - start));
+                        //file.WriteLine(count + " Samples took:" + (DateTime.Now - start));
                     }
                     start = DateTime.Now;
                     count = 0;
-                    if (i > 5)
+                    if (i > 10)
                     {
-                        Thread.Sleep(1);                        
-                        
+                        Thread.Sleep(2);
                     }
+                }
+                if (container == null)
+                {
+                    break;
                 }
                 i = 0;
                 count++;
@@ -92,19 +96,26 @@ namespace KADA
                 Point p;
                 Vector3 transformedNormal = Vector3.Zero;
                 Point firstGuess = neighbour.Current;
-                
-                /*if (container.ICPRatio > 0.2f)
+
+                bool found = true;
+                if (container.ICPRatio > 0.3f)
                 {
                     transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
                     while (Vector3.Dot(transformedNormal, Vector3.UnitZ) < this.dataContainer.NORMAL_CULLING_LIMIT)//-0.1f)
                     {
                         if (neighbour.MoveNext() == false)
                         {
+                            found = false;
                             break;
                         }
                         transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
                     }
-                }*/
+                    if (!found)
+                    {
+                        continue;
+                    }
+                    
+                }
 
                 p = neighbour.Current;
                 //transformedNormal = Vector3.Transform(p.normal, onlyRot);

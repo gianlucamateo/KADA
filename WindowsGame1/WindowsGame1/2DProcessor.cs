@@ -62,7 +62,7 @@ namespace KADA
 
             List<Thread> Stage1 = new List<Thread>();
 
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 1; i++)
             {
                 Thread x = new Thread(new ThreadStart(() => UpdateDepthData()));
                 x.Start();
@@ -72,7 +72,7 @@ namespace KADA
 
             List<Thread> Stage2 = new List<Thread>();
 
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 1; i++)
             {
                 Thread x = new Thread(new ThreadStart(() => eliminateColor()));
                 x.Start();
@@ -81,7 +81,7 @@ namespace KADA
 
             List<Thread> Stage3 = new List<Thread>();
 
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < 2; i++)
             {
                 Thread x = new Thread(new ThreadStart(() => deNoise()));
                 x.Start();
@@ -96,10 +96,10 @@ namespace KADA
         {
             DepthImagePixel[] background = null;
             int stage = 1;
-            while (true)
+            while (this.dataContainer.run)
             {
                 PipelineContainer container = null;
-                while (container == null)
+                while (container == null && this.dataContainer.run)
                 {
                     //container = manager.dequeue(stage);
                     container = null;
@@ -116,6 +116,10 @@ namespace KADA
                         Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
 
+                }
+                if (container == null)
+                {
+                    break;
                 }
                 DepthImagePixel[] dPixels = container.depthPixels;
                 int baseindex;
@@ -244,10 +248,10 @@ namespace KADA
         {
             int stage = 2;
             bool work = false;
-            while (true)
+            while (this.dataContainer.run)
             {
                 PipelineContainer container = null;
-                while (container == null)
+                while (container == null && this.dataContainer.run)
                 {
                     //container = manager.dequeue(stage);
                     container = null;
@@ -263,6 +267,10 @@ namespace KADA
                     {
                         Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
+                }
+                if (container == null)
+                {
+                    break;
                 }
                 if (this.dataContainer.deNoiseAndICP || work)
                 {
@@ -315,10 +323,10 @@ namespace KADA
             int width = 640, height = 480;
             bool[,] grid = new bool[width, height];
             bool[,] outputGrid = new bool[width, height];
-            while (true)
+            while (this.dataContainer.run)
             {
                 PipelineContainer container = null;
-                while (container == null)
+                while (container == null && this.dataContainer.run)
                 {
                     //container = manager.dequeue(stage);
                     container = null;
@@ -334,6 +342,10 @@ namespace KADA
                     {
                         Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
+                }
+                if (container == null)
+                {
+                    break;
                 }
                 if (this.dataContainer.deNoiseAndICP || work)
                 {

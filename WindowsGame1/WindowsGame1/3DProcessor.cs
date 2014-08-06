@@ -27,6 +27,8 @@ namespace KADA
     public class _3DProcessor
     {
         public const float MAX_INLIERDISTANCE = 8;
+        private const int ICPITERATIONS = 1;
+        private const int WORKERCOUNT = 10;
         /*private ConcurrentQueue<DepthColor[,]> renderQueue, processingQueue;
         private ConcurrentQueue<Vector3> centers;
         private ConcurrentQueue<XNAMatrix> rotations;*/
@@ -77,9 +79,9 @@ namespace KADA
             workers1 = new ConcurrentQueue<ICPWorker>();
             ConcurrentQueue<ICPWorker> workers2;
             workers2 = new ConcurrentQueue<ICPWorker>();
-            for (int i = 0; i < 10; i++)
-            {
-                ICPWorker w = new ICPWorker(i);
+            for (int i = 0; i < WORKERCOUNT; i++)
+            {                
+                ICPWorker w = new ICPWorker(i, this.dataContainer);
                 w.brickWrapper = tree;
                 workers1.Enqueue(w);
             }
@@ -115,10 +117,10 @@ namespace KADA
             int stage = 4;
             int lastFrame = 0;
             bool fromOutOfOrder = false;
-            while (true)
+            while (this.dataContainer.run)
             {
                 PipelineContainer container = null;
-                while (container == null)
+                while (container == null && this.dataContainer.run)
                 {
                     //container = manager.dequeue(stage);
                     container = null;
@@ -145,6 +147,10 @@ namespace KADA
                         }
                     }
                 }
+                if (container == null)
+                {
+                    break;
+                }
 
                 if (container.number == lastFrame + 1)
                 {
@@ -170,7 +176,7 @@ namespace KADA
 
                 //Removed anti-frame-mess-logic
                 /*
-                while (container == null)
+                while (container == null && this.dataContainer.run)
                 {
                     //container = manager.dequeue(stage);
                     container = null;
@@ -314,11 +320,11 @@ namespace KADA
             Matrix H;
 
 
-            while (true)
+            while (this.dataContainer.run)
             {
                 DateTime start = DateTime.Now;
                 PipelineContainer container = null;
-                while (container == null)
+                while (container == null && this.dataContainer.run)
                 {
                     //container = manager.dequeue(stage);
                     container = null;
@@ -346,7 +352,10 @@ namespace KADA
                     manager.processingQueues[++container.stage].Enqueue(container);
                     continue;
                 }*/
-
+                if (container == null)
+                {
+                    break;
+                }
                 if (this.dataContainer.deNoiseAndICP)
                 {
                     DateTime now = DateTime.Now;
@@ -372,10 +381,10 @@ namespace KADA
                         R = prevR;
                     }
                     XNAMatrix RInv = XNAMatrix.CreateRotationX(0);
-                    container.ICPRatio = 0;
+                    container.ICPRatio = 0f;
                     int iterations = 0;
                     bool skip = false;
-                    for (int i = 0; i < 1; i++)
+                    for (int i = 0; i < ICPITERATIONS; i++)
                     {
                         skip = false;
                         iterations = i;
@@ -530,7 +539,7 @@ namespace KADA
                         
                         while (workers.ElementAt(workers.Count - 1).input.Count > 0)
                         {
-                            //Thread.Sleep(1);
+                            Thread.Sleep(1);
                         }
                        // System.Diagnostics.Debug.WriteLine(DateTime.Now - now);
                         foreach (ICPWorker w in workers)
@@ -584,7 +593,7 @@ namespace KADA
                                 factor = 0.1f;
                             }*/
                             double[] XArrTrans = X.ToArray();
-                            X = X.Multiply(factor);
+                            //X = X.Multiply(factor);
                             double[] XArr = X.ToArray();
                             XNAMatrix RTemp = XNAMatrix.CreateRotationZ((float)XArr[2]);
 
@@ -604,7 +613,7 @@ namespace KADA
                         }
                         //this.ICPInliers = currentICPInliers;
                         //this.ICPOutliers = currentICPOutliers;
-                        container.ICPRatio = container.ICPOutliers == 0 ? 0 : container.ICPInliers / container.ICPOutliers;
+                        container.ICPRatio = container.ICPOutliers == 0 ? 0 : (float)container.ICPInliers / container.ICPOutliers;
                         /*if (iterations > 3)
                         {
                             System.Diagnostics.Debug.WriteLine("ICP took " + (DateTime.Now - elapsed) + "("+iterations+" iterations)");
@@ -643,33 +652,34 @@ namespace KADA
                         }
                         prevRKnown = true;
                         prevR = R;
+
+
+
+                        if (this.dataContainer.ICPInliers == 0)
+                        {
+                            /*trackingLostCount++;
+                             this.reset();*/
+                        }
+                        else if (this.dataContainer.ICPRatio < 0.8f)
+                        {
+                            trackingLostCount++;
+                            if (trackingLostCount == 15)
+                            {
+                                System.Diagnostics.Debug.WriteLine("Soft RESET");
+                                this.ICPTranslation = Vector3.Zero;
+
+                            }
+                            if (trackingLostCount > 100)
+                            {
+                               // this.reset();
+                            }
+                            if (trackingLostCount > 110)
+                            {
+                                trackingLostCount = 0;
+
+                            }
+                        }
                     }
-
-                    //READD LATER
-
-                    //                   if (this.ICPInliers == 0)
-                    //                   {
-                    //                      /*trackingLostCount++;
-                    //                       this.reset();*/
-                    //                   }
-                    //                   else if (this.ICPRatio < 0.8f)
-                    //                   {
-                    //                       trackingLostCount++;
-                    //                       if (trackingLostCount == 15)
-                    //                       {
-                    //                           System.Diagnostics.Debug.WriteLine("Soft RESET");
-                    //                           this.ICPTranslation = Vector3.Zero;
-                    //
-                    //                        }
-                    //                        if (trackingLostCount > 50)
-                    //                        {
-                    //                            this.reset();
-                    //                        }
-                    //                        if (trackingLostCount > 53)
-                    //                        {
-                    //                            trackingLostCount = 0;
-
-                    //                        }
 
                     /*if (this.trackingLostCount > 2 && resetCount < 6 && lastConfidentR != XNAMatrix.Identity)
                     {

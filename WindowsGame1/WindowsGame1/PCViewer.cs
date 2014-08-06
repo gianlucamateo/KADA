@@ -52,7 +52,6 @@ namespace KADA
         public Vector3[,] NormalMap = new Vector3[640, 480];
 
 
-
         Int32 count = 640 * 480 + 100000;
         Viewport PCViewport;
         Viewport BrickViewport;
@@ -161,7 +160,7 @@ namespace KADA
             int lastFrame = 0;
             bool fromOutOfOrder = false;
             SortedList<int, PipelineContainer> outOfOrder = new SortedList<int, PipelineContainer>();
-            while (true)
+            while (this.dataContainer.run)
             {
                 if (instances == null)
                 {
@@ -169,7 +168,7 @@ namespace KADA
                 }
                 PipelineContainer container = null;
                 
-                while (container == null)
+                while (container == null && this.dataContainer.run)
                 {
                     //container = manager.dequeue(stage);
                     container = null;
@@ -186,6 +185,10 @@ namespace KADA
                         Thread.Sleep(this.dataContainer.SLEEPTIME);
                     }
 
+                }
+                if (container == null)
+                {
+                    break;
                 }
 
 
@@ -347,7 +350,7 @@ namespace KADA
 
         public PCViewer()
         {
-            transformationUpdater = new Task(() => this.UpdateInstanceInformation());
+            //transformationUpdater = new Task(() => this.UpdateInstanceInformation());
             this.dataContainer = new PipelineDataContainer();
             this.manager = new PipelineManager(this.dataContainer);
 
@@ -362,9 +365,6 @@ namespace KADA
             BrickViewport.Y = 0;
             BrickViewport.Width = 640;
             BrickViewport.Height = 480;
-
-
-
 
             graphics = new GraphicsDeviceManager(this);
             graphics.IsFullScreen = false;
@@ -458,13 +458,13 @@ namespace KADA
 
             HandleInput(Keyboard.GetState(), Mouse.GetState());
 
-            if (!freeze)
+            /*if (!freeze)
             {
                 if (transformationUpdater.Status != TaskStatus.Running)
                 {
                     transformationUpdater.Start();
                 }
-            }
+            }*/
             this.Window.Title = "Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
 
             base.Update(gameTime);
@@ -675,7 +675,12 @@ namespace KADA
         /// </summary>
         protected override void UnloadContent()
         {
-            // TODO: Unload any non ContentManager content here
+            
+        }
+        protected override void OnExiting(Object sender, EventArgs args)
+        {
+            base.OnExiting(sender, args);
+            this.dataContainer.run = false;            
         }
 
         /// <summary>

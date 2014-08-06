@@ -58,7 +58,7 @@ namespace KADA
         PipelineContainer container;
         private void kinectFramePull()
         {
-            while (true)
+            while (this.dataContainer.run)
             {
                 if (this.manager.recycle.Count > 3)
                 {
