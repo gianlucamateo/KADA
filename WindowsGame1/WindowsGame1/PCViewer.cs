@@ -152,11 +152,11 @@ namespace KADA
         {
             this.edgePositions = edges;
         }
-        //Stage 6
+        //Stage 7
         private void UpdateInstanceInformation()
         {
             
-            int stage = 6;
+            int stage = 7;
             int lastFrame = 0;
             bool fromOutOfOrder = false;
             SortedList<int, PipelineContainer> outOfOrder = new SortedList<int, PipelineContainer>();
@@ -292,9 +292,9 @@ namespace KADA
                 Vector3 center = Vector3.Transform(Vector3.One, brickTranslation);
                 for (int o = 0; o < 3; o++)
                 {
-                    if (this.dataContainer.Normals[o] != null)
+                    if (container.Normals[o] != null)
                     {
-                        Vector3 normal = this.dataContainer.Normals[o];
+                        Vector3 normal = container.Normals[o];
                         for (int segment = 0; segment < 90; segment++)
                         {
                             instances[i].ScreenPos = center + normal * segment;

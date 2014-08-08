@@ -16,6 +16,7 @@ namespace KADA
         public Vector3 center;
         public DepthImagePixel[] depthPixels;
         public byte[] colorPixels;
+        public Vector3[] Normals;
         public ColorImagePoint[] colorPoints;
         public int ICPInliers = 0;
         public int ICPOutliers = 0;
@@ -26,6 +27,7 @@ namespace KADA
 
         public PipelineContainer(PipelineDataContainer dataContainer)
         {
+            this.Normals = new Vector3[3];
             this.timings = new List<DateTime>();
             this.stage = 0;
             this.dc = new DepthColor[640, 480];

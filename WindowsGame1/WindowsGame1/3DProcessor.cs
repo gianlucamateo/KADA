@@ -80,7 +80,7 @@ namespace KADA
             ConcurrentQueue<ICPWorker> workers2;
             workers2 = new ConcurrentQueue<ICPWorker>();
             for (int i = 0; i < WORKERCOUNT; i++)
-            {                
+            {
                 ICPWorker w = new ICPWorker(i, this.dataContainer);
                 w.brickWrapper = tree;
                 workers1.Enqueue(w);
@@ -93,6 +93,10 @@ namespace KADA
             }*/
             Thread Stage51 = new Thread(new ThreadStart(() => PtPlaneICP(workers1)));
             Stage51.Start();
+            Thread Stage6 = new Thread(new ThreadStart(() => scanNormals()));
+            Stage6.Start();
+            Thread Stage62 = new Thread(new ThreadStart(() => scanNormals()));
+            Stage62.Start();
             //Thread Stage52 = new Thread(new ThreadStart(() => PtPlaneICP(workers2)));
             //Stage52.Start();
             /*Thread Stage53 = new Thread(new ThreadStart(() => PtPlaneICP()));
@@ -434,7 +438,7 @@ namespace KADA
                             {
 
                             }
-                            int upperLimit = count +20;
+                            int upperLimit = count + 20;
                             for (int innerCount = count; innerCount < qi.Count && innerCount < upperLimit; innerCount++)
                             {
                                 worker.input.Enqueue(qi[innerCount]);
@@ -536,12 +540,12 @@ namespace KADA
                              }
                              Thread.Sleep(1);
                          }*/
-                        
+
                         while (workers.ElementAt(workers.Count - 1).input.Count > 0)
                         {
                             Thread.Sleep(1);
                         }
-                       // System.Diagnostics.Debug.WriteLine(DateTime.Now - now);
+                        // System.Diagnostics.Debug.WriteLine(DateTime.Now - now);
                         foreach (ICPWorker w in workers)
                         {
                             A = A.Add(w.A);
@@ -587,13 +591,13 @@ namespace KADA
 
                         if (!skip)
                         {
-                            float factor = 0.4f;
+                            float factor = 0.8f;
                             /*if (g.ICPRatio < MINICPRATIO)
                             {
                                 factor = 0.1f;
                             }*/
                             double[] XArrTrans = X.ToArray();
-                            //X = X.Multiply(factor);
+                            X = X.Multiply(factor);
                             double[] XArr = X.ToArray();
                             XNAMatrix RTemp = XNAMatrix.CreateRotationZ((float)XArr[2]);
 
@@ -602,6 +606,7 @@ namespace KADA
                             Rot = XNAMatrix.CreateRotationX((float)XArr[0]);
                             RTemp = XNAMatrix.Multiply(RTemp, Rot);
                             Vector3 trans = new Vector3((float)(XArrTrans[3]), (float)(XArrTrans[4]), (float)(XArrTrans[5]));
+                            //trans /= 4;
                             this.ICPTranslation += trans;
                             if (trans.Length() > 2)
                             {
@@ -644,11 +649,11 @@ namespace KADA
                             resetCount = 0;
                         }
 
-                        if (normalCounter > 10)
+                        if (normalCounter > 0)
                         {
                             //normalCounter++;
-                            normalCounter = 0;
-                            // this.scanNormals();
+                            //normalCounter = 0;
+                            //this.scanNormals(container.dc);
                         }
                         prevRKnown = true;
                         prevR = R;
@@ -671,7 +676,7 @@ namespace KADA
                             }
                             if (trackingLostCount > 100)
                             {
-                               // this.reset();
+                                // this.reset();
                             }
                             if (trackingLostCount > 110)
                             {
@@ -753,7 +758,7 @@ namespace KADA
         }
 
 
-        public void kMeans(Vector3[,] normals)
+        public Vector3[] kMeans(Vector3[,] normals)
         {
             //Bitmap norm = new Bitmap(640, 480);
             Vector3 X = new Vector3(1, 0, 0);
@@ -843,65 +848,98 @@ namespace KADA
                 //System.Diagnostics.Debug.Write("{" + estimatedNormals[i].X + "," + estimatedNormals[i].Y + "," + estimatedNormals[i].Z + "},");
             }*/
             //norm.Save("normals_clustered.png");
-            this.dataContainer.Normals = estimatedNormals;
+            return estimatedNormals;
         }
-
-        /*public void scanNormals()
+        //stage 6
+        public void scanNormals()
         {
-            Vector3[,] normals = new Vector3[640, 480];
-            Bitmap bitmap = new Bitmap(640, 480);
+            int stage = 6;
             DepthColor[,] dc;
-
-            if (!this.processingQueue.TryPeek(out dc))
-            {
-                return;
-            }
-
+            Vector3[,] normals = new Vector3[640, 480];
             Vector3 up, down, left, right;
-            Vector3 zero = new Vector3(0, 0, 0);
+
             Vector3 position;
             Vector3 normal;
             Vector3 verticalAvg, horizontalAvg;
-
-            int[, ,] bins = new int[6, 6, 6];
-
-            for (int x = 1; x < 640 - 1; x++)
+            while (this.dataContainer.run)
             {
-                for (int y = 1; y < 480 - 1; y++)
+                DateTime start = DateTime.Now;
+                PipelineContainer container = null;
+                while (container == null && this.dataContainer.run)
                 {
-                    if (dc[x, y].Depth > 0)
+                    //container = manager.dequeue(stage);
+                    container = null;
+                    if (manager.processingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
                     {
-                        position = dc[x, y].Position;
-                        up = dc[x, y - 1].Position - position;
-                        down = dc[x, y + 1].Position - position;
-                        right = dc[x + 1, y].Position - position;
-                        left = dc[x - 1, y].Position - position;
-
-                        verticalAvg = up - down;
-                        horizontalAvg = left - right;
-                        normal = Vector3.Cross(horizontalAvg, verticalAvg);
-                        normal.Normalize();
-                        //normal.X *= -1;
-                        //normal.Y *= -1;
-                        //Vector3 binIndicator = normal * 2.99f;
-
-                        if (verticalAvg.Length() > 0 && horizontalAvg.Length() > 0 && normal.Length() > 0)
+                        manager.processingQueues[stage].TryDequeue(out container);
+                        if (container == null)
                         {
-                            //normal.X *= -1;
-                            //normal.Y *= -1;
-                            normal = -normal;
-                            normals[639 - x, 479 - y] = normal;
-                            //bins[3+(int)Math.Floor(binIndicator.X), 3+(int)Math.Floor(binIndicator.Y), 3+(int)Math.Floor(binIndicator.Y)] += 1;
-                            //bitmap.SetPixel(639 - x, 479 - y, System.Drawing.Color.FromArgb(254, 127 + (int)(normal.X * 127), 127 + (int)(normal.Y * 127), 127 + (int)(normal.Z * 127)));
+                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        }
+
+                    }
+                    else
+                    {
+                        Thread.Sleep(this.dataContainer.SLEEPTIME);
+                    }
+
+                }
+                if (container == null)
+                {
+                    break;
+                }
+                
+                if (this.dataContainer.deNoiseAndICP)
+                {
+                    dc = container.dc;
+                    
+                    //Bitmap bitmap = new Bitmap(640, 480);
+
+
+                    
+
+                    //int[, ,] bins = new int[6, 6, 6];
+
+                    for (int x = 1; x < 640 - 1; x++)
+                    {
+                        for (int y = 1; y < 480 - 1; y++)
+                        {
+                            if (dc[x, y].Depth > 0)
+                            {
+                                position = dc[x, y].Position;
+                                up = dc[x, y - 1].Position - position;
+                                down = dc[x, y + 1].Position - position;
+                                right = dc[x + 1, y].Position - position;
+                                left = dc[x - 1, y].Position - position;
+
+                                verticalAvg = up - down;
+                                horizontalAvg = left - right;
+                                normal = Vector3.Cross(horizontalAvg, verticalAvg);
+                                normal.Normalize();
+                                //normal.X *= -1;
+                                //normal.Y *= -1;
+                                //Vector3 binIndicator = normal * 2.99f;
+
+                                if (verticalAvg.Length() > 0 && horizontalAvg.Length() > 0 && normal.Length() > 0)
+                                {
+                                    //normal.X *= -1;
+                                    //normal.Y *= -1;
+                                    normal = -normal;
+                                    normals[639 - x, 479 - y] = normal;
+                                    //bins[3+(int)Math.Floor(binIndicator.X), 3+(int)Math.Floor(binIndicator.Y), 3+(int)Math.Floor(binIndicator.Y)] += 1;
+                                    //bitmap.SetPixel(639 - x, 479 - y, System.Drawing.Color.FromArgb(254, 127 + (int)(normal.X * 127), 127 + (int)(normal.Y * 127), 127 + (int)(normal.Z * 127)));
+                                }
+                            }
                         }
                     }
-                }
-            }
-            
-            this.kMeans(normals);
-            //return bitmap;
 
-        }*/
+                    container.Normals = this.kMeans(normals);
+                }
+                manager.processingQueues[++container.stage].Enqueue(container);
+                //return bitmap;
+
+            }
+        }
     }
 }
 

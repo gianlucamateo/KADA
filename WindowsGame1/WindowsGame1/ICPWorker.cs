@@ -91,7 +91,7 @@ namespace KADA
                 vArr[0] = vC.X;
                 vArr[1] = vC.Y;
                 vArr[2] = vC.Z;
-                NearestNeighbour<Point> neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: _3DProcessor.THRESHOLD);
+                NearestNeighbour<Point> neighbour = brickWrapper.NearestNeighbors(vArr, 50, fDistance: _3DProcessor.THRESHOLD);
                 neighbour.MoveNext();
                 Point p;
                 Vector3 transformedNormal = Vector3.Zero;
