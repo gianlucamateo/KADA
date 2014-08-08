@@ -35,7 +35,7 @@ namespace KADA
         public ICPWorker(int number, PipelineDataContainer dataContainer)
         {
             this.dataContainer = dataContainer;
-            this.file = new StreamWriter("ICP_worker" + number+ ".txt");
+            this.file = new StreamWriter("ICP_worker" + number+"_"+DateTime.Now.Millisecond +".txt");
             this.number = number;
             this.reset();
             this.input = new ConcurrentQueue<Vector3>();

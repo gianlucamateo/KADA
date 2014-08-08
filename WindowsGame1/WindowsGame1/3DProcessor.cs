@@ -75,28 +75,37 @@ namespace KADA
             //Stage4a.Start();
 
             KDTreeWrapper tree = dataContainer.model.getKDTree();
-            ConcurrentQueue<ICPWorker> workers1;
+            ConcurrentQueue<ICPWorker> workers1, workers2;
             workers1 = new ConcurrentQueue<ICPWorker>();
-            ConcurrentQueue<ICPWorker> workers2;
             workers2 = new ConcurrentQueue<ICPWorker>();
+            
             for (int i = 0; i < WORKERCOUNT; i++)
             {
                 ICPWorker w = new ICPWorker(i, this.dataContainer);
                 w.brickWrapper = tree;
                 workers1.Enqueue(w);
             }
-            /*for (int i = 0; i < 2; i++)
+
+            Thread Stage61 = new Thread(new ThreadStart(() => PtPlaneICP(workers1)));
+            Stage61.Start();
+
+            /*for (int i = 0; i < WORKERCOUNT; i++)
             {
-                ICPWorker w = new ICPWorker();
-                w.brickWrapper = dataContainer.model.getKDTree();
+                ICPWorker w = new ICPWorker(i, this.dataContainer);
+                w.brickWrapper = tree;
                 workers2.Enqueue(w);
-            }*/
-            Thread Stage51 = new Thread(new ThreadStart(() => PtPlaneICP(workers1)));
-            Stage51.Start();
-            Thread Stage6 = new Thread(new ThreadStart(() => scanNormals()));
-            Stage6.Start();
-            Thread Stage62 = new Thread(new ThreadStart(() => scanNormals()));
-            Stage62.Start();
+            }
+            
+            
+            Thread Stage62 = new Thread(new ThreadStart(() => PtPlaneICP(workers2)));
+            Stage62.Start();*/
+
+            Thread Stage5 = new Thread(new ThreadStart(() => scanNormals()));
+            Stage5.Start();
+            Thread Stage52 = new Thread(new ThreadStart(() => scanNormals()));
+            Stage52.Start();
+            Thread Stage53 = new Thread(new ThreadStart(() => scanNormals()));
+            Stage53.Start();
             //Thread Stage52 = new Thread(new ThreadStart(() => PtPlaneICP(workers2)));
             //Stage52.Start();
             /*Thread Stage53 = new Thread(new ThreadStart(() => PtPlaneICP()));
@@ -314,11 +323,11 @@ namespace KADA
             //this.ICP(center, dc, qi);
         }
 
-        //Stage 5;
+        //Stage 6;
         private int trackingLostCount = 0, resetCount = 0;
         public void PtPlaneICP(ConcurrentQueue<ICPWorker> workers)
         {
-            int stage = 5;
+            int stage = 6;
             int icpCount = 0;
             float total = 0;
             Matrix H;
@@ -388,6 +397,7 @@ namespace KADA
                     container.ICPRatio = 0f;
                     int iterations = 0;
                     bool skip = false;
+                    XNAMatrix onlyRot = new XNAMatrix();
                     for (int i = 0; i < ICPITERATIONS; i++)
                     {
                         skip = false;
@@ -402,7 +412,7 @@ namespace KADA
 
                         Matrix A = new Matrix(new double[6, 6]);
                         Vector B = new Vector(new double[6]);
-                        XNAMatrix onlyRot = new XNAMatrix();
+                        onlyRot = new XNAMatrix();
                         onlyRot.M11 = R.M11;
                         onlyRot.M12 = R.M12;
                         onlyRot.M13 = R.M13;
@@ -438,7 +448,7 @@ namespace KADA
                             {
 
                             }
-                            int upperLimit = count + 20;
+                            int upperLimit = count + 100;
                             for (int innerCount = count; innerCount < qi.Count && innerCount < upperLimit; innerCount++)
                             {
                                 worker.input.Enqueue(qi[innerCount]);
@@ -580,7 +590,7 @@ namespace KADA
                         catch (Exception)
                         {
                             //System.Diagnostics.Debug.WriteLine("LE solver encountered an exception");
-                            Vector3 prominentNormal = this.dataContainer.Normals[2];
+                            Vector3 prominentNormal = container.Normals[2];
                             XNAMatrix rot = XNAMatrix.CreateFromAxisAngle(prominentNormal, 0.5f);
                             R = XNAMatrix.Multiply(R, rot);
                             prevR = R;
@@ -589,13 +599,12 @@ namespace KADA
                             break;
                         }
 
+                        container.ICPRatio = container.ICPOutliers == 0 ? 0 : (float)container.ICPInliers / container.ICPOutliers;
+
                         if (!skip)
                         {
-                            float factor = 0.8f;
-                            /*if (g.ICPRatio < MINICPRATIO)
-                            {
-                                factor = 0.1f;
-                            }*/
+                            float factor = 1f;
+                            
                             double[] XArrTrans = X.ToArray();
                             X = X.Multiply(factor);
                             double[] XArr = X.ToArray();
@@ -618,7 +627,7 @@ namespace KADA
                         }
                         //this.ICPInliers = currentICPInliers;
                         //this.ICPOutliers = currentICPOutliers;
-                        container.ICPRatio = container.ICPOutliers == 0 ? 0 : (float)container.ICPInliers / container.ICPOutliers;
+                        
                         /*if (iterations > 3)
                         {
                             System.Diagnostics.Debug.WriteLine("ICP took " + (DateTime.Now - elapsed) + "("+iterations+" iterations)");
@@ -637,6 +646,7 @@ namespace KADA
                         if (container.ICPRatio > MINICPRATIO)
                         {
                             this.lastConfidentR = R;
+                            this.dataContainer.modelUpVector = Vector3.Transform(Vector3.UnitY, onlyRot);
                         }
 
                         if (container.ICPRatio > 0.8f)
@@ -835,7 +845,7 @@ namespace KADA
             int maxIndex = 0;
             maxIndex = clusters[1].Count > clusters[2].Count ? 1 : 2;
             maxIndex = clusters[0].Count > Math.Max(clusters[1].Count, clusters[2].Count) ? 0 : maxIndex;
-            this.dataContainer.mostConfidentNormal = estimatedNormals[maxIndex];
+           
             int lessConfidentIndex = 1 - confidentIndex;
             estimatedNormals[lessConfidentIndex] = Vector3.Cross(centroids[confidentIndex], estimatedNormals[2]);
             estimatedNormals[confidentIndex] = Vector3.Cross(estimatedNormals[2], estimatedNormals[lessConfidentIndex]);
@@ -850,10 +860,10 @@ namespace KADA
             //norm.Save("normals_clustered.png");
             return estimatedNormals;
         }
-        //stage 6
+        //stage 5
         public void scanNormals()
         {
-            int stage = 6;
+            int stage = 5;
             DepthColor[,] dc;
             Vector3[,] normals = new Vector3[640, 480];
             Vector3 up, down, left, right;
@@ -888,7 +898,7 @@ namespace KADA
                 {
                     break;
                 }
-                
+
                 if (this.dataContainer.deNoiseAndICP)
                 {
                     dc = container.dc;

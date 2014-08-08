@@ -12,8 +12,8 @@ namespace KADA
         public int ICPInliers, ICPOutliers;
         public float ICPRatio;
         public readonly float NORMAL_CULLING_LIMIT = 0f;
-        public Vector3[] Normals = new Vector3[3];
-        public Vector3 mostConfidentNormal = Vector3.UnitZ;
+
+        public Vector3 modelUpVector;
         public float frameTime = 0, generateTime = 0;
         public DateTime lastTick = DateTime.Now, lastGeneration = DateTime.Now;
         public int COLORLENGTH, DEPTHLENGTH;

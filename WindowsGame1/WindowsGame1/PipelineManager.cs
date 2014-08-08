@@ -34,7 +34,7 @@ namespace KADA
                 recycle.Enqueue(new PipelineContainer(dataContainer));
             }
             Thread statPrinter = new Thread(new ThreadStart(() => this.printStats()));
-            statPrinter.Start();
+            //statPrinter.Start();
 
             Thread cleaner = new Thread(new ThreadStart(() => this.clean()));
             //cleaner.Start();
@@ -45,7 +45,7 @@ namespace KADA
 
         private void clean()
         {
-            PipelineContainer pc;
+            
             while (true)
             {
                 foreach (ConcurrentQueue<PipelineContainer> q in processingQueues)

@@ -318,6 +318,19 @@ namespace KADA
                     }
                 }
 
+                if (dataContainer.modelUpVector!= null)
+                {
+                    for (int segment = 0; segment < 90; segment++)
+                    {
+                        instances[i].ScreenPos = center + dataContainer.modelUpVector * segment;
+                        instances[i].Scale = 1;
+                        Vector3 c = Vector3.Zero;
+                        
+                        instances[i].Color = new Vector3(255,255,255);
+                        i++;
+                    }
+                }
+
 
 
                 instances[i].ScreenPos = center;
