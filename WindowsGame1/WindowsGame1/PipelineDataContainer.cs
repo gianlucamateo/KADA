@@ -13,7 +13,9 @@ namespace KADA
         public float ICPRatio;
         public readonly float NORMAL_CULLING_LIMIT = 0f;
 
-        public Vector3 modelUpVector;
+        //public Vector3[] trackedNormals;
+
+        public Matrix prevNormalR = Matrix.Identity;
         public float frameTime = 0, generateTime = 0;
         public DateTime lastTick = DateTime.Now, lastGeneration = DateTime.Now;
         public int COLORLENGTH, DEPTHLENGTH;
@@ -26,7 +28,9 @@ namespace KADA
 
         public PipelineDataContainer()
         {
-            this.model = new Model();            
+            //this.trackedNormals = new Vector3[3];
+            this.model = new Model();
+            
         }
 
         public void recordTick()

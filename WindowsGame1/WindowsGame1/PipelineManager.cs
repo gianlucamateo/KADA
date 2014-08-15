@@ -20,7 +20,7 @@ namespace KADA
             this.recycle = new ConcurrentQueue<PipelineContainer>();
             
 
-                this.processingQueues = new ConcurrentQueue<PipelineContainer>[8];
+                this.processingQueues = new ConcurrentQueue<PipelineContainer>[9];
             for (int i = 0; i < this.processingQueues.Length; i++)
             {
                 this.processingQueues[i] = new ConcurrentQueue<PipelineContainer>();

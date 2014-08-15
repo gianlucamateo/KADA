@@ -78,7 +78,7 @@ namespace KADA
             ConcurrentQueue<ICPWorker> workers1, workers2;
             workers1 = new ConcurrentQueue<ICPWorker>();
             workers2 = new ConcurrentQueue<ICPWorker>();
-            
+
             for (int i = 0; i < WORKERCOUNT; i++)
             {
                 ICPWorker w = new ICPWorker(i, this.dataContainer);
@@ -106,6 +106,17 @@ namespace KADA
             Stage52.Start();
             Thread Stage53 = new Thread(new ThreadStart(() => scanNormals()));
             Stage53.Start();
+
+            List<Thread> Stage7 = new List<Thread>();
+
+            for (int i = 0; i < 1; i++)
+            {
+                Thread x = new Thread(new ThreadStart(() => tryAlign()));
+                x.Start();
+                Stage7.Add(x);
+            }
+
+            
             //Thread Stage52 = new Thread(new ThreadStart(() => PtPlaneICP(workers2)));
             //Stage52.Start();
             /*Thread Stage53 = new Thread(new ThreadStart(() => PtPlaneICP()));
@@ -604,7 +615,7 @@ namespace KADA
                         if (!skip)
                         {
                             float factor = 1f;
-                            
+
                             double[] XArrTrans = X.ToArray();
                             X = X.Multiply(factor);
                             double[] XArr = X.ToArray();
@@ -627,7 +638,7 @@ namespace KADA
                         }
                         //this.ICPInliers = currentICPInliers;
                         //this.ICPOutliers = currentICPOutliers;
-                        
+
                         /*if (iterations > 3)
                         {
                             System.Diagnostics.Debug.WriteLine("ICP took " + (DateTime.Now - elapsed) + "("+iterations+" iterations)");
@@ -636,6 +647,8 @@ namespace KADA
                     //System.Diagnostics.Debug.WriteLine(R.Determinant());
                     if (Math.Abs(R.Determinant() - 1) < 0.001f && !skip)
                     {
+                        //tryAlign(container, onlyRot);
+                        container.onlyRot = onlyRot;
                         normalCounter++;
                         if (container.ICPRatio > MINICPRATIO || !this.REQUIRE_HIGH_QUALITY_RESULT)
                         {
@@ -646,7 +659,7 @@ namespace KADA
                         if (container.ICPRatio > MINICPRATIO)
                         {
                             this.lastConfidentR = R;
-                            this.dataContainer.modelUpVector = Vector3.Transform(Vector3.UnitY, onlyRot);
+                            //this.dataContainer.modelUpVector = Vector3.Transform(Vector3.UnitY, onlyRot);
                         }
 
                         if (container.ICPRatio > 0.8f)
@@ -751,6 +764,119 @@ namespace KADA
 
         }
 
+        public void tryAlign()
+        {
+            int stage = 7;
+            bool work = false;
+            while (this.dataContainer.run)
+            {
+                PipelineContainer container = null;
+                while (container == null && this.dataContainer.run)
+                {
+                    //container = manager.dequeue(stage);
+                    container = null;
+                    if (manager.processingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
+                    {
+                        manager.processingQueues[stage].TryDequeue(out container);
+                        if (container == null)
+                        {
+                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        }
+                    }
+                    else
+                    {
+                        Thread.Sleep(this.dataContainer.SLEEPTIME);
+                    }
+                }
+                if (container == null)
+                {
+                    break;
+                }
+                if (this.dataContainer.deNoiseAndICP || work)
+                {
+                    //XNAMatrix onlyRot = container.onlyRot;
+                    container.modelVectors[0] = Vector3.Transform(Vector3.UnitX, dataContainer.prevNormalR);
+                    container.modelVectors[1] = Vector3.Transform(Vector3.UnitY, dataContainer.prevNormalR);
+                    container.modelVectors[2] = Vector3.Transform(Vector3.UnitZ, dataContainer.prevNormalR);
+                    container.modelVectors[0].Normalize();
+                    container.modelVectors[1].Normalize();
+                    container.modelVectors[2].Normalize();
+                    Vector3[] modelVectors = container.modelVectors;
+                    if (container.estimatedVectors[0] != Vector3.Zero)
+                    {
+                        //modelVectors = container.estimatedVectors;
+                    }
+                    Vector3[] normals = container.Normals;
+                    for (int modelV = 0; modelV < 3; modelV++)
+                    {
+                        double maxDot = double.MinValue;
+                        for (int xyz = 0; xyz < 3; xyz++)
+                        {
+                            /*double currentDot = Math.Abs(Vector3.Dot(modelVectors[modelV], normals[xyz]));
+                            if (currentDot > maxDot)
+                            {
+                                maxDot = currentDot;
+                                container.estimatedVectors[modelV] = normals[xyz];
+                            }*/
+                            container.estimatedVectors[modelV] = normals[modelV];
+                        }
+                    }
+
+                    Vector3 axis;
+                    float angle;
+                    XNAMatrix normalR, normalR2, result;
+
+                    axis = Vector3.Cross(modelVectors[1], container.estimatedVectors[1]);
+
+                    float dotProduct = Vector3.Dot(modelVectors[1], container.estimatedVectors[1]);
+
+                    
+
+                    angle = (float)Math.Acos(dotProduct);
+                    if (dotProduct < 0)
+                    {
+                        angle = -((float)Math.PI - angle);
+                    }
+                    axis.Normalize();
+                    normalR = XNAMatrix.CreateFromAxisAngle(axis, angle/30);
+                    
+                    if (float.IsNaN(axis.X)||float.IsNaN(axis.Y)||float.IsNaN(axis.Z))
+                    {
+                        normalR = XNAMatrix.Identity;
+                    }
+
+                    result = normalR;
+                    result = result * dataContainer.prevNormalR;
+                    
+                    modelVectors[2] = Vector3.Transform(modelVectors[2], normalR);
+                    axis = Vector3.Cross(modelVectors[2], container.estimatedVectors[2]);
+                    dotProduct = Vector3.Dot(modelVectors[2], container.estimatedVectors[2]);
+                    angle = (float)Math.Acos(dotProduct);
+                    
+                    if (dotProduct < 0)
+                    {
+                        angle = -((float)Math.PI - angle);
+                    }
+                    axis.Normalize();
+                    normalR2 = XNAMatrix.CreateFromAxisAngle(axis, angle/30);
+                    if (float.IsNaN(axis.X) || float.IsNaN(axis.Y) || float.IsNaN(axis.Z))
+                    {
+                        normalR2 = XNAMatrix.Identity;
+                    }
+                    result = normalR2 * normalR;
+                    result = result * dataContainer.prevNormalR;
+                    dataContainer.prevNormalR = result;
+                    //container.normalR = dataContainer.prevNormalR;     
+                    container.normalR = result;
+                }
+                container.timings.Add(DateTime.Now);
+                manager.processingQueues[++container.stage].Enqueue(container);
+                //manager.enqueue(container);
+            }
+            
+
+        }
+
         public void reset()
         {
             System.Diagnostics.Debug.WriteLine("RESET");
@@ -845,7 +971,7 @@ namespace KADA
             int maxIndex = 0;
             maxIndex = clusters[1].Count > clusters[2].Count ? 1 : 2;
             maxIndex = clusters[0].Count > Math.Max(clusters[1].Count, clusters[2].Count) ? 0 : maxIndex;
-           
+
             int lessConfidentIndex = 1 - confidentIndex;
             estimatedNormals[lessConfidentIndex] = Vector3.Cross(centroids[confidentIndex], estimatedNormals[2]);
             estimatedNormals[confidentIndex] = Vector3.Cross(estimatedNormals[2], estimatedNormals[lessConfidentIndex]);
@@ -902,11 +1028,11 @@ namespace KADA
                 if (this.dataContainer.deNoiseAndICP)
                 {
                     dc = container.dc;
-                    
+
                     //Bitmap bitmap = new Bitmap(640, 480);
 
 
-                    
+
 
                     //int[, ,] bins = new int[6, 6, 6];
 

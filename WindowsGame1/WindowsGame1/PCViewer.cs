@@ -152,11 +152,11 @@ namespace KADA
         {
             this.edgePositions = edges;
         }
-        //Stage 7
+        //Stage 8
         private void UpdateInstanceInformation()
         {
             
-            int stage = 7;
+            int stage = 8;
             int lastFrame = 0;
             bool fromOutOfOrder = false;
             SortedList<int, PipelineContainer> outOfOrder = new SortedList<int, PipelineContainer>();
@@ -245,7 +245,8 @@ namespace KADA
                 this.model = dataContainer.model;
 
                 this.SetBrickTranslate(Matrix.CreateTranslation(container.center));
-                this.SetBrickRotation(container.R);
+                //this.SetBrickRotation(container.R);
+                this.SetBrickRotation(container.normalR);
                 foreach (Point v in model.points)
                 {
                     Matrix transform = brickRotation * brickTranslation;
@@ -318,15 +319,33 @@ namespace KADA
                     }
                 }
 
-                if (dataContainer.modelUpVector!= null)
+                if (container.estimatedVectors[0]!= null)
                 {
                     for (int segment = 0; segment < 90; segment++)
                     {
-                        instances[i].ScreenPos = center + dataContainer.modelUpVector * segment;
+                        instances[i].ScreenPos = center + container.modelVectors[0] * segment;
                         instances[i].Scale = 1;
                         Vector3 c = Vector3.Zero;
                         
-                        instances[i].Color = new Vector3(255,255,255);
+                        instances[i].Color = new Vector3(0.5f,0,0);
+                        i++;
+                    }
+                    for (int segment = 0; segment < 90; segment++)
+                    {
+                        instances[i].ScreenPos = center + container.modelVectors[1] * segment;
+                        instances[i].Scale = 1;
+                        Vector3 c = Vector3.Zero;
+
+                        instances[i].Color = new Vector3(0, 0.5f, 0);
+                        i++;
+                    }
+                    for (int segment = 0; segment < 90; segment++)
+                    {
+                        instances[i].ScreenPos = center + container.modelVectors[2] * segment;
+                        instances[i].Scale = 1;
+                        Vector3 c = Vector3.Zero;
+
+                        instances[i].Color = new Vector3(0, 0, 0.5f);
                         i++;
                     }
                 }
@@ -593,6 +612,7 @@ namespace KADA
             if (kS.IsKeyDown(Keys.R))
             {
                 this.manager.processor3D.reset();
+                this.dataContainer.prevNormalR = Matrix.Identity;
             }
 
 

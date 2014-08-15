@@ -12,6 +12,7 @@ namespace KADA
         public int stage;
         public DepthColor[,] dc;
         public Matrix R;
+        public Matrix onlyRot;
         public List<Vector3> qi;
         public Vector3 center;
         public DepthImagePixel[] depthPixels;
@@ -23,10 +24,16 @@ namespace KADA
         public float ICPRatio = 0f;
         public int number;
         public List<DateTime> timings;
+        public Vector3[] modelVectors;
+        public Vector3[] estimatedVectors;
+        public Matrix normalR;
         
 
         public PipelineContainer(PipelineDataContainer dataContainer)
         {
+            this.modelVectors = new Vector3[3];
+            this.normalR = Matrix.Identity;
+            this.estimatedVectors = new Vector3[3];
             this.Normals = new Vector3[3];
             this.timings = new List<DateTime>();
             this.stage = 0;
