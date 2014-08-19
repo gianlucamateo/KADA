@@ -245,8 +245,24 @@ namespace KADA
                 this.model = dataContainer.model;
 
                 this.SetBrickTranslate(Matrix.CreateTranslation(container.center));
+                Matrix R = container.R;
+                switch (dataContainer.trackingConfidence)
+                {
+                    case TrackingConfidenceLevel.ICPFULL: 
+                        R = container.R;
+                        break;
+                    case TrackingConfidenceLevel.ICPTENTATIVE :
+                        R = container.R;
+                        break;
+                    case TrackingConfidenceLevel.NORMALS :
+                        R = container.normalR;
+                        break;
+                    default :
+                        R = container.R;
+                        break;
+                }
                 //this.SetBrickRotation(container.R);
-                this.SetBrickRotation(container.normalR);
+                this.SetBrickRotation(R);
                 foreach (Point v in model.points)
                 {
                     Matrix transform = brickRotation * brickTranslation;
@@ -497,7 +513,7 @@ namespace KADA
                     transformationUpdater.Start();
                 }
             }*/
-            this.Window.Title = "Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
+            this.Window.Title = dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " +dataContainer.trackingConfidence + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
 
             base.Update(gameTime);
         }

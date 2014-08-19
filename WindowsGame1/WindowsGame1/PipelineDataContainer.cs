@@ -7,6 +7,10 @@ using Model = XYZFileLoader.Model;
 
 namespace KADA
 {
+    public enum TrackingConfidenceLevel
+    {
+        NONE, NORMALS, ICPTENTATIVE, ICPFULL
+    }
     public class PipelineDataContainer
     {
         public int ICPInliers, ICPOutliers;
@@ -25,11 +29,22 @@ namespace KADA
         public int SLEEPTIME = 1;
         public int MINFRAMESINCONTAINER = 1;
         public bool run = true;
+        public Matrix lastConfidentR = Matrix.Identity;
+        public TrackingConfidenceLevel trackingConfidence = TrackingConfidenceLevel.NONE;
+        public int[] normalMappings;
+        public Vector3[] modelNormals;
 
         public PipelineDataContainer()
         {
-            //this.trackedNormals = new Vector3[3];
+            this.modelNormals = new Vector3[3];
             this.model = new Model();
+            this.normalMappings = new int[3];
+            this.modelNormals[0] = Vector3.UnitX;
+            this.modelNormals[1] = Vector3.UnitY;
+            this.modelNormals[2] = Vector3.UnitZ;
+            normalMappings[0] = 2;
+            normalMappings[1] = 0;
+            normalMappings[2] = 1;
             
         }
 
