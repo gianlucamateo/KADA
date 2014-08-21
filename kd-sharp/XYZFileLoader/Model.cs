@@ -14,6 +14,7 @@ namespace XYZFileLoader
         private Brick[, ,] voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
         private List<Point>[, ,] pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
         public List<LocatedBrick> bricks;
+        private KDTreeWrapper kdTree;
 
         public Model()
         {
@@ -59,14 +60,14 @@ namespace XYZFileLoader
                 }
             }
         }
-        public KDTreeWrapper getKDTree()
+        public KDTreeWrapper generateKDTree()
         {
             this.reset();
             foreach (LocatedBrick b in bricks)
             {
                 b.insert(this.pointGrid, this.voxelGrid);
             }
-            KDTreeWrapper kdTree = new KDTreeWrapper();
+            this.kdTree = new KDTreeWrapper();
 
             updatePoints();
 
@@ -78,6 +79,10 @@ namespace XYZFileLoader
                 }
             }
             return kdTree;
+        }
+        public KDTreeWrapper getKDTree()
+        {
+            return this.kdTree;
         }
         private void updatePoints()
         {

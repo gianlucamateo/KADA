@@ -513,7 +513,7 @@ namespace KADA
                     transformationUpdater.Start();
                 }
             }*/
-            this.Window.Title = dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " +dataContainer.trackingConfidence + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
+            this.Window.Title = "" + dataContainer.backgroundEvaluator.NormalOutput.Count +"" + dataContainer.backgroundEvaluator.NormalInput.Count +" | "+dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " +dataContainer.trackingConfidence + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
 
             base.Update(gameTime);
         }

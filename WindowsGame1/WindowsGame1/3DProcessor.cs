@@ -63,7 +63,7 @@ namespace KADA
             this.dataContainer = dataContainer;
             this.manager = manager;
             this.model = dataContainer.model;
-            this.brickWrapper = dataContainer.getKDTree();
+            this.brickWrapper = dataContainer.generateKDTree();
 
 
             //this.g = g;
@@ -74,7 +74,7 @@ namespace KADA
             //Thread Stage4a = new Thread(new ThreadStart(() => generateCenter()));
             //Stage4a.Start();
 
-            KDTreeWrapper tree = dataContainer.model.getKDTree();
+            KDTreeWrapper tree = dataContainer.model.generateKDTree();
             ConcurrentQueue<ICPWorker> workers1, workers2;
             workers1 = new ConcurrentQueue<ICPWorker>();
             workers2 = new ConcurrentQueue<ICPWorker>();
@@ -694,6 +694,8 @@ namespace KADA
                                 System.Diagnostics.Debug.WriteLine("Soft RESET");
                                 this.ICPTranslation = Vector3.Zero;
                                 dataContainer.trackingConfidence = TrackingConfidenceLevel.NORMALS;
+                                this.dataContainer.backgroundEvaluator.NormalInput.Enqueue(container);
+                                
                             }
 
                         }
@@ -820,7 +822,7 @@ namespace KADA
                         for (int modelV = 0; modelV < 3; modelV++)
                         {
                             double maxDot = double.MinValue;
-                            int currentIndex = 50;
+                            int currentIndex = 0;
                             for (int xyz = 0; xyz < 3; xyz++)
                             {
                                 double currentDot = Math.Abs(Vector3.Dot(modelVectors[modelV], normals[xyz]));
@@ -830,7 +832,7 @@ namespace KADA
                                     currentIndex = xyz;
                                     container.estimatedVectors[modelV] = normals[xyz];
                                 }
-                            }//NOT WORKING AS INTENDED
+                            }
                             dataContainer.normalMappings[modelV] = currentIndex;
                         }
                     }

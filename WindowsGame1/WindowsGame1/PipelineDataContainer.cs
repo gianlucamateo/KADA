@@ -33,9 +33,11 @@ namespace KADA
         public TrackingConfidenceLevel trackingConfidence = TrackingConfidenceLevel.NONE;
         public int[] normalMappings;
         public Vector3[] modelNormals;
+        public BackgroundEvaluator backgroundEvaluator;
 
         public PipelineDataContainer()
         {
+            this.backgroundEvaluator = new BackgroundEvaluator(this);
             this.modelNormals = new Vector3[3];
             this.model = new Model();
             this.normalMappings = new int[3];
@@ -61,9 +63,9 @@ namespace KADA
             this.lastGeneration = DateTime.Now;
         }
 
-        public XYZFileLoader.KDTreeWrapper getKDTree()
+        public XYZFileLoader.KDTreeWrapper generateKDTree()
         {
-            return model.getKDTree();
+            return model.generateKDTree();
         }
     }
 }
