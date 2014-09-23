@@ -20,6 +20,7 @@ namespace KADA
         //public Vector3[] trackedNormals;
 
         public Matrix prevNormalR = Matrix.Identity;
+        public Matrix normalRotationAdjustment = Matrix.Identity;
         public float frameTime = 0, generateTime = 0;
         public DateTime lastTick = DateTime.Now, lastGeneration = DateTime.Now;
         public int COLORLENGTH, DEPTHLENGTH;
@@ -44,9 +45,9 @@ namespace KADA
             this.modelNormals[0] = Vector3.UnitX;
             this.modelNormals[1] = Vector3.UnitY;
             this.modelNormals[2] = Vector3.UnitZ;
-            normalMappings[0] = 2;
-            normalMappings[1] = 0;
-            normalMappings[2] = 1;
+            normalMappings[0] = 0;
+            normalMappings[1] = 1;
+            normalMappings[2] = 2;
             
         }
 

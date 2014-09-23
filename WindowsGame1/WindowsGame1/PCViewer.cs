@@ -242,6 +242,8 @@ namespace KADA
                     }
                 }
 
+
+                
                 this.model = dataContainer.model;
 
                 this.SetBrickTranslate(Matrix.CreateTranslation(container.center));
@@ -254,10 +256,11 @@ namespace KADA
                     case TrackingConfidenceLevel.ICPTENTATIVE :
                         R = container.R;
                         break;
-                    case TrackingConfidenceLevel.NORMALS :
+                    /*case TrackingConfidenceLevel.NORMALS :
                         R = container.normalR;
-                        break;
+                        break;*/
                     default :
+                        //R = container.R;
                         R = container.R;
                         break;
                 }
@@ -294,8 +297,9 @@ namespace KADA
                     }
                     i++;
                 }
-                foreach (Vector3 v in container.qi)
+                foreach (Point p in container.qi)
                 {
+                    Vector3 v = p.position;
                     instances[i].ScreenPos = v;
                     instances[i].Scale = 0.1f;
                     instances[i].Color = new Vector3(255, 0, 0);
@@ -309,9 +313,9 @@ namespace KADA
                 Vector3 center = Vector3.Transform(Vector3.One, brickTranslation);
                 for (int o = 0; o < 3; o++)
                 {
-                    if (container.Normals[o] != null)
+                    if (container.NormalsList[o] != null)
                     {
-                        Vector3 normal = container.Normals[o];
+                        Vector3 normal = container.NormalsList[o];
                         for (int segment = 0; segment < 90; segment++)
                         {
                             instances[i].ScreenPos = center + normal * segment;
@@ -629,6 +633,11 @@ namespace KADA
             {
                 this.manager.processor3D.reset();
                 this.dataContainer.prevNormalR = Matrix.Identity;
+            }
+
+            if (kS.IsKeyDown(Keys.L))
+            {
+                this.manager.processor3D.normalAligner = true;
             }
 
 

@@ -35,6 +35,7 @@ namespace KADA
         public Vector3 oldCenter = Vector3.Zero;
         public static readonly float THRESHOLD = 200;
         private readonly bool REQUIRE_HIGH_QUALITY_RESULT = false;
+        public bool normalAligner = false;
 
         private static object ICPSemaphore = new object();
 
@@ -221,12 +222,13 @@ namespace KADA
                 if (this.dataContainer.deNoiseAndICP)
                 {
                     DepthColor[,] dc = container.dc;
-                    List<Vector3> qi = container.qi;
+                    List<Point> qi = container.qi;
 
                     float x = 0, y = 0, z = 0;
                     int counter = 0;
                     DepthColor c;
                     Vector3 center;
+                    Point point = new Point();
 
                     if (oldCenter == Vector3.Zero)
                     {
@@ -261,6 +263,11 @@ namespace KADA
                     {
                         for (int yP = 0; yP < dc.GetLength(1); yP++)
                         {
+                            if (container.Normals[xP, yP].Length() > 0)
+                            {
+                                bool bla = true;
+                                bla = !bla;
+                            }
                             c = dc[xP, yP];
                             if (c.Position.Z != 0)
                             {
@@ -273,7 +280,10 @@ namespace KADA
                                     z += c.Position.Z;
                                     counter++;
                                     double[] arr = { c.Position.X, c.Position.Y, c.Position.Z };
-                                    qi.Add(c.Position);
+                                    //point = new Point(c.Position, container.Normals[xP,480-yP]);//[639 - xP, 479 - yP]); // check/debug this
+                                    point.position = c.Position;
+                                    point.normal = container.Normals[639 - xP, 479 - yP];
+                                    qi.Add(point);
                                 }
                             }
                         }
@@ -384,7 +394,7 @@ namespace KADA
                 {
                     DateTime now = DateTime.Now;
                     DepthColor[,] dc = container.dc;
-                    List<Vector3> qi = container.qi;
+                    List<Point> qi = container.qi;
                     //System.Diagnostics.Debug.WriteLine(qi.Count);
                     DateTime elapsed = DateTime.Now;
                     Vector3 center = container.center;
@@ -601,7 +611,7 @@ namespace KADA
                         catch (Exception)
                         {
                             //System.Diagnostics.Debug.WriteLine("LE solver encountered an exception");
-                            Vector3 prominentNormal = container.Normals[2];
+                            Vector3 prominentNormal = container.NormalsList[2];
                             XNAMatrix rot = XNAMatrix.CreateFromAxisAngle(prominentNormal, 0.5f);
                             R = XNAMatrix.Multiply(R, rot);
                             prevR = R;
@@ -638,8 +648,13 @@ namespace KADA
                             RTemp.M44 = 1;
                             RTemp = XNAMatrix.Multiply(RTemp, XNAMatrix.CreateTranslation(trans));
                             R = XNAMatrix.Multiply(R, RTemp);
-                           
 
+
+                        }
+                        if (normalAligner)
+                        {
+                            this.dataContainer.backgroundEvaluator.NormalInput.Enqueue(container);
+                            normalAligner = false;
                         }
                         //this.ICPInliers = currentICPInliers;
                         //this.ICPOutliers = currentICPOutliers;
@@ -695,7 +710,6 @@ namespace KADA
                                 this.ICPTranslation = Vector3.Zero;
                                 dataContainer.trackingConfidence = TrackingConfidenceLevel.NORMALS;
                                 this.dataContainer.backgroundEvaluator.NormalInput.Enqueue(container);
-                                
                             }
 
                         }
@@ -761,6 +775,7 @@ namespace KADA
             int stage = 7;
             bool work = false;
             bool reported = false;
+
             while (this.dataContainer.run)
             {
                 PipelineContainer container = null;
@@ -785,8 +800,14 @@ namespace KADA
                 {
                     break;
                 }
+
                 if (this.dataContainer.deNoiseAndICP || work)
                 {
+                    XNAMatrix temp;
+                    if (this.dataContainer.backgroundEvaluator.NormalOutput.TryDequeue(out temp))
+                    {
+                        dataContainer.normalRotationAdjustment = temp;
+                    }
                     //XNAMatrix onlyRot = container.onlyRot;
                     XNAMatrix rot = dataContainer.prevNormalR;
                     if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL || dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPTENTATIVE)
@@ -816,10 +837,10 @@ namespace KADA
                     {
                         //modelVectors = container.estimatedVectors;
                     }
-                    Vector3[] normals = container.Normals;
+                    Vector3[] normals = container.NormalsList;
                     if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL || dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPTENTATIVE)
                     {
-                        for (int modelV = 0; modelV < 3; modelV++)
+                        /*for (int modelV = 0; modelV < 3; modelV++)
                         {
                             double maxDot = double.MinValue;
                             int currentIndex = 0;
@@ -834,7 +855,7 @@ namespace KADA
                                 }
                             }
                             dataContainer.normalMappings[modelV] = currentIndex;
-                        }
+                        }*/
                     }
 
 
@@ -846,7 +867,7 @@ namespace KADA
 
                     Vector3 axis;
                     float angle;
-                    XNAMatrix normalR, normalR2, result;
+                    XNAMatrix normalR1, normalR2, result;
 
                     axis = Vector3.Cross(modelVectors[1], container.estimatedVectors[1]);
 
@@ -860,17 +881,19 @@ namespace KADA
                         angle = -((float)Math.PI - angle);
                     }
                     axis.Normalize();
-                    normalR = XNAMatrix.CreateFromAxisAngle(axis, angle / 10);
+                    normalR1 = XNAMatrix.CreateFromAxisAngle(axis, angle / 10);
 
                     if (float.IsNaN(axis.X) || float.IsNaN(axis.Y) || float.IsNaN(axis.Z))
                     {
-                        normalR = XNAMatrix.Identity;
+                        normalR1 = XNAMatrix.Identity;
                     }
 
-                    result = normalR;
+
+
+                    result = normalR1;
                     result = result * dataContainer.prevNormalR;
 
-                    modelVectors[2] = Vector3.Transform(modelVectors[2], normalR);
+                    modelVectors[2] = Vector3.Transform(modelVectors[2], normalR1);
                     axis = Vector3.Cross(modelVectors[2], container.estimatedVectors[2]);
                     dotProduct = Vector3.Dot(modelVectors[2], container.estimatedVectors[2]);
                     angle = (float)Math.Acos(dotProduct);
@@ -885,14 +908,15 @@ namespace KADA
                     {
                         normalR2 = XNAMatrix.Identity;
                     }
-                    result = normalR2 * normalR;
+                    result = normalR2 * normalR1;
                     result = result * dataContainer.prevNormalR;
                     dataContainer.prevNormalR = result;
                     //container.normalR = dataContainer.prevNormalR;     
-                    container.normalR = result;
+                    container.rawNormalR = result;
+                    container.normalR = dataContainer.normalRotationAdjustment * container.rawNormalR;
                     if (!reported && dataContainer.trackingConfidence == TrackingConfidenceLevel.NORMALS)
                     {
-                        prevR = result;
+                        prevR = result;//container.normalR;
                         reported = true;
                     }
                 }
@@ -1018,7 +1042,7 @@ namespace KADA
         {
             int stage = 5;
             DepthColor[,] dc;
-            Vector3[,] normals = new Vector3[640, 480];
+
             Vector3 up, down, left, right;
 
             Vector3 position;
@@ -1088,15 +1112,14 @@ namespace KADA
                                     //normal.X *= -1;
                                     //normal.Y *= -1;
                                     normal = -normal;
-                                    normals[639 - x, 479 - y] = normal;
+                                    container.Normals[639 - x, 479 - y] = normal;
                                     //bins[3+(int)Math.Floor(binIndicator.X), 3+(int)Math.Floor(binIndicator.Y), 3+(int)Math.Floor(binIndicator.Y)] += 1;
                                     //bitmap.SetPixel(639 - x, 479 - y, System.Drawing.Color.FromArgb(254, 127 + (int)(normal.X * 127), 127 + (int)(normal.Y * 127), 127 + (int)(normal.Z * 127)));
                                 }
                             }
                         }
                     }
-
-                    container.Normals = this.kMeans(normals);
+                    container.NormalsList = this.kMeans(container.Normals);
                 }
                 manager.processingQueues[++container.stage].Enqueue(container);
                 //return bitmap;

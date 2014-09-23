@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using Microsoft.Xna.Framework;
 using System.Collections.Concurrent;
+using System.IO;
 using Point = XYZFileLoader.Point;
 
 namespace KADA
@@ -71,12 +72,15 @@ namespace KADA
 
         private void AnalyzeNormal()
         {
+            StreamWriter file = new StreamWriter("rotationScores.txt");
             Thread.Sleep(3000);
             List<Vector3> points = new List<Vector3>();
             PipelineContainer container = null;
             XYZFileLoader.KDTreeWrapper kdTree = dataContainer.model.getKDTree();
             double[] searchArr = new double[3];
+            List<double> values = new List<double>();
             Matrix bestRot = Matrix.Identity;
+            Vector3 v;
             while (this.dataContainer.run)
             {
                 NormalInput.TryDequeue(out container);
@@ -86,13 +90,15 @@ namespace KADA
                     continue;
                 }
 
-                List<Vector3> qi = new List<Vector3>(container.qi);
+                List<Point> qi = new List<Point>(container.qi);
                 points.Clear();
-                Matrix R = container.normalR;
+                Matrix R = container.rawNormalR;
                 R = Matrix.Invert(R);
-                foreach (Vector3 v in qi)
+                foreach (Point point in qi)
                 {
-                    points.Add(Vector3.Transform(v, R));
+                    v = point.position;
+                    Vector3 p = v - container.center;
+                    points.Add(Vector3.Transform(p, R));
                 }
                 double minDist = double.MaxValue;
                 
@@ -100,27 +106,48 @@ namespace KADA
                 Random rand = new Random();
                 double totalDist = 0;
                 int pointsCalculated = 0;
+                int count = 0;
+                double variance = 0;
+                double avg = 0;
+                double measure = 0;
                 foreach (Matrix pRot in this.possibleRotations)
                 {
+
+                    Matrix rot = Matrix.Invert(pRot);
                     totalDist = 0;
                     pointsCalculated = 0;
+                    variance = 0;
+                    values.Clear();
                     foreach (Vector3 p in points)
                     {
-                        if (rand.NextDouble() < 0.1)
+                        Vector3 point = p;
+                        
+                        point = Vector3.Transform(point, rot);
+                        if (rand.NextDouble() < 0.2)
                         {
-                            searchArr[0] = p.X;
-                            searchArr[1] = p.Y;
-                            searchArr[2] = p.Z;
+                            searchArr[0] = point.X;
+                            searchArr[1] = point.Y;
+                            searchArr[2] = point.Z;
                             KDTree.NearestNeighbour<Point> neighbour = kdTree.NearestNeighbors(searchArr, 1);
                             neighbour.MoveNext();
                             totalDist += neighbour.CurrentDistance;
-                            pointsCalculated++;
+                            pointsCalculated++;                            
+                            values.Add(neighbour.CurrentDistance);                           
                         }
                     }
-                    totalDist /= pointsCalculated;
-                    if (totalDist < minDist)
+                    avg = totalDist/pointsCalculated;
+
+                    foreach (double value in values)
                     {
-                        minDist = totalDist;
+                        variance += (value - avg) * (value - avg);
+                    }
+                    
+                    variance /= pointsCalculated;
+                    measure = avg + 2*variance;
+                    file.WriteLine(++count + " : " + avg + " and var: " + variance + " and measure: " + measure);
+                    if (measure < minDist)
+                    {
+                        minDist = measure;
                         bestRot = pRot;
                     }
                 }

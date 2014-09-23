@@ -18,7 +18,7 @@ namespace KADA
 
     public class ICPWorker
     {
-        public ConcurrentQueue<Vector3> input;
+        public ConcurrentQueue<Point> input;
         public Vector3 center;
         public XNAMatrix RInv;
         public XNAMatrix onlyRot;
@@ -38,20 +38,21 @@ namespace KADA
             this.file = new StreamWriter("ICP_worker" + number+"_"+DateTime.Now.Millisecond +".txt");
             this.number = number;
             this.reset();
-            this.input = new ConcurrentQueue<Vector3>();
+            this.input = new ConcurrentQueue<Point>();
             this.worker = new Thread(new ThreadStart(() => this.routine()));
             worker.Start();
         }
 
         public void reset()
         {
-            this.input = new ConcurrentQueue<Vector3>();
+            this.input = new ConcurrentQueue<Point>();
             this.A = new Matrix(new double[6, 6]);
             this.B = new Vector(new double[6]);
         }
 
         private void routine()
         {
+            Point point;
             Vector3 v;
             Matrix tmA = new Matrix(6,6);
             Vector tempB = new Vector(6);
@@ -65,8 +66,8 @@ namespace KADA
                 {
                     maxCount = this.input.Count;
                 }
-                v = Vector3.Zero;
-                while (!input.TryDequeue(out v) && this.dataContainer.run)
+                point = new Point();
+                while (!input.TryDequeue(out point) && this.dataContainer.run)
                 {
                     i++;
                     if (count > 0)
@@ -80,6 +81,7 @@ namespace KADA
                         Thread.Sleep(2);
                     }
                 }
+                v = point.position;
                 if (container == null)
                 {
                     break;
@@ -118,6 +120,7 @@ namespace KADA
                 }
 
                 p = neighbour.Current;
+                transformedNormal = Vector3.Transform(p.normal, onlyRot);
                 //transformedNormal = Vector3.Transform(p.normal, onlyRot);
                 if (p.normal == Vector3.Zero)
                 {
@@ -128,7 +131,9 @@ namespace KADA
                     //return;
                     continue;
                 }
-
+                float weight = Math.Abs(Vector3.Dot(transformedNormal, point.normal));
+                weight = (1 - weight);//(float)Math.Log((1-weight)*2+1)+0.05f;//
+                
                 Vector3 pos = p.position;
                 pos /= 20;
                 vC /= 20;
@@ -149,7 +154,13 @@ namespace KADA
                 tmA[3, 0] = tmA[0, 3]; tmA[3, 1] = tmA[1, 3]; tmA[3, 2] = tmA[2, 3]; tmA[3, 3] = n.X * n.X; tmA[3, 4] = n.X * n.Y; tmA[3, 5] = n.X * n.Z;
                 tmA[4, 0] = tmA[0, 4]; tmA[4, 1] = tmA[1, 4]; tmA[4, 2] = tmA[2, 4]; tmA[4, 3] = tmA[3, 4]; tmA[4, 4] = n.Y * n.Y; tmA[4, 5] = n.Y * n.Z;
                 tmA[5, 0] = tmA[0, 5]; tmA[5, 1] = tmA[1, 5]; tmA[5, 2] = tmA[2, 5]; tmA[5, 3] = tmA[3, 5]; tmA[5, 4] = tmA[4, 5]; tmA[5, 5] = n.Z * n.Z;
-
+                //System.Diagnostics.Debug.WriteLine(weight);
+                tmA.MultiplyInplace(weight);
+                if (weight > 0)
+                {
+                    bool bla = true;
+                    bla = !bla;
+                }
                 //double[] tempB = new double[6];
 
                 float pMinqTimesN = Vector3.Dot(pos - vC, n);
@@ -160,7 +171,8 @@ namespace KADA
                 tempB[3] = pMinqTimesN * n.X;
                 tempB[4] = pMinqTimesN * n.Y;
                 tempB[5] = pMinqTimesN * n.Z;
-                
+
+                tempB.MultiplyInplace(weight);
                 A = A.Add(tmA);
                 B = B.Subtract(tempB);
                 if (neighbour.CurrentDistance < _3DProcessor.MAX_INLIERDISTANCE)
