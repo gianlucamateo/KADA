@@ -6,16 +6,25 @@ using Microsoft.Xna.Framework;
 
 namespace XYZFileLoader
 {
+    public enum BrickColor
+    {
+        NONE = 0,RED = 2,GREEN = 3,BLUE = 5,YELLOW = 7
+    }
     public struct Point
     {
         public Vector3 position;
         public Vector3 normal;
         public double[] positionArr;
+        public int brickColorInteger;
+        public BrickColor brickColor;
+
         public Point(Vector3 pos, Vector3 nor)
         {
             position = pos;
             normal = nor;
             positionArr = new double[] { pos.X, pos.Y, pos.Z };
+            brickColor = BrickColor.NONE;
+            brickColorInteger = 1;
         }
         public Point Copy()
         {

@@ -10,11 +10,15 @@ namespace XYZFileLoader
     public class Brick
     {
         public List<Point> points;
-        public Color color;
-        public Brick(Color color)
+        public BrickColor color;
+        public Brick(BrickColor color)
         {
             this.color = color;
             this.points = Reader.getPoints();
+            foreach (Point p in points)
+            {
+                
+            }
         }
 
     }

@@ -45,19 +45,19 @@ namespace KADA
             Histograms = new List<Histogram>();
 
             Bitmap red = (Bitmap)Image.FromFile("ressources/histogram/Red_cleaned_filled.png", true);
-            Histogram r = new Histogram(red, 15, 16);
+            Histogram r = new Histogram(red, 15, 16,XYZFileLoader.BrickColor.RED);
             Histograms.Add(r);
 
             Bitmap green = (Bitmap)Image.FromFile("ressources/histogram/Green_cleaned_filled.png", true);
-            Histogram g = new Histogram(green, 8, 16);
+            Histogram g = new Histogram(green, 8, 16, XYZFileLoader.BrickColor.GREEN);
             Histograms.Add(g);
 
             Bitmap blue = (Bitmap)Image.FromFile("ressources/histogram/Blue_cleaned_filled.png", true);
-            Histogram b = new Histogram(blue, 8, 16);
+            Histogram b = new Histogram(blue, 8, 16, XYZFileLoader.BrickColor.BLUE);
             Histograms.Add(b);
 
             Bitmap yellow = (Bitmap)Image.FromFile("ressources/histogram/Yellow_cleaned_filled.png", true);
-            Histogram ye = new Histogram(yellow, 12, 16);
+            Histogram ye = new Histogram(yellow, 12, 16, XYZFileLoader.BrickColor.YELLOW);
             //Histograms.Add(ye);
 
             List<Thread> Stage1 = new List<Thread>();
@@ -285,6 +285,7 @@ namespace KADA
 
                             if (pixel.Position.Z != 0)
                             {
+                                int brickColorInteger = 1;
                                 int maxval = 0;
                                 foreach (Histogram h in this.Histograms)
                                 {
@@ -293,12 +294,17 @@ namespace KADA
                                     {
                                         maxval = val;
                                     }
+                                    if (val == 1)
+                                    {
+                                        brickColorInteger *= (int)h.color;
+                                    }
                                 }
                                 if (maxval == 0 || color.X + color.Y + color.Z < 150)
                                 {
                                     pixel.Position.Z = 0;
                                     pixel.Depth = 0;
-
+                                    pixel.BrickColorInteger = brickColorInteger;
+                                   
                                 }
                                 dc[x, y] = pixel;
                             }

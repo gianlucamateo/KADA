@@ -13,15 +13,17 @@ namespace KADA
         public float[, ,] colorBins;
         private readonly int RESOLUTION;
         private readonly int BINSIZE;
+        public XYZFileLoader.BrickColor color;
 
         private float threshold;
-        public Histogram(Bitmap image, float threshold, int resolution)
+        public Histogram(Bitmap image, float threshold, int resolution, XYZFileLoader.BrickColor color)
         {
             this.RESOLUTION = resolution;
             BINSIZE = 256 / RESOLUTION;
             colorBins = new float[RESOLUTION,RESOLUTION,RESOLUTION];
             this.threshold = threshold;
             this.generate(image);
+            this.color = color;
         }
 
         public void generate(Bitmap image)

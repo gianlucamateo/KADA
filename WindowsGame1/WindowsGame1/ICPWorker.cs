@@ -31,6 +31,7 @@ namespace KADA
         private int maxCount = 0;
         private int number;
         private StreamWriter file;
+        private List<BrickColor> possibleColors = new List<BrickColor>();
 
         public ICPWorker(int number, PipelineDataContainer dataContainer)
         {
@@ -39,6 +40,10 @@ namespace KADA
             this.number = number;
             this.reset();
             this.input = new ConcurrentQueue<Point>();
+            possibleColors.Add(BrickColor.RED);
+            possibleColors.Add(BrickColor.GREEN);
+            possibleColors.Add(BrickColor.BLUE);
+            possibleColors.Add(BrickColor.YELLOW);
             this.worker = new Thread(new ThreadStart(() => this.routine()));
             worker.Start();
         }
@@ -133,7 +138,21 @@ namespace KADA
                 }
                 float weight = Math.Abs(Vector3.Dot(transformedNormal, point.normal));
                 weight = (1 - weight);//(float)Math.Log((1-weight)*2+1)+0.05f;//
-                
+                foreach (BrickColor bc in possibleColors)
+                {
+                    int number = (int)bc;
+                    if ((p.brickColorInteger / number) * number == p.brickColorInteger)
+                    {
+                        if (point.brickColor == bc)
+                        {
+                            weight *= 2.5f;
+                        }
+                        else
+                        {
+                            weight /= 2;
+                        }
+                    }
+                }
                 Vector3 pos = p.position;
                 pos /= 20;
                 vC /= 20;

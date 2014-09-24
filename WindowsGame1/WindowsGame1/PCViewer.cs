@@ -31,6 +31,7 @@ namespace KADA
         public int Depth;
         public bool UpToDate;
         public Vector3 Position;
+        public int BrickColorInteger;
 
         public DepthColor(int Depth, Vector3 Color)
         {
@@ -38,6 +39,7 @@ namespace KADA
             this.Color = Color;
             this.UpToDate = true;
             this.Position = new Vector3(0, 0, 0);
+            this.BrickColorInteger = 1;
         }
     }
     #endregion

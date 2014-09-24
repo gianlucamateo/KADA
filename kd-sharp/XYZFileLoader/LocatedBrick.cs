@@ -16,7 +16,7 @@ namespace XYZFileLoader
         private Vector3 root = new Vector3(Model.DIMENSION / 2, Model.DIMENSION / 2, Model.DIMENSION / 2);
         private Vector3 voxelDimensions = new Vector3(64.0f / 4, 19.2f, 32.0f / 2);
 
-        public LocatedBrick(bool rotated, Vector3 voxelOffset, Color color)
+        public LocatedBrick(bool rotated, Vector3 voxelOffset, BrickColor color)
         {
             this.rotated = rotated;
             this.voxelOffset = voxelOffset;
@@ -37,8 +37,25 @@ namespace XYZFileLoader
 
         public Vector3 getColor()
         {
-            Vector3 val = new Vector3(this.brick.color.R, this.brick.color.G, this.brick.color.B);
-            return val/255f;
+            Vector3 color = Vector3.Zero;
+            switch (this.brick.color)
+            {
+                case BrickColor.BLUE:
+                    color = new Vector3(0, 0, 1);
+                    break;
+                case BrickColor.RED:
+                    color = new Vector3(1, 0, 0);
+                    break;
+                case BrickColor.GREEN:
+                    color = new Vector3(0, 1, 0);
+                    break;
+                case BrickColor.YELLOW:
+                    color = new Vector3(1, 1, 0);
+                    break;
+            }
+            return color;   
+            //Vector3 val = new Vector3(this.brick.color.R, this.brick.color.G, this.brick.color.B);
+            //return val/255f;
         }
 
         public void insert(List<Point>[, ,] pointGrid, Brick[, ,] voxelGrid)

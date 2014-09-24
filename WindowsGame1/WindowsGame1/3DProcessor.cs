@@ -283,6 +283,7 @@ namespace KADA
                                     //point = new Point(c.Position, container.Normals[xP,480-yP]);//[639 - xP, 479 - yP]); // check/debug this
                                     point.position = c.Position;
                                     point.normal = container.Normals[639 - xP, 479 - yP];
+                                    point.brickColorInteger = c.BrickColorInteger;
                                     qi.Add(point);
                                 }
                             }
