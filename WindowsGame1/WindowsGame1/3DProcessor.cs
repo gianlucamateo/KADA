@@ -26,6 +26,9 @@ namespace KADA
 {
     public class _3DProcessor
     {
+        public const float POINTTOPOINTWEIGHT = 0.5f;
+        public const float POINTTOPLANEWEIGHT = 0.01f;
+        public const float TRANSLATIONWEIGHT = 0.9F;
         public const float MAX_INLIERDISTANCE = 8;
         private const int ICPITERATIONS = 1;
         private const int WORKERCOUNT = 10;
@@ -293,10 +296,10 @@ namespace KADA
                     y /= counter;
                     z /= counter;
                     center = new Vector3(x, y, z);
-                    if (ICPTranslation.Length() > 100)
+                    /*if (ICPTranslation.Length() > 100)
                     {
                         this.reset();
-                    }
+                    }*/
                     //center += ICPTranslation;
                     oldCenter = center;
 
@@ -434,6 +437,7 @@ namespace KADA
 
                         Matrix A = new Matrix(new double[6, 6]);
                         Vector B = new Vector(new double[6]);
+                        H = new Matrix(3, 3);
                         onlyRot = new XNAMatrix();
                         onlyRot.M11 = R.M11;
                         onlyRot.M12 = R.M12;
@@ -580,9 +584,9 @@ namespace KADA
                         // System.Diagnostics.Debug.WriteLine(DateTime.Now - now);
                         foreach (ICPWorker w in workers)
                         {
-                            A = A.Add(w.A);
-
-                            B = B.Add(w.B);
+                            A.AddInplace(w.A);
+                            B.AddInplace(w.B);
+                            H.AddInplace(w.H);
                         }
 
                         //REMOVED FOR PERFORMANCE TESTING
@@ -598,11 +602,40 @@ namespace KADA
                             {
                                 double[,] addArr = new double[6, 6];
                                 addArr = A.CopyToArray();
-                                addArr[row, row] = 1;
+                                addArr[row, row] = 0.001f;
                                 A = new Matrix(addArr);
                             }
                         }
 
+                        //Point-to-Point component
+
+                        //H.Multiply(1.0 / (double)container.ICPInliers);
+
+                        H.MultiplyInplace(POINTTOPOINTWEIGHT);
+                        DotNumerics.LinearAlgebra.SingularValueDecomposition s = new SingularValueDecomposition();
+                        Matrix S, U, VT;
+                        s.ComputeSVD(H, out S, out U, out VT);
+
+                        Matrix V = VT.Transpose();
+                        Matrix UT = U.Transpose();
+                        Matrix Xm = V.Multiply(UT);
+                        
+                        XNAMatrix pointR = new XNAMatrix(
+                            (float)Xm[0, 0],
+                            (float)Xm[0, 1],
+                            (float)Xm[0, 2],
+                            0,
+                            (float)Xm[1, 0],
+                            (float)Xm[1, 1],
+                            (float)Xm[1, 2],
+                            0,
+                            (float)Xm[2, 0],
+                            (float)Xm[2, 1],
+                            (float)Xm[2, 2],
+                            0,
+                            0, 0, 0, 1
+                            );
+                        pointR = XNAMatrix.Transpose(pointR);
                         LinearEquations LE = new LinearEquations();
                         Vector X = null;
                         try
@@ -625,7 +658,7 @@ namespace KADA
 
                         if (!skip)
                         {
-                            float factor = 1f;
+                            float factor = POINTTOPLANEWEIGHT;
 
                             double[] XArrTrans = X.ToArray();
                             X = X.Multiply(factor);
@@ -637,7 +670,7 @@ namespace KADA
                             Rot = XNAMatrix.CreateRotationX((float)XArr[0]);
                             RTemp = XNAMatrix.Multiply(RTemp, Rot);
                             Vector3 trans = new Vector3((float)(XArrTrans[3]), (float)(XArrTrans[4]), (float)(XArrTrans[5]));
-                            //trans /= 4;
+                            trans *= TRANSLATIONWEIGHT;
                             this.ICPTranslation += trans;
                             if (trans.Length() > 2)
                             {
@@ -647,8 +680,14 @@ namespace KADA
                             RTemp.M42 = 0;
                             RTemp.M43 = 0;
                             RTemp.M44 = 1;
+
+                            
+
+                            
+                            RTemp = XNAMatrix.Multiply(RTemp, pointR);
                             RTemp = XNAMatrix.Multiply(RTemp, XNAMatrix.CreateTranslation(trans));
                             R = XNAMatrix.Multiply(R, RTemp);
+                            
 
 
                         }

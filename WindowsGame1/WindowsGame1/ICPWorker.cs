@@ -24,6 +24,7 @@ namespace KADA
         public XNAMatrix onlyRot;
         public Matrix A;
         public Vector B;
+        public Matrix H, HTemp;
         private Thread worker;
         public KDTreeWrapper brickWrapper;
         public PipelineDataContainer dataContainer;
@@ -44,6 +45,8 @@ namespace KADA
             possibleColors.Add(BrickColor.GREEN);
             possibleColors.Add(BrickColor.BLUE);
             possibleColors.Add(BrickColor.YELLOW);
+            this.H = new Matrix(3, 3);
+            this.HTemp = new Matrix(3, 3);
             this.worker = new Thread(new ThreadStart(() => this.routine()));
             worker.Start();
         }
@@ -53,6 +56,8 @@ namespace KADA
             this.input = new ConcurrentQueue<Point>();
             this.A = new Matrix(new double[6, 6]);
             this.B = new Vector(new double[6]);
+            this.H = new Matrix(3, 3);
+            this.HTemp = new Matrix(3, 3);
         }
 
         private void routine()
@@ -98,11 +103,19 @@ namespace KADA
                 vArr[0] = vC.X;
                 vArr[1] = vC.Y;
                 vArr[2] = vC.Z;
-                NearestNeighbour<Point> neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: _3DProcessor.THRESHOLD);
+                double maxDistance = _3DProcessor.THRESHOLD;
+                if (container.ICPRatio > 0.3f)
+                {
+                    maxDistance = _3DProcessor.MAX_INLIERDISTANCE;
+                }
+
+                NearestNeighbour<Point> neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: maxDistance);
                 neighbour.MoveNext();
                 Point p;
                 Vector3 transformedNormal = Vector3.Zero;
                 Point firstGuess = neighbour.Current;
+                double distance = 0f;
+                float bonus = 1;
 
                 bool found = true;
                 if (container.ICPRatio > 0.3f)
@@ -116,14 +129,21 @@ namespace KADA
                             break;
                         }
                         transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
+                        distance = neighbour.CurrentDistance;
                     }
                     if (!found)
                     {
                         continue;
                     }
+
+                    if (distance < _3DProcessor.MAX_INLIERDISTANCE)
+                    {
+                        //continue;
+                        bonus = 10;
+                    }
                     
                 }
-
+                
                 p = neighbour.Current;
                 transformedNormal = Vector3.Transform(p.normal, onlyRot);
                 //transformedNormal = Vector3.Transform(p.normal, onlyRot);
@@ -132,10 +152,22 @@ namespace KADA
                     //p = firstGuess;
                     
                     container.ICPOutliers++;
-                    
                     //return;
                     continue;
                 }
+
+                HTemp[0, 0] = vC.X * p.position.X;
+                HTemp[0, 1] = vC.Y * p.position.X;
+                HTemp[0, 2] = vC.Z * p.position.X;
+                HTemp[1, 0] = vC.X * p.position.Y;
+                HTemp[1, 1] = vC.Y * p.position.Y;
+                HTemp[1, 2] = vC.Z * p.position.Y;
+                HTemp[2, 0] = vC.X * p.position.Z;
+                HTemp[2, 1] = vC.Y * p.position.Z;
+                HTemp[2, 2] = vC.Z * p.position.Z;
+
+                H.AddInplace(HTemp);
+
                 float weight = Math.Abs(Vector3.Dot(transformedNormal, point.normal));
                 weight = (1 - weight);//(float)Math.Log((1-weight)*2+1)+0.05f;//
                 foreach (BrickColor bc in possibleColors)
@@ -153,9 +185,10 @@ namespace KADA
                         }
                     }
                 }
+                weight *= bonus;
                 Vector3 pos = p.position;
-                pos /= 20;
-                vC /= 20;
+                //pos /= 20;
+                //vC /= 20;
                 Vector3 n = p.normal; //+new Vector3(0.3f, 0.001f, 0.001f);
                 Vector3 c = Vector3.Cross(pos, n);
 
