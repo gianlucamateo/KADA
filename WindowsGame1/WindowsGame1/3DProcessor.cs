@@ -26,10 +26,10 @@ namespace KADA
 {
     public class _3DProcessor
     {
-        public const float POINTTOPOINTWEIGHT = 1.0f;//0.6f; //this doesn't work
-        public const float POINTTOPLANEWEIGHT = 0.1f;//0.1f;
+        public const float POINTTOPOINTWEIGHT = 0.5f;
+        public const float POINTTOPLANEWEIGHT = 0.5f;
         public const float TRANSLATIONWEIGHT = 1f;
-        public const float MAX_INLIERDISTANCE = 8; 
+        public const float MAX_INLIERDISTANCE = 8;
         private const int ICPITERATIONS = 1;
         private const int WORKERCOUNT = 10;
 
@@ -567,17 +567,17 @@ namespace KADA
 
                         if (!skip)
                         {
-                            float factor = POINTTOPLANEWEIGHT;
-
+                            float currentWeight = 0.2f + Math.Min(0.8f, 1f / container.ICPRatio);
                             double[] XArrTrans = X.ToArray();
-                            X = X.Multiply(factor);
-                            double[] XArr = X.ToArray();
-                            XNAMatrix RTemp = XNAMatrix.CreateRotationZ((float)XArr[2]);
 
-                            XNAMatrix Rot = XNAMatrix.CreateRotationY((float)XArr[1]);
-                            RTemp = XNAMatrix.Multiply(RTemp, Rot);
-                            Rot = XNAMatrix.CreateRotationX((float)XArr[0]);
-                            RTemp = XNAMatrix.Multiply(RTemp, Rot);
+                            X = X.Multiply(POINTTOPLANEWEIGHT * currentWeight);
+                            double[] XArr = X.ToArray();
+
+                            XNAMatrix XRot = XNAMatrix.CreateRotationX(Math.Min((float)XArr[0], (float)Math.PI / 10));
+                            XNAMatrix YRot = XNAMatrix.CreateRotationY(Math.Min((float)XArr[1], (float)Math.PI / 10));
+                            XNAMatrix ZRot = XNAMatrix.CreateRotationZ(Math.Min((float)XArr[2], (float)Math.PI / 10));
+                            XNAMatrix RTemp = ZRot * YRot * XRot;
+
                             Vector3 trans = new Vector3((float)(XArrTrans[3]), (float)(XArrTrans[4]), (float)(XArrTrans[5]));
                             trans *= TRANSLATIONWEIGHT;
                             trans *= model.radius;
@@ -591,9 +591,24 @@ namespace KADA
                             RTemp.M43 = 0;
                             RTemp.M44 = 1;
 
-                            RTemp = XNAMatrix.Multiply(RTemp, pointR);
-                            RTemp = XNAMatrix.Multiply(RTemp, XNAMatrix.CreateTranslation(trans));
-                            R = XNAMatrix.Multiply(R, RTemp);
+                            double pointThetaX = -Math.Atan2(pointR.M32, pointR.M33);
+                            double pointThetaY = -Math.Atan2(-pointR.M31, Math.Sqrt(pointR.M32 * pointR.M32 + pointR.M33 * pointR.M33));
+                            double pointThetaZ = -Math.Atan2(pointR.M21, pointR.M11);
+
+                            pointThetaX *= Math.Min(POINTTOPOINTWEIGHT * currentWeight, Math.PI / 10);
+                            pointThetaY *= Math.Min(POINTTOPOINTWEIGHT * currentWeight, Math.PI / 10);
+                            pointThetaZ *= Math.Min(POINTTOPOINTWEIGHT * currentWeight, Math.PI / 10);
+
+
+                            ZRot = XNAMatrix.CreateRotationZ((float)pointThetaZ);
+                            YRot = XNAMatrix.CreateRotationY((float)pointThetaY);
+
+                            XRot = XNAMatrix.CreateRotationX((float)pointThetaX);
+                            pointR = ZRot * YRot * XRot;
+
+                            RTemp = RTemp * pointR;
+                            RTemp = XNAMatrix.CreateTranslation(trans) * RTemp;
+                            R = RTemp * R;
 
                         }
                         if (normalAligner)

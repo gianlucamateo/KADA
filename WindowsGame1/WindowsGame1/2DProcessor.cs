@@ -81,7 +81,7 @@ namespace KADA
                 IHistogram b = new YUVHistogram(blue, blacklist, XYZFileLoader.BrickColor.BLUE);
                 Histograms.Add(b);
                 IHistogram y = new YUVHistogram(yellow, blacklist, XYZFileLoader.BrickColor.YELLOW);
-                Histograms.Add(y);
+                //Histograms.Add(y);
             }
 
             List<Thread> Stage1 = new List<Thread>();

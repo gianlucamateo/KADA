@@ -23,10 +23,10 @@ namespace XYZFileLoader
             this.bricks = new List<LocatedBrick>();
             this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0),BrickColor.GREEN));
 
-            /*this.bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
+            this.bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
             this.bricks.Add(new LocatedBrick(false, new Vector3(-1, 2, -1), BrickColor.BLUE));
             this.bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
-            this.bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));*/
+            this.bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
             
             //this.bricks.Add(new LocatedBrick(true, new Vector3(3, -1, -3)));
             //this.bricks.Add(new LocatedBrick(false, new Vector3(0, 2, 0)));
