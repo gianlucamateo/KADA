@@ -31,7 +31,7 @@ namespace KADA
         public const float TRANSLATIONWEIGHT = 1f;
         public const float MAX_INLIERDISTANCE = 8;
         private const int ICPITERATIONS = 1;
-        private const int WORKERCOUNT = 10;
+        private const int WORKERCOUNT = 5;
 
         public Vector3 oldCenter = Vector3.Zero;
         public static readonly float THRESHOLD = 200;
@@ -494,6 +494,8 @@ namespace KADA
                             B.AddInplace(w.B);
                             H.AddInplace(w.H);
                             totalWeight += w.totalWeight;
+                            container.ICPOutliers += w.ICPOutliers;
+                            container.ICPInliers += w.ICPInliers;
                         }
                         if (totalWeight > 0)
                         {

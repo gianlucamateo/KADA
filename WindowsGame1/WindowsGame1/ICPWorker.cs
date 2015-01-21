@@ -35,13 +35,16 @@ namespace KADA
         private StreamWriter file;
         public float totalWeight;
         private List<BrickColor> possibleColors = new List<BrickColor>();
+        public int ICPInliers, ICPOutliers;
 
         public ICPWorker(int number, PipelineDataContainer dataContainer)
         {
+            this.ICPOutliers = 0;
+            this.ICPInliers = 0;
             this.ICPTranslation = Vector3.Zero;
             this.totalWeight = 0;
             this.dataContainer = dataContainer;
-            this.file = new StreamWriter("ICP_worker" + number+"_"+DateTime.Now.Millisecond +".txt");
+            this.file = new StreamWriter("ICP_worker" + number + "_" + DateTime.Now.Millisecond + ".txt");
             this.number = number;
             this.reset();
             this.input = new ConcurrentQueue<Point>();
@@ -57,6 +60,8 @@ namespace KADA
 
         public void reset()
         {
+            this.ICPOutliers = 0;
+            this.ICPInliers = 0;
             this.totalWeight = 0;
             this.input = new ConcurrentQueue<Point>();
             this.A = new Matrix(new double[6, 6]);
@@ -69,7 +74,7 @@ namespace KADA
         {
             Point point;
             Vector3 v;
-            Matrix tmA = new Matrix(6,6);
+            Matrix tmA = new Matrix(6, 6);
             Vector tempB = new Vector(6);
             DateTime start = DateTime.Now;
             int count = 0;
@@ -85,10 +90,6 @@ namespace KADA
                 while (!input.TryDequeue(out point) && this.dataContainer.run)
                 {
                     i++;
-                    if (count > 0)
-                    {
-                        //file.WriteLine(count + " Samples took:" + (DateTime.Now - start));
-                    }
                     start = DateTime.Now;
                     count = 0;
                     if (i > 10)
@@ -97,7 +98,7 @@ namespace KADA
                     }
                 }
                 v = point.position;
-                //v += ICPTranslation;
+
                 if (container == null)
                 {
                     break;
@@ -121,7 +122,7 @@ namespace KADA
                 Vector3 transformedNormal = Vector3.Zero;
                 Point firstGuess = neighbour.Current;
                 double distance = 0f;
-                
+
 
                 bool found = true;
                 if (container.ICPRatio > 0.2f)
@@ -142,14 +143,14 @@ namespace KADA
                         continue;
                     }
                 }
-                
+
                 p = neighbour.Current;
                 transformedNormal = Vector3.Transform(p.normal, onlyRot);
                 //transformedNormal = Vector3.Transform(p.normal, onlyRot);
                 if (p.normal == Vector3.Zero)
                 {
                     //p = firstGuess;
-                    
+
                     container.ICPOutliers++;
                     //return;
                     continue;
@@ -168,7 +169,7 @@ namespace KADA
                 HTemp[2, 1] = vC.Y * p.position.Z;
                 HTemp[2, 2] = vC.Z * p.position.Z;
 
-                
+
 
                 float weight = Math.Abs(Vector3.Dot(transformedNormal, point.normal));
                 weight = (1 - weight);//(float)Math.Log((1-weight)*2+1)+0.05f;//
@@ -184,7 +185,7 @@ namespace KADA
                         }
                     }
                 }
-                
+
                 Vector3 pos = p.position;
                 //pos /= 20;
                 //vC /= 20;
@@ -207,7 +208,7 @@ namespace KADA
                 tmA[5, 0] = tmA[0, 5]; tmA[5, 1] = tmA[1, 5]; tmA[5, 2] = tmA[2, 5]; tmA[5, 3] = tmA[3, 5]; tmA[5, 4] = tmA[4, 5]; tmA[5, 5] = n.Z * n.Z;
                 //System.Diagnostics.Debug.WriteLine(weight);
                 tmA.MultiplyInplace(weight);
-                
+
                 //double[] tempB = new double[6];
 
                 float pMinqTimesN = Vector3.Dot(pos - vC, n);
@@ -219,24 +220,24 @@ namespace KADA
                 tempB[4] = pMinqTimesN * n.Y;
                 tempB[5] = pMinqTimesN * n.Z;
 
-                
+
                 tempB.MultiplyInplace(weight);
 
                 HTemp.MultiplyInplace(weight);
-               
+
 
                 totalWeight += weight;
                 H.AddInplace(HTemp);
-                
+
                 A = A.Add(tmA);
                 B = B.Subtract(tempB);
                 if (neighbour.CurrentDistance < _3DProcessor.MAX_INLIERDISTANCE)
                 {
-                    container.ICPInliers++;
+                    this.ICPInliers++;
                 }
                 else
                 {
-                    container.ICPOutliers++;
+                    this.ICPOutliers++;
                 }
             }
         }
