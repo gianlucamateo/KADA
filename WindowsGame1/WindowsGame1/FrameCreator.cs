@@ -15,13 +15,14 @@ namespace KADA
         private PipelineManager manager;
         private int number;
         private StreamWriter file;
+        private Queue<DepthImagePixel[]> depthqueue = new Queue<DepthImagePixel[]>();
 
         public FrameCreator(PipelineDataContainer dataContainer, PipelineManager manager)
         {
             this.file = new StreamWriter("timings.csv");
             this.manager = manager;
             this.dataContainer = dataContainer;
-            Thread frameCreator = new Thread(new ThreadStart(()=>kinectFramePull()));
+            Thread frameCreator = new Thread(new ThreadStart(() => kinectFramePull()));
             foreach (var potentialKinect in KinectSensor.KinectSensors)
             {
                 if (potentialKinect.Status == KinectStatus.Connected)
@@ -29,6 +30,10 @@ namespace KADA
                     this.kinect = potentialKinect;
                     break;
                 }
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                this.depthqueue.Enqueue(new DepthImagePixel[640 * 480]);
             }
             if (this.kinect != null)
             {
@@ -48,7 +53,7 @@ namespace KADA
                     this.kinect = null;
                 }
 
-               // this.kinect.AllFramesReady += this.KinectAllFramesReady;
+                // this.kinect.AllFramesReady += this.KinectAllFramesReady;
                 frameCreator.Start();
                 this.number = 0;
             }
@@ -73,6 +78,8 @@ namespace KADA
                     continue;
                 }
 
+
+
                 using (ColorImageFrame colorFrame = kinect.ColorStream.OpenNextFrame(0))
                 {
                     if (colorFrame == null)
@@ -80,8 +87,15 @@ namespace KADA
                         manager.recycle.Enqueue(container);
                         continue;
                     }
-                    colorFrame.CopyPixelDataTo(container.colorPixels);                    
+                    if (depthqueue.Count > 0)
+                    {
+                        //DepthImagePixel[] arr = depthqueue.Dequeue();
+                        colorFrame.CopyPixelDataTo(container.colorPixels);
+                        //container.depthPixels = (DepthImagePixel[])arr.Clone();
+                        //depthqueue.Enqueue(arr);
+                    }
                 }
+
                 using (DepthImageFrame depthFrame = kinect.DepthStream.OpenNextFrame(50))
                 {
                     if (depthFrame == null)
@@ -89,8 +103,14 @@ namespace KADA
                         manager.recycle.Enqueue(container);
                         continue;
                     }
+
+                    //DepthImagePixel[] arr = depthqueue.Dequeue();
+                    //depthFrame.CopyDepthImagePixelDataTo(arr);
+                    //depthqueue.Enqueue(arr);
                     depthFrame.CopyDepthImagePixelDataTo(container.depthPixels);
                 }
+
+
                 int stage = 0;
                 TimeSpan current;
                 DateTime previous = DateTime.MinValue;
@@ -113,15 +133,15 @@ namespace KADA
                 container.stage = 0;
                 container.qi.Clear();
 
-                
-                
+
+
 
                 this.kinect.CoordinateMapper.MapDepthFrameToColorFrame(DepthImageFormat.Resolution640x480Fps30, container.depthPixels, ColorImageFormat.RgbResolution640x480Fps30, container.colorPoints);
 
                 dataContainer.recordGenerationTick();
                 container.timings.Add(DateTime.Now);
                 manager.processingQueues[++container.stage].Enqueue(container);
-                
+
             }
         }
 
@@ -129,7 +149,7 @@ namespace KADA
         //Stage 0
         private void KinectAllFramesReady(object sender, AllFramesReadyEventArgs e)
         {
-            
+
             if (this.manager.recycle.Count > 3)
             {
                 while (this.manager.recycle.TryDequeue(out container) == false)

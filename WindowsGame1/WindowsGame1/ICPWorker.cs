@@ -22,6 +22,7 @@ namespace KADA
         public Vector3 center;
         public XNAMatrix RInv;
         public XNAMatrix onlyRot;
+        public Vector3 ICPTranslation;
         public Matrix A;
         public Vector B;
         public Matrix H, HTemp;
@@ -32,10 +33,13 @@ namespace KADA
         private int maxCount = 0;
         private int number;
         private StreamWriter file;
+        public float totalWeight;
         private List<BrickColor> possibleColors = new List<BrickColor>();
 
         public ICPWorker(int number, PipelineDataContainer dataContainer)
         {
+            this.ICPTranslation = Vector3.Zero;
+            this.totalWeight = 0;
             this.dataContainer = dataContainer;
             this.file = new StreamWriter("ICP_worker" + number+"_"+DateTime.Now.Millisecond +".txt");
             this.number = number;
@@ -53,6 +57,7 @@ namespace KADA
 
         public void reset()
         {
+            this.totalWeight = 0;
             this.input = new ConcurrentQueue<Point>();
             this.A = new Matrix(new double[6, 6]);
             this.B = new Vector(new double[6]);
@@ -92,6 +97,7 @@ namespace KADA
                     }
                 }
                 v = point.position;
+                //v += ICPTranslation;
                 if (container == null)
                 {
                     break;
@@ -115,10 +121,10 @@ namespace KADA
                 Vector3 transformedNormal = Vector3.Zero;
                 Point firstGuess = neighbour.Current;
                 double distance = 0f;
-                float bonus = 1;
+                
 
                 bool found = true;
-                if (container.ICPRatio > 0.3f)
+                if (container.ICPRatio > 0.2f)
                 {
                     transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
                     while (Vector3.Dot(transformedNormal, Vector3.UnitZ) < this.dataContainer.NORMAL_CULLING_LIMIT)//-0.1f)
@@ -135,13 +141,6 @@ namespace KADA
                     {
                         continue;
                     }
-
-                    if (distance < _3DProcessor.MAX_INLIERDISTANCE)
-                    {
-                        //continue;
-                        bonus = 10;
-                    }
-                    
                 }
                 
                 p = neighbour.Current;
@@ -156,6 +155,9 @@ namespace KADA
                     continue;
                 }
 
+                vC /= dataContainer.model.radius;
+                p.position /= dataContainer.model.radius;
+
                 HTemp[0, 0] = vC.X * p.position.X;
                 HTemp[0, 1] = vC.Y * p.position.X;
                 HTemp[0, 2] = vC.Z * p.position.X;
@@ -166,7 +168,7 @@ namespace KADA
                 HTemp[2, 1] = vC.Y * p.position.Z;
                 HTemp[2, 2] = vC.Z * p.position.Z;
 
-                H.AddInplace(HTemp);
+                
 
                 float weight = Math.Abs(Vector3.Dot(transformedNormal, point.normal));
                 weight = (1 - weight);//(float)Math.Log((1-weight)*2+1)+0.05f;//
@@ -177,15 +179,12 @@ namespace KADA
                     {
                         if (point.brickColor == bc)
                         {
-                            weight *= 2.5f;
-                        }
-                        else
-                        {
-                            weight /= 2;
+                            weight *= 10f;
+                            break;
                         }
                     }
                 }
-                weight *= bonus;
+                
                 Vector3 pos = p.position;
                 //pos /= 20;
                 //vC /= 20;
@@ -208,11 +207,7 @@ namespace KADA
                 tmA[5, 0] = tmA[0, 5]; tmA[5, 1] = tmA[1, 5]; tmA[5, 2] = tmA[2, 5]; tmA[5, 3] = tmA[3, 5]; tmA[5, 4] = tmA[4, 5]; tmA[5, 5] = n.Z * n.Z;
                 //System.Diagnostics.Debug.WriteLine(weight);
                 tmA.MultiplyInplace(weight);
-                if (weight > 0)
-                {
-                    bool bla = true;
-                    bla = !bla;
-                }
+                
                 //double[] tempB = new double[6];
 
                 float pMinqTimesN = Vector3.Dot(pos - vC, n);
@@ -224,7 +219,15 @@ namespace KADA
                 tempB[4] = pMinqTimesN * n.Y;
                 tempB[5] = pMinqTimesN * n.Z;
 
+                
                 tempB.MultiplyInplace(weight);
+
+                HTemp.MultiplyInplace(weight);
+               
+
+                totalWeight += weight;
+                H.AddInplace(HTemp);
+                
                 A = A.Add(tmA);
                 B = B.Subtract(tempB);
                 if (neighbour.CurrentDistance < _3DProcessor.MAX_INLIERDISTANCE)

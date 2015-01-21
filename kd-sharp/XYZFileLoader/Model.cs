@@ -15,16 +15,18 @@ namespace XYZFileLoader
         private List<Point>[, ,] pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
         public List<LocatedBrick> bricks;
         private KDTreeWrapper kdTree;
+        public float radius;
+        private Vector3 center;
 
         public Model()
         {
             this.bricks = new List<LocatedBrick>();
             this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0),BrickColor.GREEN));
 
-            this.bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
+            /*this.bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
             this.bricks.Add(new LocatedBrick(false, new Vector3(-1, 2, -1), BrickColor.BLUE));
             this.bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
-            this.bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
+            this.bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));*/
             
             //this.bricks.Add(new LocatedBrick(true, new Vector3(3, -1, -3)));
             //this.bricks.Add(new LocatedBrick(false, new Vector3(0, 2, 0)));
@@ -184,6 +186,26 @@ namespace XYZFileLoader
             {
                 this.points.AddRange(l);
             }
-        }
+            this.center = Vector3.Zero;
+
+            //compute center
+            foreach (Point p in this.points)
+            {
+                this.center += p.position;
+            }
+            this.center /= points.Count;
+
+            //compute max Distance, radius of wrapping sphere
+            this.radius = 0f;
+            foreach (Point p in this.points)
+            {
+                float length = (p.position - this.center).Length();
+                if (length > radius)
+                {
+                    radius = length;
+                }
+            }
+            
+        }   
     }
 }

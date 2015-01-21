@@ -19,6 +19,7 @@ namespace KADA
 
         //public Vector3[] trackedNormals;
 
+        public Boolean useYUV = true;
         public Matrix prevNormalR = Matrix.Identity;
         public Matrix normalRotationAdjustment = Matrix.Identity;
         public float frameTime = 0, generateTime = 0;

@@ -28,41 +28,65 @@ namespace KADA
         private short[] depthValues;
         private float angleFactor = (float)(1.0 / Math.Tan(43.0 / 180.0 / 480 * Math.PI)) * 0.85f;
         //private Vector3[] colors = new Vector3[4];
-        List<Histogram> Histograms;
+        List<IHistogram> Histograms;
         Bitmap bitmap = new Bitmap(640, 480);
         private PipelineDataContainer dataContainer;
         public static ManualResetEvent resetEvent = new ManualResetEvent(false);
+        private Matrix RGBToYUV, YUVToRGB;
 
 
         public _2DProcessor(PipelineManager manager, PipelineDataContainer dataContainer)//(ConcurrentQueue<DepthColor[,]> processingQueue)
         {
+            this.RGBToYUV = new Matrix(0.299f, 0.587f, 0.144f, 0f, -0.14713f, -0.28886f, 0.436f, 0f, 0.615f, -0.51499f, -0.10001f, 0f, 0f, 0f, 0f, 1f);
+            this.RGBToYUV = Matrix.Transpose(this.RGBToYUV);
+            this.YUVToRGB = Matrix.Invert(RGBToYUV);
+
             this.dataContainer = dataContainer;
             this.manager = manager;
             singleImages = new DepthImagePixel[5][];
             this.depthValues = new short[5];
             Semaphor = new Object();
             Normalizer = new Object();
-            Histograms = new List<Histogram>();
+            Histograms = new List<IHistogram>();
 
-            Bitmap red = (Bitmap)Image.FromFile("ressources/histogram/Red_cleaned_filled.png", true);
-            Histogram r = new Histogram(red, 15, 16,XYZFileLoader.BrickColor.RED);
-            Histograms.Add(r);
+            if (!dataContainer.useYUV)
+            {
+                Bitmap red = (Bitmap)Image.FromFile("ressources/histogram/Red_cleaned_filled.png", true);
+                IHistogram r = new RGBHistogram(red, 15, 16, XYZFileLoader.BrickColor.RED, dataContainer, new Vector3(123, -20, 118));
+                Histograms.Add(r);
 
-            Bitmap green = (Bitmap)Image.FromFile("ressources/histogram/Green_cleaned_filled.png", true);
-            Histogram g = new Histogram(green, 8, 16, XYZFileLoader.BrickColor.GREEN);
-            Histograms.Add(g);
+                Bitmap green = (Bitmap)Image.FromFile("ressources/histogram/Green_cleaned_filled.png", true);
+                IHistogram g = new RGBHistogram(green, 8, 16, XYZFileLoader.BrickColor.GREEN, dataContainer, new Vector3(125, -16, -28));
+                Histograms.Add(g);
 
-            Bitmap blue = (Bitmap)Image.FromFile("ressources/histogram/Blue_cleaned_filled.png", true);
-            Histogram b = new Histogram(blue, 8, 16, XYZFileLoader.BrickColor.BLUE);
-            Histograms.Add(b);
+                Bitmap blue = (Bitmap)Image.FromFile("ressources/histogram/Blue_cleaned_filled.png", true);
+                IHistogram b = new RGBHistogram(blue, 8, 16, XYZFileLoader.BrickColor.BLUE, dataContainer, new Vector3(126, 39, -18));
+                Histograms.Add(b);
 
-            Bitmap yellow = (Bitmap)Image.FromFile("ressources/histogram/Yellow_cleaned_filled.png", true);
-            Histogram ye = new Histogram(yellow, 12, 16, XYZFileLoader.BrickColor.YELLOW);
-            //Histograms.Add(ye);
+                Bitmap yellow = (Bitmap)Image.FromFile("ressources/histogram/Yellow_cleaned_filled.png", true);
+                IHistogram ye = new RGBHistogram(yellow, 12, 16, XYZFileLoader.BrickColor.YELLOW, dataContainer, new Vector3(126, -65, 41));
+                Histograms.Add(ye);
+            }
+            else
+            {
+                Bitmap blacklist = (Bitmap)Image.FromFile("ressources/histogram/YUV_blacklist.bmp", true);
+                Bitmap red = (Bitmap)Image.FromFile("ressources/histogram/YUV_red.bmp", true);
+                Bitmap green = (Bitmap)Image.FromFile("ressources/histogram/YUV_green.bmp", true);
+                Bitmap blue = (Bitmap)Image.FromFile("ressources/histogram/YUV_blue.bmp", true);
+                Bitmap yellow = (Bitmap)Image.FromFile("ressources/histogram/YUV_yellow.bmp", true);               
+                IHistogram g = new YUVHistogram(green, blacklist, XYZFileLoader.BrickColor.GREEN);
+                Histograms.Add(g);
+                IHistogram r = new YUVHistogram(red, blacklist, XYZFileLoader.BrickColor.RED);
+                Histograms.Add(r);
+                IHistogram b = new YUVHistogram(blue, blacklist, XYZFileLoader.BrickColor.BLUE);
+                Histograms.Add(b);
+                IHistogram y = new YUVHistogram(yellow, blacklist, XYZFileLoader.BrickColor.YELLOW);
+                Histograms.Add(y);
+            }
 
             List<Thread> Stage1 = new List<Thread>();
 
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < 3; i++)
             {
                 Thread x = new Thread(new ThreadStart(() => UpdateDepthData()));
                 x.Start();
@@ -160,11 +184,22 @@ namespace KADA
                         baseindex = (p.X + p.Y * 640) * 4;
                         Vector3 c = depth[x, y].Color;
 
+
+
                         c.X = colorPixels[baseindex + 2];
                         c.Y = colorPixels[baseindex + 1];
                         c.Z = colorPixels[baseindex];
 
-                        depth[x, y].Color = c / 255f;
+                        c = c / 255f;
+                        if (dataContainer.useYUV)
+                        {
+                            c = Vector3.Transform(c, RGBToYUV);
+                            c.X = 0.5f;
+
+                            //c = Vector3.Transform(c, YUVToRGB);
+                        }
+                        //System.Diagnostics.Debug.WriteLine(c);
+                        depth[x, y].Color = c;
 
                         depth[x, y].UpToDate = true;
                     }
@@ -287,7 +322,8 @@ namespace KADA
                             {
                                 int brickColorInteger = 1;
                                 int maxval = 0;
-                                foreach (Histogram h in this.Histograms)
+
+                                foreach (IHistogram h in this.Histograms)
                                 {
                                     int val = h.getValue(color);
                                     if (maxval < val)
@@ -296,15 +332,16 @@ namespace KADA
                                     }
                                     if (val == 1)
                                     {
-                                        brickColorInteger *= (int)h.color;
+                                        brickColorInteger *= (int)h.getColor();
                                     }
                                 }
-                                if (maxval == 0 || color.X + color.Y + color.Z < 150)
+
+                                if (maxval == 0 || (color.X + color.Y + color.Z < 150&&!dataContainer.useYUV))
                                 {
                                     pixel.Position.Z = 0;
                                     pixel.Depth = 0;
                                     pixel.BrickColorInteger = brickColorInteger;
-                                   
+
                                 }
                                 dc[x, y] = pixel;
                             }
@@ -428,7 +465,7 @@ namespace KADA
                         {
                             for (int y = 0; y < height; y++)
                             {
-                                grid[x, y] = outputGrid[x,y];
+                                grid[x, y] = outputGrid[x, y];
                             }
                         }
                     }
@@ -484,10 +521,10 @@ namespace KADA
                         {
                             for (int y = 0; y < height; y++)
                             {
-                                outputGrid[x, y] = grid[x,y];
+                                outputGrid[x, y] = grid[x, y];
                             }
                         }
-                        
+
                     }
 
                     for (int x = 1; x < width - 1; x++)

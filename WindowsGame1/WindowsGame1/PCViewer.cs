@@ -53,7 +53,8 @@ namespace KADA
 
         public Vector3[,] NormalMap = new Vector3[640, 480];
 
-
+        Matrix RGBToYUV;
+        Matrix YUVToRGB;
         Int32 count = 640 * 480 + 100000;
         Viewport PCViewport;
         Viewport BrickViewport;
@@ -233,6 +234,10 @@ namespace KADA
                         {
                             instances[i].ScreenPos = d.Position;
                             instances[i].Scale = 1;
+                            if (dataContainer.useYUV)
+                            {
+                                d.Color = Vector3.Transform(d.Color, YUVToRGB);
+                            }
                             instances[i].Color = d.Color;
                         }
                         else
@@ -405,6 +410,9 @@ namespace KADA
         public PCViewer()
         {
             //transformationUpdater = new Task(() => this.UpdateInstanceInformation());
+            this.RGBToYUV = new Matrix(0.299f, 0.587f, 0.144f, 0f, -0.14713f, -0.28886f, 0.436f, 0f, 0.615f, -0.51499f, -0.10001f, 0f, 0f, 0f, 0f, 1f);
+            this.RGBToYUV = Matrix.Transpose(this.RGBToYUV);
+            this.YUVToRGB = Matrix.Invert(RGBToYUV);
             this.dataContainer = new PipelineDataContainer();
             this.manager = new PipelineManager(this.dataContainer);
 
