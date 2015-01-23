@@ -11,19 +11,19 @@ namespace KADA
     {
         private _2DProcessor processor2D;
         public _3DProcessor processor3D;
-        public ConcurrentQueue<PipelineContainer>[] processingQueues;
+        public ConcurrentQueue<PipelineContainer>[] ProcessingQueues;
         private FrameCreator frameCreator;
         private PipelineDataContainer dataContainer;
-        public ConcurrentQueue<PipelineContainer> recycle;
+        public ConcurrentQueue<PipelineContainer> Recycle;
         public PipelineManager(PipelineDataContainer dataContainer)
         {
-            this.recycle = new ConcurrentQueue<PipelineContainer>();
+            this.Recycle = new ConcurrentQueue<PipelineContainer>();
             
 
-                this.processingQueues = new ConcurrentQueue<PipelineContainer>[9];
-            for (int i = 0; i < this.processingQueues.Length; i++)
+                this.ProcessingQueues = new ConcurrentQueue<PipelineContainer>[9];
+            for (int i = 0; i < this.ProcessingQueues.Length; i++)
             {
-                this.processingQueues[i] = new ConcurrentQueue<PipelineContainer>();
+                this.ProcessingQueues[i] = new ConcurrentQueue<PipelineContainer>();
             }
             this.dataContainer = dataContainer;
             this.processor2D = new _2DProcessor(this, this.dataContainer);
@@ -31,7 +31,7 @@ namespace KADA
             this.frameCreator = new FrameCreator(this.dataContainer,this);
             for (int i = 0; i < 50; i++)
             {
-                recycle.Enqueue(new PipelineContainer(dataContainer));
+                Recycle.Enqueue(new PipelineContainer(dataContainer));
             }
             Thread statPrinter = new Thread(new ThreadStart(() => this.printStats()));
             //statPrinter.Start();
@@ -48,25 +48,25 @@ namespace KADA
             
             while (true)
             {
-                foreach (ConcurrentQueue<PipelineContainer> q in processingQueues)
+                foreach (ConcurrentQueue<PipelineContainer> q in ProcessingQueues)
                 {
-                    q.OrderBy(element => element.number);
+                    q.OrderBy(element => element.Number);
                 }
                 Thread.Sleep(1);
             }
         }
         private void enqueue(PipelineContainer container)
         {
-            int index = ++container.stage;
-            if (index >= processingQueues.Length)
+            int index = ++container.Stage;
+            if (index >= ProcessingQueues.Length)
             {
                 container = null;
                 System.Diagnostics.Debug.WriteLine("Container reached end of pipeline");
                 return;
             }
-            if (processingQueues[index].Count < 20)
+            if (ProcessingQueues[index].Count < 20)
             {
-                this.processingQueues[index].Enqueue(container);
+                this.ProcessingQueues[index].Enqueue(container);
             }
             else
             {
@@ -79,9 +79,9 @@ namespace KADA
         private PipelineContainer dequeue(int stage)
         {
             PipelineContainer p = null;
-            if (processingQueues[stage].Count > 1)
+            if (ProcessingQueues[stage].Count > 1)
             {
-                processingQueues[stage].TryDequeue(out p);
+                ProcessingQueues[stage].TryDequeue(out p);
                 return p;
             }
             else
@@ -90,15 +90,15 @@ namespace KADA
 
         private void printStats()
         {
-            while (this.dataContainer.run)
+            while (this.dataContainer.Run)
             {
                 System.Diagnostics.Debug.Write("Usage:");
-                for (int i = 0; i < this.processingQueues.Length; i++)
+                for (int i = 0; i < this.ProcessingQueues.Length; i++)
                 {
-                    System.Diagnostics.Debug.Write(" [" + i + "]: " +processingQueues[i].Count);
+                    System.Diagnostics.Debug.Write(" [" + i + "]: " +ProcessingQueues[i].Count);
                 }
                 System.Diagnostics.Debug.Write("\n");
-                System.Diagnostics.Debug.WriteLine("recycling: " + this.recycle.Count);
+                System.Diagnostics.Debug.WriteLine("recycling: " + this.Recycle.Count);
                 Thread.Sleep(10000);
             }
         }

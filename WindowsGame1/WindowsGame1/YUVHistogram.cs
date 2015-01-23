@@ -49,7 +49,7 @@ namespace KADA
             this.RGBToYUV = Matrix.Transpose(this.RGBToYUV);
             this.YUVToRGB = Matrix.Invert(RGBToYUV);
         }
-        public int getValue(Vector3 color)
+        public int GetValue(Vector3 color)
         {
             /*Vector3 writeColor = Vector3.Transform(color, YUVToRGB);
             writeColor b= Vector3.Min(writeColor, new Vector3(255, 255, 255));
@@ -75,7 +75,7 @@ namespace KADA
         }
 
 
-        public XYZFileLoader.BrickColor getColor()
+        public XYZFileLoader.BrickColor GetColor()
         {
             return this.brickColor;
         }

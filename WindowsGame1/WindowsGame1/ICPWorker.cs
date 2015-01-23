@@ -32,10 +32,13 @@ namespace KADA
         public PipelineContainer container;
         private int maxCount = 0;
         private int number;
-        private StreamWriter file;
+        //private StreamWriter file;
         public float totalWeight;
         private List<BrickColor> possibleColors = new List<BrickColor>();
         public int ICPInliers, ICPOutliers;
+
+        Point p, firstGuess;
+        Vector3 transformedNormal;
 
         public ICPWorker(int number, PipelineDataContainer dataContainer)
         {
@@ -44,7 +47,7 @@ namespace KADA
             this.ICPTranslation = Vector3.Zero;
             this.totalWeight = 0;
             this.dataContainer = dataContainer;
-            this.file = new StreamWriter("ICP_worker" + number + "_" + DateTime.Now.Millisecond + ".txt");
+           // this.file = new StreamWriter("ICP_worker" + number + "_" + DateTime.Now.Millisecond + ".txt");
             this.number = number;
             this.reset();
             this.input = new ConcurrentQueue<Point>();
@@ -73,28 +76,30 @@ namespace KADA
         private void routine()
         {
             Point point;
-            Vector3 v;
+            Vector3 v, vC;
             Matrix tmA = new Matrix(6, 6);
             Vector tempB = new Vector(6);
             DateTime start = DateTime.Now;
             int count = 0;
             int i = 0;
             double[] vArr = new double[3];
-            while (this.dataContainer.run)
+            double maxDistance = _3DProcessor.THRESHOLD;
+            NearestNeighbour<Point> neighbour;
+            while (this.dataContainer.Run)
             {
                 if (this.input.Count > maxCount)
                 {
                     maxCount = this.input.Count;
                 }
-                point = new Point();
-                while (!input.TryDequeue(out point) && this.dataContainer.run)
+                //point = new Point();
+                while (!input.TryDequeue(out point) && this.dataContainer.Run)
                 {
                     i++;
-                    start = DateTime.Now;
+                    //start = DateTime.Now;
                     count = 0;
                     if (i > 10)
                     {
-                        Thread.Sleep(2);
+                        Thread.Sleep(1);
                     }
                 }
                 v = point.position;
@@ -105,22 +110,22 @@ namespace KADA
                 }
                 i = 0;
                 count++;
-                Vector3 vC = v - center;
+                vC = v - center;
                 vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
                 vArr[0] = vC.X;
                 vArr[1] = vC.Y;
                 vArr[2] = vC.Z;
-                double maxDistance = _3DProcessor.THRESHOLD;
-                if (container.ICPRatio > 0.3f)
-                {
-                    maxDistance = _3DProcessor.MAX_INLIERDISTANCE;
-                }
+                //maxDistance = _3DProcessor.THRESHOLD;
+                //if (container.ICPRatio > 0.3f)
+                //{
+                //    maxDistance = _3DProcessor.MAX_INLIERDISTANCE;
+                //}
 
-                NearestNeighbour<Point> neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: maxDistance);
+                neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: maxDistance);
                 neighbour.MoveNext();
-                Point p;
-                Vector3 transformedNormal = Vector3.Zero;
-                Point firstGuess = neighbour.Current;
+
+                transformedNormal = Vector3.Zero;
+                firstGuess = neighbour.Current;
                 double distance = 0f;
 
 

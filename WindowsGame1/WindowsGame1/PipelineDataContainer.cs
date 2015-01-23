@@ -19,18 +19,18 @@ namespace KADA
 
         //public Vector3[] trackedNormals;
 
-        public Boolean useYUV = true;
+        public Boolean UseYUV = true;
         public Matrix prevNormalR = Matrix.Identity;
         public Matrix normalRotationAdjustment = Matrix.Identity;
         public float frameTime = 0, generateTime = 0;
         public DateTime lastTick = DateTime.Now, lastGeneration = DateTime.Now;
         public int COLORLENGTH, DEPTHLENGTH;
         public Model model;
-        public bool generateBackground = false;
-        public bool deNoiseAndICP = false;
+        public bool GenerateBackground = false;
+        public bool DeNoiseAndICP = false;
         public int SLEEPTIME = 1;
         public int MINFRAMESINCONTAINER = 1;
-        public bool run = true;
+        public bool Run = true;
         public Matrix lastConfidentR = Matrix.Identity;
         public TrackingConfidenceLevel trackingConfidence = TrackingConfidenceLevel.NONE;
         public int[] normalMappings;

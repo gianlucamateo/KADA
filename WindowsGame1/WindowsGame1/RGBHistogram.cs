@@ -42,7 +42,7 @@ namespace KADA
                 {
                     Color c = image.GetPixel(x, y);
 
-                    if (dataContainer.useYUV)
+                    if (dataContainer.UseYUV)
                     {
                         Vector3 color = new Vector3(c.R, c.G, c.B);
                         color = Vector3.Transform(color, RGBToYUV);
@@ -98,9 +98,9 @@ namespace KADA
             }*/
         }
 
-        public int getValue(Vector3 color)
+        public int GetValue(Vector3 color)
         {
-            if (!dataContainer.useYUV)
+            if (!dataContainer.UseYUV)
             {
                 if (color.Length() < 50)
                     return 0;
@@ -112,7 +112,7 @@ namespace KADA
             /*float green = g[(int)color.Y];
             float red = r[(int)color.X];
             float blue = r[(int)color.Z];*/
-            if (dataContainer.useYUV)
+            if (dataContainer.UseYUV)
             {
                 //color = color + new Vector3(123, 123, 123);
                 //color = Vector3.Transform(color, YUVToRGB);
@@ -142,7 +142,7 @@ namespace KADA
 
         }
 
-        public XYZFileLoader.BrickColor getColor()
+        public XYZFileLoader.BrickColor GetColor()
         {
             return this.color;
         }

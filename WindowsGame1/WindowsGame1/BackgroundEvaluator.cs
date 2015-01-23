@@ -81,7 +81,7 @@ namespace KADA
             List<double> values = new List<double>();
             Matrix bestRot = Matrix.Identity;
             Vector3 v;
-            while (this.dataContainer.run)
+            while (this.dataContainer.Run)
             {
                 NormalInput.TryDequeue(out container);
                 if (container == null)
@@ -90,7 +90,7 @@ namespace KADA
                     continue;
                 }
 
-                List<Point> qi = new List<Point>(container.qi);
+                List<Point> qi = new List<Point>(container.Qi);
                 points.Clear();
                 Matrix R = container.rawNormalR;
                 R = Matrix.Invert(R);

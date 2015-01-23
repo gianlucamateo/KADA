@@ -10,236 +10,165 @@ namespace KADA
 {
     public class FrameCreator
     {
-        private KinectSensor kinect;
-        private PipelineDataContainer dataContainer;
-        private PipelineManager manager;
-        private int number;
-        private StreamWriter file;
-        private Queue<DepthImagePixel[]> depthqueue = new Queue<DepthImagePixel[]>();
+        private KinectSensor Kinect;
+        private PipelineDataContainer DataContainer;
+        private PipelineManager Manager;
+        private int Number;
+        private StreamWriter File, File2;
+        private Queue<DepthImagePixel[]> DepthQueue = new Queue<DepthImagePixel[]>();
 
         public FrameCreator(PipelineDataContainer dataContainer, PipelineManager manager)
         {
-            this.file = new StreamWriter("timings.csv");
-            this.manager = manager;
-            this.dataContainer = dataContainer;
-            Thread frameCreator = new Thread(new ThreadStart(() => kinectFramePull()));
+            this.File = new StreamWriter("timings.csv");
+            this.File2 = new StreamWriter("loads.csv");
+            this.Manager = manager;
+            this.DataContainer = dataContainer;
+            Thread frameCreator = new Thread(new ThreadStart(() => KinectFramePull()));
             foreach (var potentialKinect in KinectSensor.KinectSensors)
             {
                 if (potentialKinect.Status == KinectStatus.Connected)
                 {
-                    this.kinect = potentialKinect;
+                    this.Kinect = potentialKinect;
                     break;
                 }
             }
             for (int i = 0; i < 3; i++)
             {
-                this.depthqueue.Enqueue(new DepthImagePixel[640 * 480]);
+                this.DepthQueue.Enqueue(new DepthImagePixel[640 * 480]);
             }
-            if (this.kinect != null)
+            if (this.Kinect != null)
             {
 
-                this.kinect.ColorStream.Enable(ColorImageFormat.RgbResolution640x480Fps30);
-                this.kinect.DepthStream.Enable(DepthImageFormat.Resolution640x480Fps30);
-                this.dataContainer.COLORLENGTH = this.kinect.ColorStream.FramePixelDataLength;
-                this.dataContainer.DEPTHLENGTH = this.kinect.DepthStream.FramePixelDataLength;
+                this.Kinect.ColorStream.Enable(ColorImageFormat.RgbResolution640x480Fps30);
+                this.Kinect.DepthStream.Enable(DepthImageFormat.Resolution640x480Fps30);
+                this.DataContainer.COLORLENGTH = this.Kinect.ColorStream.FramePixelDataLength;
+                this.DataContainer.DEPTHLENGTH = this.Kinect.DepthStream.FramePixelDataLength;
 
 
                 try
                 {
-                    this.kinect.Start();
+                    this.Kinect.Start();
                 }
                 catch (IOException)
                 {
-                    this.kinect = null;
+                    this.Kinect = null;
                 }
 
                 // this.kinect.AllFramesReady += this.KinectAllFramesReady;
                 frameCreator.Start();
-                this.number = 0;
+                this.Number = 0;
             }
         }
 
-        //Stage 0
+        // Stage 0
         PipelineContainer container;
-        private void kinectFramePull()
+        private void KinectFramePull()
         {
-            while (this.dataContainer.run)
+            while (this.DataContainer.Run)
             {
-                if (this.manager.recycle.Count > 3)
+                if (this.Manager.Recycle.Count > 3)
                 {
-                    while (this.manager.recycle.TryDequeue(out container) == false)
+                    while (this.Manager.Recycle.TryDequeue(out container) == false)
                     {
-                        Thread.Sleep(dataContainer.SLEEPTIME);
+                        Thread.Sleep(DataContainer.SLEEPTIME);
                     }
                 }
                 else
                 {
-                    Thread.Sleep(dataContainer.SLEEPTIME);
+                    Thread.Sleep(DataContainer.SLEEPTIME);
                     continue;
                 }
+                //container.Timings.Add(DateTime.Now);
 
 
 
-                using (ColorImageFrame colorFrame = kinect.ColorStream.OpenNextFrame(0))
+                using (ColorImageFrame colorFrame = Kinect.ColorStream.OpenNextFrame(0))
                 {
                     if (colorFrame == null)
                     {
-                        manager.recycle.Enqueue(container);
+                        Manager.Recycle.Enqueue(container);
                         continue;
                     }
-                    if (depthqueue.Count > 0)
+                    if (DepthQueue.Count > 0)
                     {
                         //DepthImagePixel[] arr = depthqueue.Dequeue();
-                        colorFrame.CopyPixelDataTo(container.colorPixels);
+                        colorFrame.CopyPixelDataTo(container.ColorPixels);
                         //container.depthPixels = (DepthImagePixel[])arr.Clone();
                         //depthqueue.Enqueue(arr);
                     }
                 }
 
-                using (DepthImageFrame depthFrame = kinect.DepthStream.OpenNextFrame(50))
+                using (DepthImageFrame depthFrame = Kinect.DepthStream.OpenNextFrame(50))
                 {
                     if (depthFrame == null)
                     {
-                        manager.recycle.Enqueue(container);
+                        Manager.Recycle.Enqueue(container);
                         continue;
                     }
 
                     //DepthImagePixel[] arr = depthqueue.Dequeue();
                     //depthFrame.CopyDepthImagePixelDataTo(arr);
                     //depthqueue.Enqueue(arr);
-                    depthFrame.CopyDepthImagePixelDataTo(container.depthPixels);
+                    depthFrame.CopyDepthImagePixelDataTo(container.DepthPixels);
                 }
 
 
-                int stage = 0;
-                TimeSpan current;
-                DateTime previous = DateTime.MinValue;
-                if (dataContainer.deNoiseAndICP)
-                {
-                    this.file.Write(container.number + " ");
-                    foreach (DateTime t in container.timings)
-                    {
-                        current = t.Subtract(previous);
-                        this.file.Write("; Stage: " + stage++ + "; : " + current);
-                        previous = t;
-                    }
+                WriteDiagnostics();
 
-                    this.file.WriteLine("");
-                }
+                this.Kinect.CoordinateMapper.MapDepthFrameToColorFrame(DepthImageFormat.Resolution640x480Fps30, container.DepthPixels, ColorImageFormat.RgbResolution640x480Fps30, container.ColorPoints);
 
-                container.timings = new List<DateTime>();
-                Random r = new Random();
-                container.number = ++this.number;
-                container.stage = 0;
-                container.qi.Clear();
-
-
-
-
-                this.kinect.CoordinateMapper.MapDepthFrameToColorFrame(DepthImageFormat.Resolution640x480Fps30, container.depthPixels, ColorImageFormat.RgbResolution640x480Fps30, container.colorPoints);
-
-                dataContainer.recordGenerationTick();
-                container.timings.Add(DateTime.Now);
-                manager.processingQueues[++container.stage].Enqueue(container);
+                AddToQueue();
 
             }
         }
 
-
-        //Stage 0
-        private void KinectAllFramesReady(object sender, AllFramesReadyEventArgs e)
+        private void AddToQueue()
         {
+            DataContainer.recordGenerationTick();
+            //container.Timings.Add(DateTime.Now);
+            Manager.ProcessingQueues[++container.Stage].Enqueue(container);
+        }
 
-            if (this.manager.recycle.Count > 3)
-            {
-                while (this.manager.recycle.TryDequeue(out container) == false)
-                {
-                    Thread.Sleep(dataContainer.SLEEPTIME);
-                }
-            }
-
-
-            if (container == null || dataContainer.COLORLENGTH == 0 || dataContainer.DEPTHLENGTH == 0)
-            {
-                return;
-            }
-
+        private void WriteDiagnostics()
+        {
             int stage = 0;
             TimeSpan current;
             DateTime previous = DateTime.MinValue;
-            if (dataContainer.deNoiseAndICP)
+            if (DataContainer.DeNoiseAndICP)
             {
-                this.file.Write(container.number + ": ");
-                foreach (DateTime t in container.timings)
+                for(int i = 0; i<8;i++){
+                    this.File2.Write(Manager.ProcessingQueues[i].Count + ";");
+                }
+                this.File2.WriteLine("");
+                this.File.Write(container.Number + " ");
+                for (int i = 0; i < container.Timings.Count - 1; i+=2)
                 {
+                    DateTime t = container.Timings[i];
                     current = t.Subtract(previous);
-                    this.file.Write(" Stage: " + stage++ + " : " + current);
+                    this.File.Write("; Stage: " + stage++ + ";  " + current);
                     previous = t;
+                    t = container.Timings[i+1];
+                    current = t.Subtract(previous);
+                    previous = t;
+                    this.File.Write("; "+ current);
+                    
+                }
+                if (container.Timings.Count > 1)
+                {
+                    DateTime end = container.Timings[container.Timings.Count - 1];
+                    DateTime beginning = container.Timings[0];
+                    current = end.Subtract(beginning);
+                    this.File.Write(";Total ; " + current);
                 }
 
-                this.file.WriteLine("");
+                this.File.WriteLine("");
             }
 
-            container.timings = new List<DateTime>();
-            Random r = new Random();
-            container.number = ++this.number;
-            container.stage = 0;
-            container.qi.Clear();
+            container.Timings = new List<DateTime>();
 
-            /* for (int x = 0; x < 640*480; x++)
-             {
-                
-                     container.colorPoints[x] = new ColorImagePoint();
-                
-             }*/
-
-            using (ColorImageFrame colorFrame = e.OpenColorImageFrame())
-            {
-                if (colorFrame != null)
-                {
-
-                    colorFrame.CopyPixelDataTo(container.colorPixels);
-                    /*this.imageBitmap.WritePixels(
-                        new Int32Rect(0, 0, this.imageBitmap.PixelWidth, this.imageBitmap.PixelHeight),
-                        this.colorPixels,
-                        this.imageBitmap.PixelWidth * sizeof(int),
-                        0);*/
-                }
-
-            }
-            using (DepthImageFrame depthFrame = e.OpenDepthImageFrame())
-            {
-                if (depthFrame != null)
-                {
-
-                    depthFrame.CopyDepthImagePixelDataTo(container.depthPixels);
-
-                    /*this.depthBitmap.WritePixels(
-                        new Int32Rect(0, 0, this.depthBitmap.PixelWidth, this.depthBitmap.PixelHeight),
-                        this.depthPixels,
-                        this.imageBitmap.PixelWidth * sizeof(int),
-                        0);*/
-
-                }
-                //this.kinect.CoordinateMapper.MapColorFrameToDepthFrame(ColorImageFormat.RgbResolution640x480Fps30, DepthImageFormat.Resolution640x480Fps30, this.depthPixels, this.depthPoints);
-                this.kinect.CoordinateMapper.MapDepthFrameToColorFrame(DepthImageFormat.Resolution640x480Fps30, container.depthPixels, ColorImageFormat.RgbResolution640x480Fps30, container.colorPoints);
-
-                /*Boolean processColors = _3Dprocessor.g.saveColors;
-                System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(UpdateDepthData), processColors);
-                depthUpdater = new Thread(new ThreadStart(() => UpdateDepthData(saveToFile)));
-                depthUpdater.Start();*/
-                /*
-                if (!this._2Dprocessor.BackgroundReady() && _3Dprocessor.g.generateBackground)
-                {
-                    imageProcessorThread = new Thread(new ThreadStart(() => _2Dprocessor.GenerateBackground(depthPixels)));
-                    imageProcessorThread.Start();
-                    // this.processor.GenerateBackground(this.depthPixels);
-                }*/
-            }
-            dataContainer.recordGenerationTick();
-            // manager.enqueue(container);
-            container.timings.Add(DateTime.Now);
-            manager.processingQueues[++container.stage].Enqueue(container);
+            container.Number = ++this.Number;
+            container.Stage = 0;
+            container.Qi.Clear();
         }
     }
 }

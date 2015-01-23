@@ -10,7 +10,7 @@ namespace KADA
 {
     interface IHistogram
     {
-        XYZFileLoader.BrickColor getColor();
-        int getValue(Vector3 color);
+        XYZFileLoader.BrickColor GetColor();
+        int GetValue(Vector3 color);
     }
 }

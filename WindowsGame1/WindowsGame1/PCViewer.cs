@@ -163,7 +163,7 @@ namespace KADA
             int lastFrame = 0;
             bool fromOutOfOrder = false;
             SortedList<int, PipelineContainer> outOfOrder = new SortedList<int, PipelineContainer>();
-            while (this.dataContainer.run)
+            while (this.dataContainer.Run)
             {
                 if (instances == null)
                 {
@@ -171,13 +171,13 @@ namespace KADA
                 }
                 PipelineContainer container = null;
                 
-                while (container == null && this.dataContainer.run)
+                while (container == null && this.dataContainer.Run)
                 {
                     //container = manager.dequeue(stage);
                     container = null;
-                    if (manager.processingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
+                    if (manager.ProcessingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
                     {
-                        manager.processingQueues[stage].TryDequeue(out container);
+                        manager.ProcessingQueues[stage].TryDequeue(out container);
                         if (container == null)
                         {
                             Thread.Sleep(this.dataContainer.SLEEPTIME);
@@ -223,7 +223,7 @@ namespace KADA
                 }*/
                 
 
-                DepthColor[,] depth = container.dc;
+                DepthColor[,] depth = container.DC;
                 int i = 0;
                 for (int x = 0; x < depth.GetLength(0); x++)
                 {
@@ -234,7 +234,7 @@ namespace KADA
                         {
                             instances[i].ScreenPos = d.Position;
                             instances[i].Scale = 1;
-                            if (dataContainer.useYUV)
+                            if (dataContainer.UseYUV)
                             {
                                 d.Color = Vector3.Transform(d.Color, YUVToRGB);
                             }
@@ -304,7 +304,7 @@ namespace KADA
                     }
                     i++;
                 }
-                foreach (Point p in container.qi)
+                foreach (Point p in container.Qi)
                 {
                     Vector3 v = p.position;
                     instances[i].ScreenPos = v;
@@ -383,8 +383,8 @@ namespace KADA
                 instances[i].Scale = 1;
                 instances[i].Color = new Vector3(0, 255, 0);
 
-                container.timings.Add(DateTime.Now);
-                this.manager.recycle.Enqueue(container);
+                container.Timings.Add(DateTime.Now);
+                this.manager.Recycle.Enqueue(container);
                 this.dataContainer.recordTick();
                 this.dataContainer.ICPInliers = container.ICPInliers;
                 this.dataContainer.ICPOutliers = container.ICPOutliers;
@@ -618,11 +618,11 @@ namespace KADA
             }
             if (kS.IsKeyDown(Keys.B))
             {
-                this.dataContainer.generateBackground = true;
+                this.dataContainer.GenerateBackground = true;
             }
             if (kS.IsKeyDown(Keys.I))
             {
-                this.dataContainer.deNoiseAndICP = true;
+                this.dataContainer.DeNoiseAndICP = true;
             }
             if (kS.IsKeyDown(Keys.V))
             {
@@ -748,7 +748,7 @@ namespace KADA
         protected override void OnExiting(Object sender, EventArgs args)
         {
             base.OnExiting(sender, args);
-            this.dataContainer.run = false;            
+            this.dataContainer.Run = false;            
         }
 
         /// <summary>
