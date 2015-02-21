@@ -75,6 +75,7 @@ namespace KADA
 
 
 
+        private Vector3 outlierCenter = Vector3.Zero;
         public Vector3 offset = new Vector3(-36.5f, -17f, 15f);
 
         private Matrix brickTranslation = Matrix.CreateTranslation(new Vector3(0, 0, 0));
@@ -273,6 +274,8 @@ namespace KADA
                 }
                 //this.SetBrickRotation(container.R);
                 this.SetBrickRotation(R);
+
+                this.outlierCenter = container.outlierCenter;
                 foreach (Point v in model.points)
                 {
                     Matrix transform = brickRotation * brickTranslation;
@@ -801,6 +804,23 @@ namespace KADA
                 }
             }
 
+
+            foreach (ModelMesh mesh in brick.Meshes)
+            {
+
+                foreach (BasicEffect eff in mesh.Effects)
+                {
+                    eff.TextureEnabled = false;
+                    eff.DiffuseColor = Vector3.One * 0.7f;
+                    eff.EnableDefaultLighting();
+                    eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * Matrix.CreateTranslation(this.offset) * Matrix.CreateTranslation(this.outlierCenter);// *
+
+                    eff.View = View;
+                    eff.Projection = Projection;
+                }
+
+                mesh.Draw();
+            }
 
             base.Draw(gameTime);
 

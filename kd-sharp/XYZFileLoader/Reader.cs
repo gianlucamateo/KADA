@@ -14,7 +14,7 @@ namespace XYZFileLoader
     {
         public Vector3 position;
         public Vector3 normal;
-        public double[] positionArr;
+        //public double[] positionArr;
         public int brickColorInteger;
         public BrickColor brickColor;
 
@@ -22,7 +22,7 @@ namespace XYZFileLoader
         {
             position = pos;
             normal = nor;
-            positionArr = new double[] { pos.X, pos.Y, pos.Z };
+            //positionArr = new double[] { pos.X, pos.Y, pos.Z };
             brickColor = BrickColor.NONE;
             brickColorInteger = 1;
         }

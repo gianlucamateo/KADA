@@ -28,17 +28,18 @@ namespace KADA
     {
         public const float POINTTOPOINTWEIGHT = 0.5f;
         public const float POINTTOPLANEWEIGHT = 0.5f;
+        public const float MAXROTATION = (float)Math.PI / 3;
         public const float TRANSLATIONWEIGHT = 1f;
         public const float MAX_INLIERDISTANCE = 8;
         private const int ICPITERATIONS = 1;
         private const int WORKERCOUNT = 5;
+       
+        
 
         public Vector3 oldCenter = Vector3.Zero;
         public static readonly float THRESHOLD = 200;
         private readonly bool REQUIRE_HIGH_QUALITY_RESULT = false;
         public bool normalAligner = false;
-
-        private static object ICPSemaphore = new object();
 
         private KDTreeWrapper brickWrapper;
         private static XNAMatrix prevR;
@@ -173,7 +174,7 @@ namespace KADA
                     }
                     continue;
                 }
-                
+
 
 
 
@@ -271,8 +272,9 @@ namespace KADA
                     oldCenter = center;
 
 
-
+                    
                     container.center = center;
+                    
                 }
 
                 //container.Timings.Add(DateTime.Now);
@@ -361,6 +363,8 @@ namespace KADA
                         container.ICPOutliers = 0;
 
 
+                        
+
                         XNAMatrix.Invert(ref R, out RInv);
 
                         Matrix A = new Matrix(new double[6, 6]);
@@ -377,6 +381,7 @@ namespace KADA
                         onlyRot.M32 = R.M32;
                         onlyRot.M33 = R.M33;
 
+                        
 
 
                         foreach (ICPWorker w in workers)
@@ -387,7 +392,7 @@ namespace KADA
                             w.onlyRot = onlyRot;
                             w.RInv = RInv;
                             w.container = container;
-                            w.ICPTranslation = ICPTranslation;
+                            // w.ICPTranslation = ICPTranslation;
                         }
 
                         int discard = 0;
@@ -498,6 +503,7 @@ namespace KADA
                         }
 
                         float totalWeight = 0;
+
                         foreach (ICPWorker w in workers)
                         {
                             A.AddInplace(w.A);
@@ -506,7 +512,10 @@ namespace KADA
                             totalWeight += w.totalWeight;
                             container.ICPOutliers += w.ICPOutliers;
                             container.ICPInliers += w.ICPInliers;
+                            container.outlierCenter += w.OutlierSum; 
                         }
+                        container.outlierCenter /= container.ICPOutliers;
+                        //container.center = currentCenter;
                         if (totalWeight > 0)
                         {
                             //A.MultiplyInplace(1f / totalWeight);
@@ -585,15 +594,15 @@ namespace KADA
                             X = X.Multiply(POINTTOPLANEWEIGHT * currentWeight);
                             double[] XArr = X.ToArray();
 
-                            XNAMatrix XRot = XNAMatrix.CreateRotationX(Math.Min((float)XArr[0], (float)Math.PI / 10));
-                            XNAMatrix YRot = XNAMatrix.CreateRotationY(Math.Min((float)XArr[1], (float)Math.PI / 10));
-                            XNAMatrix ZRot = XNAMatrix.CreateRotationZ(Math.Min((float)XArr[2], (float)Math.PI / 10));
+                            XNAMatrix XRot = XNAMatrix.CreateRotationX(Math.Min((float)XArr[0], MAXROTATION));
+                            XNAMatrix YRot = XNAMatrix.CreateRotationY(Math.Min((float)XArr[1], MAXROTATION));
+                            XNAMatrix ZRot = XNAMatrix.CreateRotationZ(Math.Min((float)XArr[2], MAXROTATION));
                             XNAMatrix RTemp = ZRot * YRot * XRot;
 
                             Vector3 trans = new Vector3((float)(XArrTrans[3]), (float)(XArrTrans[4]), (float)(XArrTrans[5]));
                             trans *= TRANSLATIONWEIGHT;
                             trans *= model.radius;
-                            this.ICPTranslation += trans;
+                            //this.ICPTranslation += trans;
                             if (trans.Length() > 2)
                             {
                                 trans.Normalize();
@@ -607,9 +616,9 @@ namespace KADA
                             double pointThetaY = -Math.Atan2(-pointR.M31, Math.Sqrt(pointR.M32 * pointR.M32 + pointR.M33 * pointR.M33));
                             double pointThetaZ = -Math.Atan2(pointR.M21, pointR.M11);
 
-                            pointThetaX *= Math.Min(POINTTOPOINTWEIGHT * currentWeight, Math.PI / 10);
-                            pointThetaY *= Math.Min(POINTTOPOINTWEIGHT * currentWeight, Math.PI / 10);
-                            pointThetaZ *= Math.Min(POINTTOPOINTWEIGHT * currentWeight, Math.PI / 10);
+                            pointThetaX *= Math.Min(POINTTOPOINTWEIGHT * currentWeight, MAXROTATION);
+                            pointThetaY *= Math.Min(POINTTOPOINTWEIGHT * currentWeight, MAXROTATION);
+                            pointThetaZ *= Math.Min(POINTTOPOINTWEIGHT * currentWeight, MAXROTATION);
 
 
                             ZRot = XNAMatrix.CreateRotationZ((float)pointThetaZ);
@@ -617,6 +626,8 @@ namespace KADA
 
                             XRot = XNAMatrix.CreateRotationX((float)pointThetaX);
                             pointR = ZRot * YRot * XRot;
+
+                            this.ICPTranslation = this.ICPTranslation + trans;
 
                             RTemp = RTemp * pointR;
                             RTemp = XNAMatrix.CreateTranslation(trans) * RTemp;
@@ -658,6 +669,7 @@ namespace KADA
                         }
                         else
                         {
+                            this.dataContainer.trackingConfidence = TrackingConfidenceLevel.NONE;
                             trackingLostCount++;
                         }
                         if (trackingLostCount > 100)
@@ -862,7 +874,7 @@ namespace KADA
             {
                 prevRKnown = false;
             }
-            this.ICPTranslation = Vector3.Zero;
+            //this.ICPTranslation = Vector3.Zero;
             this.oldCenter = Vector3.Zero;
         }
 
@@ -1018,11 +1030,11 @@ namespace KADA
                                 horizontalAvg = left - right;
                                 normal = Vector3.Cross(horizontalAvg, verticalAvg);
                                 normal.Normalize();
-                                
+
 
                                 if (verticalAvg.Length() > 0 && horizontalAvg.Length() > 0 && normal.Length() > 0)
                                 {
-                                    
+
                                     normal = -normal;
                                     container.Normals[639 - x, 479 - y] = normal;
                                 }
@@ -1033,7 +1045,7 @@ namespace KADA
                 }
                 //container.Timings.Add(DateTime.Now);
                 manager.ProcessingQueues[++container.Stage].Enqueue(container);
-                
+
 
             }
         }

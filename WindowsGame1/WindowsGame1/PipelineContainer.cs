@@ -15,7 +15,7 @@ namespace KADA
         public Matrix R;
         public Matrix onlyRot;
         public List<Point> Qi;
-        public Vector3 center;
+        public Vector3 center, computedCenter;
         public DepthImagePixel[] DepthPixels;
         public byte[] ColorPixels;
         public Vector3[] NormalsList;
@@ -30,10 +30,12 @@ namespace KADA
         public Vector3[] estimatedVectors;
         public Matrix rawNormalR;
         public Matrix normalR;
+        public Vector3 outlierCenter;
         
 
         public PipelineContainer(PipelineDataContainer dataContainer)
         {
+            this.outlierCenter = Vector3.Zero;
             this.modelVectors = new Vector3[3];
             this.rawNormalR = Matrix.Identity;
             this.normalR = Matrix.Identity;
@@ -45,6 +47,7 @@ namespace KADA
             this.R = Matrix.Identity;
             this.Qi = new List<Point>();
             this.center = Vector3.Zero;
+            this.computedCenter = Vector3.Zero;
             this.DepthPixels = new DepthImagePixel[dataContainer.DEPTHLENGTH];
             this.ColorPixels = new byte[dataContainer.COLORLENGTH];
             this.ColorPoints = new ColorImagePoint[640 * 480];

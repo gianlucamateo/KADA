@@ -22,7 +22,7 @@ namespace KADA
         public Vector3 center;
         public XNAMatrix RInv;
         public XNAMatrix onlyRot;
-        public Vector3 ICPTranslation;
+        
         public Matrix A;
         public Vector B;
         public Matrix H, HTemp;
@@ -36,15 +36,16 @@ namespace KADA
         public float totalWeight;
         private List<BrickColor> possibleColors = new List<BrickColor>();
         public int ICPInliers, ICPOutliers;
+        public Vector3 OutlierSum;
 
-        Point p, firstGuess;
+        Point q, firstGuess;
         Vector3 transformedNormal;
 
         public ICPWorker(int number, PipelineDataContainer dataContainer)
         {
             this.ICPOutliers = 0;
             this.ICPInliers = 0;
-            this.ICPTranslation = Vector3.Zero;
+            this.OutlierSum = Vector3.Zero;
             this.totalWeight = 0;
             this.dataContainer = dataContainer;
            // this.file = new StreamWriter("ICP_worker" + number + "_" + DateTime.Now.Millisecond + ".txt");
@@ -63,6 +64,7 @@ namespace KADA
 
         public void reset()
         {
+            this.OutlierSum = Vector3.Zero;
             this.ICPOutliers = 0;
             this.ICPInliers = 0;
             this.totalWeight = 0;
@@ -76,9 +78,9 @@ namespace KADA
         private void routine()
         {
             Point point;
-            Vector3 v, vC;
-            Matrix tmA = new Matrix(6, 6);
-            Vector tempB = new Vector(6);
+            Vector3 v, p;
+            Matrix tmA = new Matrix(6, 6), tmAPoint = new Matrix(6,6);
+            Vector tempB = new Vector(6), tempBPoint = new Vector(6);
             DateTime start = DateTime.Now;
             int count = 0;
             int i = 0;
@@ -110,11 +112,11 @@ namespace KADA
                 }
                 i = 0;
                 count++;
-                vC = v - center;
-                vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
-                vArr[0] = vC.X;
-                vArr[1] = vC.Y;
-                vArr[2] = vC.Z;
+                p = v - center;
+                p = Microsoft.Xna.Framework.Vector3.Transform(p, RInv);
+                vArr[0] = p.X;
+                vArr[1] = p.Y;
+                vArr[2] = p.Z;
                 //maxDistance = _3DProcessor.THRESHOLD;
                 //if (container.ICPRatio > 0.3f)
                 //{
@@ -145,34 +147,38 @@ namespace KADA
                     }
                     if (!found)
                     {
+                        this.ICPOutliers++;
+                        this.OutlierSum += p;
                         continue;
+                       
                     }
                 }
 
-                p = neighbour.Current;
-                transformedNormal = Vector3.Transform(p.normal, onlyRot);
+                q = neighbour.Current;
+                transformedNormal = Vector3.Transform(q.normal, onlyRot);
                 //transformedNormal = Vector3.Transform(p.normal, onlyRot);
-                if (p.normal == Vector3.Zero)
+                if (q.normal == Vector3.Zero)
                 {
                     //p = firstGuess;
 
-                    container.ICPOutliers++;
+                    this.ICPOutliers++;
+                    this.OutlierSum += p;
                     //return;
                     continue;
                 }
 
-                vC /= dataContainer.model.radius;
-                p.position /= dataContainer.model.radius;
+                p /= dataContainer.model.radius;
+                q.position /= dataContainer.model.radius;
 
-                HTemp[0, 0] = vC.X * p.position.X;
-                HTemp[0, 1] = vC.Y * p.position.X;
-                HTemp[0, 2] = vC.Z * p.position.X;
-                HTemp[1, 0] = vC.X * p.position.Y;
-                HTemp[1, 1] = vC.Y * p.position.Y;
-                HTemp[1, 2] = vC.Z * p.position.Y;
-                HTemp[2, 0] = vC.X * p.position.Z;
-                HTemp[2, 1] = vC.Y * p.position.Z;
-                HTemp[2, 2] = vC.Z * p.position.Z;
+                HTemp[0, 0] = p.X * q.position.X;
+                HTemp[0, 1] = p.Y * q.position.X;
+                HTemp[0, 2] = p.Z * q.position.X;
+                HTemp[1, 0] = p.X * q.position.Y;
+                HTemp[1, 1] = p.Y * q.position.Y;
+                HTemp[1, 2] = p.Z * q.position.Y;
+                HTemp[2, 0] = p.X * q.position.Z;
+                HTemp[2, 1] = p.Y * q.position.Z;
+                HTemp[2, 2] = p.Z * q.position.Z;
 
 
 
@@ -181,7 +187,7 @@ namespace KADA
                 foreach (BrickColor bc in possibleColors)
                 {
                     int number = (int)bc;
-                    if ((p.brickColorInteger / number) * number == p.brickColorInteger)
+                    if ((q.brickColorInteger / number) * number == q.brickColorInteger)
                     {
                         if (point.brickColor == bc)
                         {
@@ -191,15 +197,16 @@ namespace KADA
                     }
                 }
 
-                Vector3 pos = p.position;
+                Vector3 pos = q.position;
                 //pos /= 20;
                 //vC /= 20;
-                Vector3 n = p.normal; //+new Vector3(0.3f, 0.001f, 0.001f);
+                Vector3 n = q.normal; //+new Vector3(0.3f, 0.001f, 0.001f);
                 Vector3 c = Vector3.Cross(pos, n);
 
                 if (neighbour.CurrentDistance > _3DProcessor.THRESHOLD)
                 {
-                    container.ICPOutliers++;
+                    this.ICPOutliers++;
+                    this.OutlierSum += p;
                     //return;
                     continue;
                 }
@@ -214,9 +221,50 @@ namespace KADA
                 //System.Diagnostics.Debug.WriteLine(weight);
                 tmA.MultiplyInplace(weight);
 
-                //double[] tempB = new double[6];
+                tmAPoint[0, 0] = p.Y * p.Y + p.Z * p.Z;
+                tmAPoint[0, 1] = -p.Y * p.X;
+                tmAPoint[0, 2] = -p.Z * p.X;
+                tmAPoint[0, 3] = 0;
+                tmAPoint[0, 4] = -p.Z;
+                tmAPoint[0, 5] = p.Y;
 
-                float pMinqTimesN = Vector3.Dot(pos - vC, n);
+                tmAPoint[1, 0] = -p.X*p.Y;
+                tmAPoint[1, 1] = p.Z*p.Z +p.X*p.X;
+                tmAPoint[1, 2] = -p.Z * p.Y;
+                tmAPoint[1, 3] = p.Z;
+                tmAPoint[1, 4] = 0;
+                tmAPoint[1, 5] = -p.X;
+
+                tmAPoint[2, 0] = -p.X*p.Z;
+                tmAPoint[2, 1] = -p.Y * p.Z;
+                tmAPoint[2, 2] = p.Y*p.Y+p.X*p.X;
+                tmAPoint[2, 3] = -p.Y;
+                tmAPoint[2, 4] = p.X;
+                tmAPoint[2, 5] = 0;
+
+                tmAPoint[3, 0] = 0;
+                tmAPoint[3, 1] = p.Z;
+                tmAPoint[3, 2] = -p.Y;
+                tmAPoint[3, 3] = 1;
+                tmAPoint[3, 4] = 0;
+                tmAPoint[3, 5] = 0;
+
+                tmAPoint[4, 0] = -p.Z;
+                tmAPoint[4, 1] = 0;
+                tmAPoint[4, 2] = p.X;
+                tmAPoint[4, 3] = 0;
+                tmAPoint[4, 4] = 1;
+                tmAPoint[4, 5] = 0;
+
+                tmAPoint[5, 0] = p.Y;
+                tmAPoint[5, 1] = -p.X;
+                tmAPoint[5, 2] = 0;
+                tmAPoint[5, 3] = 0;
+                tmAPoint[5, 4] = 0;
+                tmAPoint[5, 5] = 1;
+                //double[] tempB = new double[6];
+                //tmAPoint.MultiplyInplace(weight);
+                float pMinqTimesN = Vector3.Dot(pos - p, n);
 
                 tempB[0] = pMinqTimesN * c.X;
                 tempB[1] = pMinqTimesN * c.Y;
@@ -225,24 +273,33 @@ namespace KADA
                 tempB[4] = pMinqTimesN * n.Y;
                 tempB[5] = pMinqTimesN * n.Z;
 
+                tempBPoint[0] = p.Z * (p.Y - q.position.Y) - p.Y * (p.Z - q.position.Z);
+                tempBPoint[1] = -p.Z * (p.X - q.position.X) + p.X * (p.Z - q.position.Z);
+                tempBPoint[2] = p.Y * (p.X - q.position.X) - p.X * (p.Y - q.position.Y);
+                tempBPoint[0] = -p.X + q.position.X;
+                tempBPoint[0] = -p.Y + q.position.Y;
+                tempBPoint[0] = -p.Z + q.position.Z;
 
                 tempB.MultiplyInplace(weight);
 
                 HTemp.MultiplyInplace(weight);
 
 
+
+
                 totalWeight += weight;
                 H.AddInplace(HTemp);
 
-                A = A.Add(tmA);
-                B = B.Subtract(tempB);
+                A = A + tmA;// +tmAPoint;
+
+                B = B - tempB;// - tempBPoint;
                 if (neighbour.CurrentDistance < _3DProcessor.MAX_INLIERDISTANCE)
                 {
                     this.ICPInliers++;
                 }
                 else
                 {
-                    this.ICPOutliers++;
+                    //this.ICPOutliers++;
                 }
             }
         }

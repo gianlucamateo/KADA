@@ -197,14 +197,21 @@ namespace XYZFileLoader
 
             //compute max Distance, radius of wrapping sphere
             this.radius = 0f;
-            foreach (Point p in this.points)
+
+            for (int i = 0; i < this.points.Count; i++)
             {
-                float length = (p.position - this.center).Length();
-                if (length > radius)
-                {
-                    radius = length;
-                }
+                Point p = this.points[i];
+                p.position = p.position- this.center;
             }
+
+                foreach (Point p in this.points)
+                {
+                    float length = (p.position - this.center).Length();
+                    if (length > radius)
+                    {
+                        radius = length;
+                    }
+                }
             
         }   
     }
