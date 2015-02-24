@@ -34,11 +34,17 @@ namespace KADA
         public Matrix lastConfidentR = Matrix.Identity;
         public TrackingConfidenceLevel trackingConfidence = TrackingConfidenceLevel.NONE;
         public int[] normalMappings;
+        public Queue<Vector3> outlierCenters;
+        public Vector3 outlierCenter;
         public Vector3[] modelNormals;
         public BackgroundEvaluator backgroundEvaluator;
 
+        public float ICPThreshold = 200;
+
         public PipelineDataContainer()
         {
+            this.outlierCenter = Vector3.Zero;
+            this.outlierCenters = new Queue<Vector3>();
             this.backgroundEvaluator = new BackgroundEvaluator(this);
             this.modelNormals = new Vector3[3];
             this.model = new Model();

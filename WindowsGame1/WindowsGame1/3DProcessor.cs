@@ -33,11 +33,11 @@ namespace KADA
         public const float MAX_INLIERDISTANCE = 8;
         private const int ICPITERATIONS = 1;
         private const int WORKERCOUNT = 5;
-       
-        
+
+
 
         public Vector3 oldCenter = Vector3.Zero;
-        public static readonly float THRESHOLD = 200;
+
         private readonly bool REQUIRE_HIGH_QUALITY_RESULT = false;
         public bool normalAligner = false;
 
@@ -238,6 +238,7 @@ namespace KADA
                     y = 0;
                     z = 0;
                     counter = 0;
+                    container.outliers.Clear();
                     for (int xP = 0; xP < dc.GetLength(0); xP++)
                     {
                         for (int yP = 0; yP < dc.GetLength(1); yP++)
@@ -248,7 +249,7 @@ namespace KADA
                             {
                                 float dist;
                                 Vector3.Distance(ref center, ref c.Position, out dist);
-                                if (dist < THRESHOLD)
+                                if (dist < dataContainer.ICPThreshold)
                                 {
                                     x += c.Position.X;
                                     y += c.Position.Y;
@@ -261,6 +262,10 @@ namespace KADA
                                     point.brickColorInteger = c.BrickColorInteger;
                                     qi.Add(point);
                                 }
+                                else
+                                {
+                                    container.outliers.Add(c.Position);
+                                }
                             }
                         }
                     }
@@ -272,9 +277,9 @@ namespace KADA
                     oldCenter = center;
 
 
-                    
+
                     container.center = center;
-                    
+
                 }
 
                 //container.Timings.Add(DateTime.Now);
@@ -321,6 +326,11 @@ namespace KADA
                 {
                     break;
                 }
+
+
+
+                this.dataContainer.ICPThreshold = model.radius;
+
                 //container.Timings.Add(DateTime.Now);
                 if (this.dataContainer.DeNoiseAndICP)
                 {
@@ -363,7 +373,7 @@ namespace KADA
                         container.ICPOutliers = 0;
 
 
-                        
+
 
                         XNAMatrix.Invert(ref R, out RInv);
 
@@ -381,12 +391,12 @@ namespace KADA
                         onlyRot.M32 = R.M32;
                         onlyRot.M33 = R.M33;
 
-                        
+
 
 
                         foreach (ICPWorker w in workers)
                         {
-                            w.reset();
+                            w.ModelRadius = model.radius;
                             w.center = center;
                             w.dataContainer = this.dataContainer;
                             w.onlyRot = onlyRot;
@@ -503,18 +513,94 @@ namespace KADA
                         }
 
                         float totalWeight = 0;
-
+                        container.outlierCenter = Vector3.Zero;
+                        List<Vector3> outliers = new List<Vector3>(5000);
+                        int workerOutlierCount = 0;
+                        Vector3 workerOutlierSum = Vector3.Zero;
                         foreach (ICPWorker w in workers)
                         {
+
+                            //outliers.AddRange(w.Outliers);
+                            Thread.Sleep(1);
                             A.AddInplace(w.A);
                             B.AddInplace(w.B);
                             H.AddInplace(w.H);
                             totalWeight += w.totalWeight;
                             container.ICPOutliers += w.ICPOutliers;
                             container.ICPInliers += w.ICPInliers;
-                            container.outlierCenter += w.OutlierSum; 
+                            w.reset();
+                            if (w.OutlierSum.Length() > 1)
+                                workerOutlierSum += w.OutlierSum;
+                            workerOutlierCount += w.OutlierCount;
                         }
-                        container.outlierCenter /= container.ICPOutliers;
+                        Vector3 outlierCenter = Vector3.Zero;
+
+                        foreach (Vector3 outlier in container.outliers)
+                        {
+                            if(!float.IsNaN(outlier.X))
+                            outlierCenter += outlier - center;
+                        }
+                        if (workerOutlierCount > 0 || container.outliers.Count > 0)
+                        {
+                            container.outlierCenter = outlierCenter + workerOutlierSum;
+                            container.outlierCenter /= (container.outliers.Count + workerOutlierCount);
+                        }
+
+                        container.outlierCenter = container.outlierCenter + center;
+
+                        float confidence = 0;
+                        Vector3 diff = Vector3.Zero;
+                        if (dataContainer.outlierCenters.Count > 3)
+                        {
+                            foreach (Vector3 vec in dataContainer.outlierCenters)
+                            {
+                                diff += vec - dataContainer.outlierCenter;
+                            }
+                            confidence = 1f / diff.Length();
+                            if (confidence > 5000)
+                            {
+                                if ((container.outlierCenter - dataContainer.outlierCenter).Length() < 100)
+                                {
+                                    dataContainer.outlierCenters.Enqueue(container.outlierCenter);
+                                }
+                                else
+                                {
+                                    dataContainer.outlierCenters.Dequeue();
+                                }
+
+                            }
+
+                        }
+                        else if ((container.outliers.Count + workerOutlierCount) > 50)
+                        {
+                            dataContainer.outlierCenters.Enqueue(container.outlierCenter);
+                        }
+                        
+
+                        //if ((container.outliers.Count + workerOutlierCount) > 50)
+                        //    dataContainer.outlierCenters.Enqueue(container.outlierCenter);
+
+                       
+
+
+
+                        if (dataContainer.outlierCenters.Count > 5)
+                            dataContainer.outlierCenters.Dequeue();
+
+
+                        Vector3 averagedOutlierCenter = Vector3.Zero;
+
+                        foreach (Vector3 vec in dataContainer.outlierCenters)
+                        {
+                            averagedOutlierCenter += vec;
+                        }
+                        if (dataContainer.outlierCenters.Count()>0)
+                            averagedOutlierCenter /= dataContainer.outlierCenters.Count();
+                        container.outlierCenter = averagedOutlierCenter;
+                        dataContainer.outlierCenter = averagedOutlierCenter;
+
+                        //container.outlierCenter /= workers.Count;
+                        //Console.WriteLine(container.outlierCenter);
                         //container.center = currentCenter;
                         if (totalWeight > 0)
                         {
@@ -584,7 +670,7 @@ namespace KADA
                             break;
                         }
 
-                        container.ICPRatio = container.ICPOutliers == 0 ? 0 : (float)container.ICPInliers / container.ICPOutliers;
+                        container.ICPRatio = container.ICPOutliers == 0 ? 1000 : (float)container.ICPInliers / container.ICPOutliers;
 
                         if (!skip)
                         {

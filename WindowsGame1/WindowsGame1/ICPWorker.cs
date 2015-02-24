@@ -37,6 +37,9 @@ namespace KADA
         private List<BrickColor> possibleColors = new List<BrickColor>();
         public int ICPInliers, ICPOutliers;
         public Vector3 OutlierSum;
+        public float ModelRadius = 0;
+        public List<Vector3> Outliers;
+        public int OutlierCount = 0;
 
         Point q, firstGuess;
         Vector3 transformedNormal;
@@ -45,7 +48,8 @@ namespace KADA
         {
             this.ICPOutliers = 0;
             this.ICPInliers = 0;
-            this.OutlierSum = Vector3.Zero;
+            //this.OutlierAvg = Vector3.Zero;
+            this.Outliers = new List<Vector3>();
             this.totalWeight = 0;
             this.dataContainer = dataContainer;
            // this.file = new StreamWriter("ICP_worker" + number + "_" + DateTime.Now.Millisecond + ".txt");
@@ -65,6 +69,20 @@ namespace KADA
         public void reset()
         {
             this.OutlierSum = Vector3.Zero;
+            OutlierCount = 0;
+            List<Vector3> outliers = new List<Vector3>(this.Outliers);
+            foreach (Vector3 outlier in outliers)
+            {
+                if (outlier.Length() > ModelRadius)
+                {
+                    OutlierCount++;
+                    this.OutlierSum += outlier;
+                }
+            }
+
+           
+
+            this.Outliers.Clear();
             this.ICPOutliers = 0;
             this.ICPInliers = 0;
             this.totalWeight = 0;
@@ -85,7 +103,7 @@ namespace KADA
             int count = 0;
             int i = 0;
             double[] vArr = new double[3];
-            double maxDistance = _3DProcessor.THRESHOLD;
+            double maxDistance = dataContainer.ICPThreshold;
             NearestNeighbour<Point> neighbour;
             while (this.dataContainer.Run)
             {
@@ -105,7 +123,7 @@ namespace KADA
                     }
                 }
                 v = point.position;
-
+                
                 if (container == null)
                 {
                     break;
@@ -117,11 +135,11 @@ namespace KADA
                 vArr[0] = p.X;
                 vArr[1] = p.Y;
                 vArr[2] = p.Z;
-                //maxDistance = _3DProcessor.THRESHOLD;
-                //if (container.ICPRatio > 0.3f)
-                //{
-                //    maxDistance = _3DProcessor.MAX_INLIERDISTANCE;
-                //}
+                maxDistance =  dataContainer.ICPThreshold; 
+                if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL)
+                {
+                    maxDistance = 2*_3DProcessor.MAX_INLIERDISTANCE;
+                }
 
                 neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: maxDistance);
                 neighbour.MoveNext();
@@ -148,7 +166,8 @@ namespace KADA
                     if (!found)
                     {
                         this.ICPOutliers++;
-                        this.OutlierSum += p;
+                        //this.OutlierAvg += p;
+                        this.Outliers.Add(p);
                         continue;
                        
                     }
@@ -162,7 +181,8 @@ namespace KADA
                     //p = firstGuess;
 
                     this.ICPOutliers++;
-                    this.OutlierSum += p;
+                    //this.OutlierAvg += p;
+                    this.Outliers.Add(p);
                     //return;
                     continue;
                 }
@@ -203,10 +223,11 @@ namespace KADA
                 Vector3 n = q.normal; //+new Vector3(0.3f, 0.001f, 0.001f);
                 Vector3 c = Vector3.Cross(pos, n);
 
-                if (neighbour.CurrentDistance > _3DProcessor.THRESHOLD)
+                if (neighbour.CurrentDistance > maxDistance)
                 {
                     this.ICPOutliers++;
-                    this.OutlierSum += p;
+                    //this.OutlierAvg += p;
+                    this.Outliers.Add(p);
                     //return;
                     continue;
                 }
@@ -284,9 +305,6 @@ namespace KADA
 
                 HTemp.MultiplyInplace(weight);
 
-
-
-
                 totalWeight += weight;
                 H.AddInplace(HTemp);
 
@@ -299,7 +317,7 @@ namespace KADA
                 }
                 else
                 {
-                    //this.ICPOutliers++;
+                    this.ICPOutliers++;
                 }
             }
         }
