@@ -650,7 +650,7 @@ namespace KADA
 
             if (kS.IsKeyDown(Keys.L))
             {
-                this.manager.processor3D.normalAligner = true;
+                this.manager.processor3D.NormalAligner = true;
             }
 
 

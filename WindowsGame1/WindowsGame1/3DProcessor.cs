@@ -33,39 +33,41 @@ namespace KADA
         public const float MAX_INLIERDISTANCE = 12;
         private const int ICPITERATIONS = 1;
         private const int WORKERCOUNT = 5;
-
-        public Vector3 oldCenter = Vector3.Zero;
+        private const double MINICPRATIO = 2.5;       
 
         private readonly bool REQUIRE_HIGH_QUALITY_RESULT = false;
-        public bool normalAligner = false;
 
-        private KDTreeWrapper brickWrapper;
-        private static XNAMatrix prevR;
-        private static bool prevRKnown = false;
+        public Vector3 OldCenter = Vector3.Zero;        
+        public bool NormalAligner = false;
+
+        private KDTreeWrapper BrickWrapper;
+        private static XNAMatrix PrevR;
+        private static bool PrevRKnown = false;
         
         private Vector3 ICPTranslation = Vector3.Zero;
 
-        private Model model;
+        private Model Model;
 
-        private int normalCounter = 0;
+        private int NormalCounter = 0;
+        private int trackingLostCount = 0, resetCount = 0;
+        private DotNumerics.LinearAlgebra.SingularValueDecomposition SVD;
+        LinearEquations LE;
 
-        private const double MINICPRATIO = 2.5;
+        
 
-        private PipelineManager manager;
-        private PipelineDataContainer dataContainer;
+        private PipelineManager Manager;
+        private PipelineDataContainer DataContainer;
 
 
         public _3DProcessor(PipelineManager manager, PipelineDataContainer dataContainer)
         {
-            this.dataContainer = dataContainer;
-            this.manager = manager;
-            this.model = dataContainer.model;
-            this.brickWrapper = dataContainer.generateKDTree();
+            this.DataContainer = dataContainer;
+            this.Manager = manager;
+            this.Model = dataContainer.model;
+            this.BrickWrapper = dataContainer.generateKDTree();
 
-            Thread Stage4 = new Thread(new ThreadStart(() => generateCenter()));
-            Stage4.Start();
-            //Thread Stage4a = new Thread(new ThreadStart(() => generateCenter()));
-            //Stage4a.Start();
+            Thread Stage4 = new Thread(new ThreadStart(() => GenerateCenter()));
+            Stage4.Start();            
 
             KDTreeWrapper tree = dataContainer.model.generateKDTree();
             ConcurrentQueue<ICPWorker> workers1, workers2;
@@ -74,7 +76,7 @@ namespace KADA
 
             for (int i = 0; i < WORKERCOUNT; i++)
             {
-                ICPWorker w = new ICPWorker(i, this.dataContainer);
+                ICPWorker w = new ICPWorker(i, this.DataContainer);
                 w.brickWrapper = tree;
                 workers1.Enqueue(w);
             }
@@ -89,7 +91,7 @@ namespace KADA
             Thread Stage52 = new Thread(new ThreadStart(() => scanNormals()));
             Stage52.Start();
             Thread Stage53 = new Thread(new ThreadStart(() => scanNormals()));
-            Stage53.Start();
+            Stage53.Start();           
 
             List<Thread> Stage7 = new List<Thread>();
 
@@ -99,7 +101,8 @@ namespace KADA
                 x.Start();
                 Stage7.Add(x);
             }
-
+            this.SVD = new SingularValueDecomposition();
+            this.LE =  new LinearEquations();
 
 
 
@@ -108,16 +111,18 @@ namespace KADA
 
 
         //Stage 4
-        public void generateCenter()
+        public void GenerateCenter()
         {
+            #region Get sorted container
+            
             SortedList<int, PipelineContainer> outOfOrder = new SortedList<int, PipelineContainer>();
             int stage = 4;
             int lastFrame = 0;
             bool fromOutOfOrder = false;
-            while (this.dataContainer.Run)
+            while (this.DataContainer.Run)
             {
                 PipelineContainer container = null;
-                while (container == null && this.dataContainer.Run)
+                while (container == null && this.DataContainer.Run)
                 {
 
                     container = null;
@@ -130,17 +135,17 @@ namespace KADA
                     else
                     {
                         fromOutOfOrder = false;
-                        if (manager.ProcessingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
+                        if (Manager.ProcessingQueues[stage].Count > DataContainer.MINFRAMESINCONTAINER)
                         {
-                            manager.ProcessingQueues[stage].TryDequeue(out container);
+                            Manager.ProcessingQueues[stage].TryDequeue(out container);
                             if (container == null)
                             {
-                                Thread.Sleep(this.dataContainer.SLEEPTIME);
+                                Thread.Sleep(this.DataContainer.SLEEPTIME);
                             }
                         }
                         else
                         {
-                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                            Thread.Sleep(this.DataContainer.SLEEPTIME);
                         }
                     }
                 }
@@ -163,7 +168,7 @@ namespace KADA
                         lastFrame = container.Number;
                         foreach (PipelineContainer c in outOfOrder.Values)
                         {
-                            manager.Recycle.Enqueue(c);
+                            Manager.Recycle.Enqueue(c);
                         }
                         outOfOrder.Clear();
                     }
@@ -173,72 +178,45 @@ namespace KADA
 
 
 
-
-                while (container == null && this.dataContainer.Run)
+            
+                while (container == null && this.DataContainer.Run)
                 {
 
                     container = null;
-                    if (manager.ProcessingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
+                    if (Manager.ProcessingQueues[stage].Count > DataContainer.MINFRAMESINCONTAINER)
                     {
-                        manager.ProcessingQueues[stage].TryDequeue(out container);
+                        Manager.ProcessingQueues[stage].TryDequeue(out container);
                         if (container == null)
                         {
-                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                            Thread.Sleep(this.DataContainer.SLEEPTIME);
                         }
                     }
                     else
                     {
-                        Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        Thread.Sleep(this.DataContainer.SLEEPTIME);
                     }
                 }
                 //container.Timings.Add(DateTime.Now);
-
-                if (this.dataContainer.DeNoiseAndICP)
+            #endregion
+                if (this.DataContainer.DeNoiseAndICP)
                 {
                     DepthColor[,] dc = container.DC;
                     List<Point> qi = container.Qi;
-
-                    float x = 0, y = 0, z = 0;
-                    int counter = 0;
-                    DepthColor c;
-                    Vector3 center;
                     Point point = new Point(Vector3.Zero, Vector3.Zero);
 
-                    if (oldCenter == Vector3.Zero)
-                    {
-                        for (int xP = 0; xP < dc.GetLength(0); xP++)
-                        {
-                            for (int yP = 0; yP < dc.GetLength(1); yP++)
-                            {
-                                c = dc[xP, yP];
-                                if (c.Position.Z != 0)
-                                {
-                                    x += c.Position.X;
-                                    y += c.Position.Y;
-                                    z += c.Position.Z;
-                                    counter++;
-                                }
-                            }
-                        }
-                        x /= counter;
-                        y /= counter;
-                        z /= counter;
-                        center = new Vector3(x, y, z);
-                    }
-                    else
-                    {
-                        center = oldCenter;
-                    }
-                    x = 0;
-                    y = 0;
-                    z = 0;
-                    counter = 0;
+                    
+                    Vector3 center;
+
+                    center = CheckOldCenter(dc);
+
+                    DepthColor c;
+                    float x = 0,y = 0,z = 0;
+                    int counter = 0;
                     container.OutlierPoints.Clear();
                     for (int xP = 0; xP < dc.GetLength(0); xP++)
                     {
                         for (int yP = 0; yP < dc.GetLength(1); yP++)
                         {
-
                             c = dc[xP, yP];
                             if (c.Position.Z != 0)
                             {
@@ -251,7 +229,7 @@ namespace KADA
                                 point.position = c.Position;
                                 point.normal = container.Normals[639 - xP, 479 - yP];
                                 point.brickColorInteger = c.BrickColorInteger;
-                                if (dist < dataContainer.ICPThreshold)
+                                if (dist < DataContainer.ICPThreshold)
                                 {
                                     x += c.Position.X;
                                     y += c.Position.Y;
@@ -272,7 +250,7 @@ namespace KADA
                     z /= counter;
                     center = new Vector3(x, y, z);
 
-                    oldCenter = center;
+                    OldCenter = center;
 
 
 
@@ -281,13 +259,46 @@ namespace KADA
                 }
 
                 //container.Timings.Add(DateTime.Now);
-                manager.ProcessingQueues[++container.Stage].Enqueue(container);
+                Manager.ProcessingQueues[++container.Stage].Enqueue(container);
             }
 
         }
 
-        //Stage 6;
-        private int trackingLostCount = 0, resetCount = 0;
+        private Vector3 CheckOldCenter(DepthColor[,] dc)
+        {
+            Vector3 center;
+            DepthColor c;
+            float x = 0, y = 0, z = 0;
+            int counter = 0;
+            if (OldCenter == Vector3.Zero)
+            {
+                for (int xP = 0; xP < dc.GetLength(0); xP++)
+                {
+                    for (int yP = 0; yP < dc.GetLength(1); yP++)
+                    {
+                        c = dc[xP, yP];
+                        if (c.Position.Z != 0)
+                        {
+                            x += c.Position.X;
+                            y += c.Position.Y;
+                            z += c.Position.Z;
+                            counter++;
+                        }
+                    }
+                }
+                x /= counter;
+                y /= counter;
+                z /= counter;
+                center = new Vector3(x, y, z);
+            }
+            else
+            {
+                center = OldCenter;
+            }
+            return center;
+        }
+
+        //Stage 6;        
         public void PtPlaneICP(ConcurrentQueue<ICPWorker> workers)
         {
             int stage = 6;
@@ -296,27 +307,26 @@ namespace KADA
             Matrix H;
             List<Vector3> Outliers = null;
 
-
-            while (this.dataContainer.Run)
+            while (this.DataContainer.Run)
             {
                 DateTime start = DateTime.Now;
                 PipelineContainer container = null;
-                while (container == null && this.dataContainer.Run)
+                while (container == null && this.DataContainer.Run)
                 {
 
                     container = null;
-                    if (manager.ProcessingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
+                    if (Manager.ProcessingQueues[stage].Count > DataContainer.MINFRAMESINCONTAINER)
                     {
-                        manager.ProcessingQueues[stage].TryDequeue(out container);
+                        Manager.ProcessingQueues[stage].TryDequeue(out container);
                         if (container == null)
                         {
-                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                            Thread.Sleep(this.DataContainer.SLEEPTIME);
                         }
 
                     }
                     else
                     {
-                        Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        Thread.Sleep(this.DataContainer.SLEEPTIME);
                     }
 
                 }
@@ -328,16 +338,17 @@ namespace KADA
 
 
 
-                this.dataContainer.ICPThreshold = model.radius;
+                this.DataContainer.ICPThreshold = Model.radius;
 
                 //container.Timings.Add(DateTime.Now);
-                if (this.dataContainer.DeNoiseAndICP)
+                if (this.DataContainer.DeNoiseAndICP)
                 {
-                    if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL && container.Number % 3 < 2)
+                    //Skip some frames if locked
+                    if (DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL && container.Number % 3 < 2)
                     {
                         //container.Timings.Add(DateTime.Now);
-                        manager.ProcessingQueues[++container.Stage].Enqueue(container);
-                        container.R = prevR;
+                        Manager.ProcessingQueues[++container.Stage].Enqueue(container);
+                        container.R = PrevR;
                         continue;
                     }
                     DateTime now = DateTime.Now;
@@ -350,13 +361,13 @@ namespace KADA
                     container.ICPInliers = 0;
 
                     XNAMatrix R;
-                    if (!prevRKnown)
+                    if (!PrevRKnown)
                     {
                         R = XNAMatrix.CreateRotationX(0);
                     }
                     else
                     {
-                        R = prevR;
+                        R = PrevR;
                     }
                     XNAMatrix RInv = XNAMatrix.CreateRotationX(0);
                     container.ICPRatio = 0f;
@@ -395,117 +406,31 @@ namespace KADA
 
                         foreach (ICPWorker w in workers)
                         {
-                            w.ModelRadius = model.radius;
+                            w.ModelRadius = Model.radius;
                             w.center = center;
-                            w.dataContainer = this.dataContainer;
+                            w.dataContainer = this.DataContainer;
                             w.onlyRot = onlyRot;
                             w.RInv = RInv;
                             w.container = container;
                             // w.ICPTranslation = ICPTranslation;
                         }
 
-                        int discard = 0;
+                        
                         for (int count = 0; count < qi.Count; count++)
-                        {
+                        {                          
                             
-                            if (discard++ % 1 != 0)
-                            {
-                                continue;
-                            }
                             ICPWorker worker;
                             while (!workers.TryDequeue(out worker))
                             {
-
+                                
                             }
-                            int upperLimit = count + 100;
+                            int upperLimit = count + 50;
                             for (int innerCount = count; innerCount < qi.Count && innerCount < upperLimit; innerCount++)
                             {
-                               
                                 worker.input.Enqueue(qi[innerCount]);
-                                
                                 count++;
                             }
-                            workers.Enqueue(worker);
-                            #region outdated
-                            /*
-                            Vector3 vC = v - center;
-                            vC = Microsoft.Xna.Framework.Vector3.Transform(vC, RInv);
-                            double[] vArr = new double[] { vC.X, vC.Y, vC.Z };
-                            NearestNeighbour<Point> neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: THRESHOLD);
-                            neighbour.MoveNext();
-                            Point p;
-                            Vector3 transformedNormal = Vector3.Zero;
-                            Point firstGuess = neighbour.Current;
-                            if (this.ICPRatio > 0.2f)
-                            {
-                                transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
-                                while (Vector3.Dot(transformedNormal, Vector3.UnitZ) < this.dataContainer.NORMAL_CULLING_LIMIT)//-0.1f)
-                                {
-                                    if (neighbour.MoveNext() == false)
-                                    {
-                                        break;
-                                    }
-                                    transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
-                                }
-                            }
-
-                            p = neighbour.Current;
-                            //transformedNormal = Vector3.Transform(p.normal, onlyRot);
-                            if (p.normal == Vector3.Zero)
-                            {
-                                //p = firstGuess;
-                                ICPOutliers++;
-                                return;
-                                //continue;
-                            }
-
-                            Vector3 pos = p.position;
-                            pos /= 20;
-                            vC /= 20;
-                            Vector3 n = p.normal; //+new Vector3(0.3f, 0.001f, 0.001f);
-                            Vector3 c = Vector3.Cross(pos, n);
-
-                            if (neighbour.CurrentDistance > THRESHOLD)
-                            {
-                                ICPOutliers++;
-                                return;
-                                //continue;
-                            }
-
-                            double[,] tmA = new double[6, 6];
-                            tmA[0, 0] = c.X * c.X; tmA[0, 1] = c.X * c.Y; tmA[0, 2] = c.X * c.Z; tmA[0, 3] = c.X * n.X; tmA[0, 4] = c.X * n.Y; tmA[0, 5] = c.X * n.Z;
-                            tmA[1, 0] = tmA[0, 1]; tmA[1, 1] = c.Y * c.Y; tmA[1, 2] = c.Y * c.Z; tmA[1, 3] = c.Y * n.X; tmA[1, 4] = c.Y * n.Y; tmA[1, 5] = c.Y * n.Z;
-                            tmA[2, 0] = tmA[0, 2]; tmA[2, 1] = tmA[1, 2]; tmA[2, 2] = c.Z * c.Z; tmA[2, 3] = c.Z * n.X; tmA[2, 4] = c.Z * n.Y; tmA[2, 5] = c.Z * n.Z;
-                            tmA[3, 0] = tmA[0, 3]; tmA[3, 1] = tmA[1, 3]; tmA[3, 2] = tmA[2, 3]; tmA[3, 3] = n.X * n.X; tmA[3, 4] = n.X * n.Y; tmA[3, 5] = n.X * n.Z;
-                            tmA[4, 0] = tmA[0, 4]; tmA[4, 1] = tmA[1, 4]; tmA[4, 2] = tmA[2, 4]; tmA[4, 3] = tmA[3, 4]; tmA[4, 4] = n.Y * n.Y; tmA[4, 5] = n.Y * n.Z;
-                            tmA[5, 0] = tmA[0, 5]; tmA[5, 1] = tmA[1, 5]; tmA[5, 2] = tmA[2, 5]; tmA[5, 3] = tmA[3, 5]; tmA[5, 4] = tmA[4, 5]; tmA[5, 5] = n.Z * n.Z;
-
-                            double[] tempB = new double[6];
-
-                            float pMinqTimesN = Vector3.Dot(pos - vC, n);
-
-                            tempB[0] = pMinqTimesN * c.X;
-                            tempB[1] = pMinqTimesN * c.Y;
-                            tempB[2] = pMinqTimesN * c.Z;
-                            tempB[3] = pMinqTimesN * n.X;
-                            tempB[4] = pMinqTimesN * n.Y;
-                            tempB[5] = pMinqTimesN * n.Z;
-
-                            A = A.Add(new Matrix(tmA));
-
-
-
-                            B = B.Subtract(new Vector(tempB));
-                            /* if (neighbour.CurrentDistance < MAX_INLIERDISTANCE)
-                            {
-                                currentICPInliers++;
-                            }
-                            else
-                            {
-                                currentICPOutliers++;
-                            }*/
-
-                            #endregion
+                            workers.Enqueue(worker);                            
                         }
 
                         while (workers.ElementAt(workers.Count - 1).input.Count > 0)
@@ -515,15 +440,12 @@ namespace KADA
 
                         float totalWeight = 0;
                         container.outlierCenter = Vector3.Zero;
-                        List<Vector3> outliers = new List<Vector3>(5000);
-                        int workerOutlierCount = 0;
+                        
                         Outliers = new List<Vector3>();
-                        Vector3 workerOutlierSum = Vector3.Zero;
+                        
                         foreach (ICPWorker w in workers)
                         {
 
-                            //outliers.AddRange(w.Outliers);
-                            Thread.Sleep(1);
                             A.AddInplace(w.A);
                             B.AddInplace(w.B);
                             H.AddInplace(w.H);
@@ -537,81 +459,11 @@ namespace KADA
                                 Outliers.Add(v);
                             }
                             w.reset();
-                            /*if (w.OutlierSum.Length() > 1)
-                                workerOutlierSum += w.OutlierSum;
-                            workerOutlierCount += w.OutlierCount;*/
+                            
                         }
                         Outliers.AddRange(container.OutlierPoints);
                         Vector3 outlierCenter = Vector3.Zero;
 
-                        
-                        /*
-                        foreach (Vector3 outlier in container.outliers)
-                        {
-                            if(!float.IsNaN(outlier.X))
-                            outlierCenter += outlier - center;
-                        }
-                        if (workerOutlierCount > 0 || container.outliers.Count > 0)
-                        {
-                            container.outlierCenter = outlierCenter + workerOutlierSum;
-                            container.outlierCenter /= (container.outliers.Count + workerOutlierCount);
-                        }
-
-                        container.outlierCenter = container.outlierCenter + center;
-
-                        float confidence = 0;
-                        Vector3 diff = Vector3.Zero;
-                        if (dataContainer.outlierCenters.Count > 3)
-                        {
-                            foreach (Vector3 vec in dataContainer.outlierCenters)
-                            {
-                                diff += vec - dataContainer.outlierCenter;
-                            }
-                            confidence = 1f / diff.Length();
-                            if (confidence > 5000)
-                            {
-                                if ((container.outlierCenter - dataContainer.outlierCenter).Length() < 100)
-                                {
-                                    dataContainer.outlierCenters.Enqueue(container.outlierCenter);
-                                }
-                                else
-                                {
-                                    dataContainer.outlierCenters.Dequeue();
-                                }
-
-                            }
-
-                        }
-                        else if ((container.outliers.Count + workerOutlierCount) > 50)
-                        {
-                            dataContainer.outlierCenters.Enqueue(container.outlierCenter);
-                        }
-                        
-
-                        
-
-                       
-
-
-
-                        if (dataContainer.outlierCenters.Count > 5)
-                            dataContainer.outlierCenters.Dequeue();
-
-
-                        Vector3 averagedOutlierCenter = Vector3.Zero;
-
-                        foreach (Vector3 vec in dataContainer.outlierCenters)
-                        {
-                            averagedOutlierCenter += vec;
-                        }
-                        if (dataContainer.outlierCenters.Count()>0)
-                            averagedOutlierCenter /= dataContainer.outlierCenters.Count();
-                        container.outlierCenter = averagedOutlierCenter;
-                        dataContainer.outlierCenter = averagedOutlierCenter;
-                        */
-                        //container.outlierCenter /= workers.Count;
-                        //Console.WriteLine(container.outlierCenter);
-                        //container.center = currentCenter;
                         if (totalWeight > 0)
                         {
                             //A.MultiplyInplace(1f / totalWeight);
@@ -632,13 +484,9 @@ namespace KADA
                         }
 
                         //Point-to-Point component
-
-
-
-
-                        DotNumerics.LinearAlgebra.SingularValueDecomposition s = new SingularValueDecomposition();
+                        
                         Matrix S, U, VT;
-                        s.ComputeSVD(H, out S, out U, out VT);
+                        SVD.ComputeSVD(H, out S, out U, out VT);
 
                         Matrix V = VT.Transpose();
                         Matrix UT = U.Transpose();
@@ -660,11 +508,9 @@ namespace KADA
                             0, 0, 0, 1
                             );
 
-                        //pointR = XNAMatrix.Multiply(pointR, pointR);
-
                         pointR = XNAMatrix.Transpose(pointR);
 
-                        LinearEquations LE = new LinearEquations();
+                        
                         Vector X = null;
                         try
                         {
@@ -673,9 +519,7 @@ namespace KADA
                         catch (Exception)
                         {
                             Vector3 prominentNormal = container.NormalsList[2];
-                            /*XNAMatrix rot = XNAMatrix.CreateFromAxisAngle(prominentNormal, 0.5f);
-                            R = XNAMatrix.Multiply(R, rot);
-                            prevR = R;*/
+                            
                             skip = true;
                             break;
                         }
@@ -697,7 +541,7 @@ namespace KADA
 
                             Vector3 trans = new Vector3((float)(XArrTrans[3]), (float)(XArrTrans[4]), (float)(XArrTrans[5]));
                             trans *= TRANSLATIONWEIGHT;
-                            trans *= model.radius;
+                            trans *= Model.radius;
                             //this.ICPTranslation += trans;
                             if (trans.Length() > 2)
                             {
@@ -730,10 +574,10 @@ namespace KADA
                             R = RTemp * R;
 
                         }
-                        if (normalAligner)
+                        if (NormalAligner)
                         {
-                            this.dataContainer.backgroundEvaluator.NormalInput.Enqueue(container);
-                            normalAligner = false;
+                            this.DataContainer.backgroundEvaluator.NormalInput.Enqueue(container);
+                            NormalAligner = false;
                         }
 
                     }
@@ -742,15 +586,15 @@ namespace KADA
                     {
 
                         container.onlyRot = onlyRot;
-                        normalCounter++;
+                        NormalCounter++;
                         if (container.ICPRatio > MINICPRATIO || !this.REQUIRE_HIGH_QUALITY_RESULT)
                         {
                             container.R = R;
                         }
                         if (container.ICPRatio > MINICPRATIO)
                         {
-                            this.dataContainer.lastConfidentR = R;
-                            this.dataContainer.trackingConfidence = TrackingConfidenceLevel.ICPFULL;
+                            this.DataContainer.lastConfidentR = R;
+                            this.DataContainer.trackingConfidence = TrackingConfidenceLevel.ICPFULL;
                             trackingLostCount = 0;
                         }
                         else if (container.ICPRatio > 0.5f)
@@ -761,11 +605,11 @@ namespace KADA
                             }
                             trackingLostCount = 0;
                             resetCount = 0;
-                            this.dataContainer.trackingConfidence = TrackingConfidenceLevel.ICPTENTATIVE;
+                            this.DataContainer.trackingConfidence = TrackingConfidenceLevel.ICPTENTATIVE;
                         }
                         else
                         {
-                            this.dataContainer.trackingConfidence = TrackingConfidenceLevel.NONE;
+                            this.DataContainer.trackingConfidence = TrackingConfidenceLevel.NONE;
                             trackingLostCount++;
                         }
                         if (trackingLostCount > 100)
@@ -773,18 +617,18 @@ namespace KADA
                             this.reset();
                             trackingLostCount = 0;
                         }
-                        prevRKnown = true;
-                        prevR = R;
+                        PrevRKnown = true;
+                        PrevR = R;
 
                     }
 
 
-                    this.dataContainer.recordTick();
+                    this.DataContainer.recordTick();
 
                 }
 
                 //container.Timings.Add(DateTime.Now);
-                manager.ProcessingQueues[++container.Stage].Enqueue(container);
+                Manager.ProcessingQueues[++container.Stage].Enqueue(container);
                 if (icpCount++ % 90 == 0)
                 {
                     float time = total / 90;
@@ -796,9 +640,9 @@ namespace KADA
                 {
                     total += (DateTime.Now - start).Milliseconds;
                 }
-                if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL && icpCount % 1 == 0)
+                if (DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL && icpCount % 1 == 0)
                 {
-                    this.dataContainer.backgroundEvaluator.PointsInput.Enqueue(Outliers);
+                    this.DataContainer.backgroundEvaluator.PointsInput.Enqueue(Outliers);
                 }
             }
 
@@ -811,24 +655,24 @@ namespace KADA
             bool work = false;
             bool reported = false;
 
-            while (this.dataContainer.Run)
+            while (this.DataContainer.Run)
             {
                 PipelineContainer container = null;
-                while (container == null && this.dataContainer.Run)
+                while (container == null && this.DataContainer.Run)
                 {
                     //container = manager.dequeue(stage);
                     container = null;
-                    if (manager.ProcessingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
+                    if (Manager.ProcessingQueues[stage].Count > DataContainer.MINFRAMESINCONTAINER)
                     {
-                        manager.ProcessingQueues[stage].TryDequeue(out container);
+                        Manager.ProcessingQueues[stage].TryDequeue(out container);
                         if (container == null)
                         {
-                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                            Thread.Sleep(this.DataContainer.SLEEPTIME);
                         }
                     }
                     else
                     {
-                        Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        Thread.Sleep(this.DataContainer.SLEEPTIME);
                     }
                 }
                 if (container == null)
@@ -836,19 +680,19 @@ namespace KADA
                     break;
                 }
                 //container.Timings.Add(DateTime.Now);
-                if (this.dataContainer.DeNoiseAndICP || work)
+                if (this.DataContainer.DeNoiseAndICP || work)
                 {
                     XNAMatrix temp;
-                    if (this.dataContainer.backgroundEvaluator.NormalOutput.TryDequeue(out temp))
+                    if (this.DataContainer.backgroundEvaluator.NormalOutput.TryDequeue(out temp))
                     {
-                        dataContainer.normalRotationAdjustment = temp;
+                        DataContainer.normalRotationAdjustment = temp;
                     }
                     //XNAMatrix onlyRot = container.onlyRot;
-                    XNAMatrix rot = dataContainer.prevNormalR;
-                    if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL || dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPTENTATIVE)
+                    XNAMatrix rot = DataContainer.prevNormalR;
+                    if (DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL || DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPTENTATIVE)
                     {
-                        if (dataContainer.lastConfidentR.M11 != 1)
-                            rot = dataContainer.lastConfidentR;
+                        if (DataContainer.lastConfidentR.M11 != 1)
+                            rot = DataContainer.lastConfidentR;
                         reported = false;
                     }
                     rot.M14 = 0;
@@ -865,15 +709,15 @@ namespace KADA
                     container.modelVectors[1].Normalize();
                     container.modelVectors[2].Normalize();
                     Vector3[] modelVectors = container.modelVectors;
-                    dataContainer.modelNormals[0] = container.modelVectors[0];
-                    dataContainer.modelNormals[1] = container.modelVectors[1];
-                    dataContainer.modelNormals[2] = container.modelVectors[2];
+                    DataContainer.modelNormals[0] = container.modelVectors[0];
+                    DataContainer.modelNormals[1] = container.modelVectors[1];
+                    DataContainer.modelNormals[2] = container.modelVectors[2];
                     if (container.estimatedVectors[0] != Vector3.Zero)
                     {
                         //modelVectors = container.estimatedVectors;
                     }
                     Vector3[] normals = container.NormalsList;
-                    if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL || dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPTENTATIVE)
+                    if (DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL || DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPTENTATIVE)
                     {
                         /*for (int modelV = 0; modelV < 3; modelV++)
                         {
@@ -896,7 +740,7 @@ namespace KADA
 
                     for (int modelV = 0; modelV < 3; modelV++)
                     {
-                        container.estimatedVectors[modelV] = normals[dataContainer.normalMappings[modelV]];
+                        container.estimatedVectors[modelV] = normals[DataContainer.normalMappings[modelV]];
                     }
 
 
@@ -926,7 +770,7 @@ namespace KADA
 
 
                     result = normalR1;
-                    result = result * dataContainer.prevNormalR;
+                    result = result * DataContainer.prevNormalR;
 
                     modelVectors[2] = Vector3.Transform(modelVectors[2], normalR1);
                     axis = Vector3.Cross(modelVectors[2], container.estimatedVectors[2]);
@@ -944,19 +788,19 @@ namespace KADA
                         normalR2 = XNAMatrix.Identity;
                     }
                     result = normalR2 * normalR1;
-                    result = result * dataContainer.prevNormalR;
-                    dataContainer.prevNormalR = result;
+                    result = result * DataContainer.prevNormalR;
+                    DataContainer.prevNormalR = result;
                     //container.normalR = dataContainer.prevNormalR;     
                     container.rawNormalR = result;
-                    container.normalR = dataContainer.normalRotationAdjustment * container.rawNormalR;
-                    if (!reported && dataContainer.trackingConfidence == TrackingConfidenceLevel.NORMALS)
+                    container.normalR = DataContainer.normalRotationAdjustment * container.rawNormalR;
+                    if (!reported && DataContainer.trackingConfidence == TrackingConfidenceLevel.NORMALS)
                     {
-                        prevR = result;//container.normalR;
+                        PrevR = result;//container.normalR;
                         reported = true;
                     }
                 }
                 //container.Timings.Add(DateTime.Now);
-                manager.ProcessingQueues[++container.Stage].Enqueue(container);
+                Manager.ProcessingQueues[++container.Stage].Enqueue(container);
                 //manager.enqueue(container);
             }
 
@@ -966,16 +810,16 @@ namespace KADA
         public void reset()
         {
             System.Diagnostics.Debug.WriteLine("RESET");
-            if (Math.Abs(this.dataContainer.lastConfidentR.Determinant() - 1) < 0.001f)
+            if (Math.Abs(this.DataContainer.lastConfidentR.Determinant() - 1) < 0.001f)
             {
-                prevR = this.dataContainer.lastConfidentR;
+                PrevR = this.DataContainer.lastConfidentR;
             }
             else
             {
-                prevRKnown = false;
+                PrevRKnown = false;
             }
             //this.ICPTranslation = Vector3.Zero;
-            this.oldCenter = Vector3.Zero;
+            this.OldCenter = Vector3.Zero;
         }
 
 
@@ -1082,26 +926,26 @@ namespace KADA
             Vector3 position;
             Vector3 normal;
             Vector3 verticalAvg, horizontalAvg;
-            while (this.dataContainer.Run)
+            while (this.DataContainer.Run)
             {
                 DateTime start = DateTime.Now;
                 PipelineContainer container = null;
-                while (container == null && this.dataContainer.Run)
+                while (container == null && this.DataContainer.Run)
                 {
                     //container = manager.dequeue(stage);
                     container = null;
-                    if (manager.ProcessingQueues[stage].Count > dataContainer.MINFRAMESINCONTAINER)
+                    if (Manager.ProcessingQueues[stage].Count > DataContainer.MINFRAMESINCONTAINER)
                     {
-                        manager.ProcessingQueues[stage].TryDequeue(out container);
+                        Manager.ProcessingQueues[stage].TryDequeue(out container);
                         if (container == null)
                         {
-                            Thread.Sleep(this.dataContainer.SLEEPTIME);
+                            Thread.Sleep(this.DataContainer.SLEEPTIME);
                         }
 
                     }
                     else
                     {
-                        Thread.Sleep(this.dataContainer.SLEEPTIME);
+                        Thread.Sleep(this.DataContainer.SLEEPTIME);
                     }
 
                 }
@@ -1110,7 +954,7 @@ namespace KADA
                     break;
                 }
                 //container.Timings.Add(DateTime.Now);
-                if (this.dataContainer.DeNoiseAndICP)
+                if (this.DataContainer.DeNoiseAndICP)
                 {
                     dc = container.DC;
 
@@ -1144,7 +988,7 @@ namespace KADA
                     container.NormalsList = this.kMeans(container.Normals);
                 }
                 //container.Timings.Add(DateTime.Now);
-                manager.ProcessingQueues[++container.Stage].Enqueue(container);
+                Manager.ProcessingQueues[++container.Stage].Enqueue(container);
 
 
             }
