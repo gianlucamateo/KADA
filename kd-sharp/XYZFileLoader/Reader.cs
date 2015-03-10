@@ -14,12 +14,14 @@ namespace XYZFileLoader
     {
         public Vector3 position;
         public Vector3 normal;
+        public bool inlier;
         //public double[] positionArr;
         public int brickColorInteger;
         public BrickColor brickColor;
 
         public Point(Vector3 pos, Vector3 nor)
         {
+            inlier = false;
             position = pos;
             normal = nor;
             //positionArr = new double[] { pos.X, pos.Y, pos.Z };
@@ -28,7 +30,11 @@ namespace XYZFileLoader
         }
         public Point Copy()
         {
-            return new Point(this.position, this.normal);
+            Point p = new Point(this.position, this.normal);
+            p.inlier = this.inlier;
+            p.brickColorInteger = this.brickColorInteger;
+            p.brickColor = this.brickColor;
+            return p;
         }
     }
 
@@ -44,7 +50,8 @@ namespace XYZFileLoader
             {
                 readFromFile();
             }
-            return new List<Point>(points);
+            List<Point> newList = new List<Point>(points);
+            return newList;
         }
         public static void readFromFile()
         {
@@ -101,7 +108,7 @@ namespace XYZFileLoader
                 //if (Math.Abs(originalPos.X - 1.5f) > 0.01 && Math.Abs(originalPos.X - 62.5f) > 0.01 && Math.Abs(originalPos.Y - 17.7f) > 0.01 && Math.Abs(originalPos.Z + 30.5f) > 0.01 && Math.Abs(originalPos.Z + 1.5f) > 0.01)
                 if (normal != Vector3.Zero)
                 {
-                    if (r.NextDouble() > 0)
+                    if (r.NextDouble() > 0 && p.position != Vector3.Zero)
                     {
                         kdTree.AddPoint(pos, p);
                         points.Add(p);

@@ -275,7 +275,7 @@ namespace KADA
                 //this.SetBrickRotation(container.R);
                 this.SetBrickRotation(R);
 
-                this.outlierCenter = container.outlierCenter;
+                this.outlierCenter = dataContainer.outlierCenter;
                 foreach (Point v in model.points)
                 {
                     Matrix transform = brickRotation * brickTranslation;

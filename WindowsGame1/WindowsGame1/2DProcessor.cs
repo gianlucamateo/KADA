@@ -485,7 +485,7 @@ namespace KADA
             return lastGrid;
         }
 
-        private static void Erode(int width, int height, int[,] grid, int[,] outputGrid)
+        public static void Erode(int width, int height, int[,] grid, int[,] outputGrid)
         {
             for (int x = 0; x < width; x++)
             {

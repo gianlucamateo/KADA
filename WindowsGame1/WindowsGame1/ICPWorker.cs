@@ -21,8 +21,7 @@ namespace KADA
         public ConcurrentQueue<Point> input;
         public Vector3 center;
         public XNAMatrix RInv;
-        public XNAMatrix onlyRot;
-        
+        public XNAMatrix onlyRot;        
         public Matrix A;
         public Vector B;
         public Matrix H, HTemp;
@@ -38,7 +37,7 @@ namespace KADA
         public int ICPInliers, ICPOutliers;
         public Vector3 OutlierSum;
         public float ModelRadius = 0;
-        public List<Vector3> Outliers;
+        public ConcurrentQueue<Vector3> Outliers;
         public int OutlierCount = 0;
 
         Point q, firstGuess;
@@ -49,7 +48,7 @@ namespace KADA
             this.ICPOutliers = 0;
             this.ICPInliers = 0;
             //this.OutlierAvg = Vector3.Zero;
-            this.Outliers = new List<Vector3>();
+            this.Outliers = new ConcurrentQueue<Vector3>();
             this.totalWeight = 0;
             this.dataContainer = dataContainer;
            // this.file = new StreamWriter("ICP_worker" + number + "_" + DateTime.Now.Millisecond + ".txt");
@@ -70,7 +69,7 @@ namespace KADA
         {
             this.OutlierSum = Vector3.Zero;
             OutlierCount = 0;
-            List<Vector3> outliers = new List<Vector3>(this.Outliers);
+            /*List<Vector3> outliers = new List<Vector3>(this.Outliers);
             foreach (Vector3 outlier in outliers)
             {
                 if (outlier.Length() > ModelRadius)
@@ -78,11 +77,12 @@ namespace KADA
                     OutlierCount++;
                     this.OutlierSum += outlier;
                 }
-            }
-
+            }*/
+            Vector3 trash;
            
-
-            this.Outliers.Clear();
+            while(this.Outliers.Count>0){
+                this.Outliers.TryDequeue(out trash);
+            }
             this.ICPOutliers = 0;
             this.ICPInliers = 0;
             this.totalWeight = 0;
@@ -123,7 +123,9 @@ namespace KADA
                     }
                 }
                 v = point.position;
-                
+
+                //point.inlier = true;
+
                 if (container == null)
                 {
                     break;
@@ -135,7 +137,7 @@ namespace KADA
                 vArr[0] = p.X;
                 vArr[1] = p.Y;
                 vArr[2] = p.Z;
-                maxDistance =  dataContainer.ICPThreshold; 
+                maxDistance = dataContainer.ICPThreshold; 
                 if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL)
                 {
                     maxDistance = 2*_3DProcessor.MAX_INLIERDISTANCE;
@@ -167,25 +169,27 @@ namespace KADA
                     {
                         this.ICPOutliers++;
                         //this.OutlierAvg += p;
-                        this.Outliers.Add(p);
-                        continue;
-                       
+                        this.Outliers.Enqueue(p+center);
+                        continue;                       
                     }
                 }
+                
 
                 q = neighbour.Current;
-                transformedNormal = Vector3.Transform(q.normal, onlyRot);
-                //transformedNormal = Vector3.Transform(p.normal, onlyRot);
-                if (q.normal == Vector3.Zero)
+
+                
+                
+                if (/*q == null||*/q.normal == Vector3.Zero||q.position == Vector3.Zero)
                 {
                     //p = firstGuess;
 
                     this.ICPOutliers++;
                     //this.OutlierAvg += p;
-                    this.Outliers.Add(p);
+                    this.Outliers.Enqueue(p + center);
                     //return;
                     continue;
                 }
+                transformedNormal = Vector3.Transform(q.normal, onlyRot);
 
                 p /= dataContainer.model.radius;
                 q.position /= dataContainer.model.radius;
@@ -227,7 +231,7 @@ namespace KADA
                 {
                     this.ICPOutliers++;
                     //this.OutlierAvg += p;
-                    this.Outliers.Add(p);
+                    this.Outliers.Enqueue(p + center);
                     //return;
                     continue;
                 }
@@ -314,9 +318,11 @@ namespace KADA
                 if (neighbour.CurrentDistance < _3DProcessor.MAX_INLIERDISTANCE)
                 {
                     this.ICPInliers++;
+                    point.inlier = true;
                 }
                 else
                 {
+                    this.Outliers.Enqueue(p + center);
                     this.ICPOutliers++;
                 }
             }

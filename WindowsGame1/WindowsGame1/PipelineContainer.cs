@@ -15,7 +15,7 @@ namespace KADA
         public Matrix R;
         public Matrix onlyRot;
         public List<Point> Qi;
-        public List<Vector3> outliers;
+        public List<Vector3> OutlierPoints;
         public Vector3 center, computedCenter;
         public DepthImagePixel[] DepthPixels;
         public byte[] ColorPixels;
@@ -47,7 +47,7 @@ namespace KADA
             this.DC = new DepthColor[640, 480];
             this.R = Matrix.Identity;
             this.Qi = new List<Point>();
-            this.outliers = new List<Vector3>();
+            this.OutlierPoints = new List<Vector3>();
             this.center = Vector3.Zero;
             this.computedCenter = Vector3.Zero;
             this.DepthPixels = new DepthImagePixel[dataContainer.DEPTHLENGTH];

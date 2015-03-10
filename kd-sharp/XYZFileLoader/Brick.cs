@@ -15,10 +15,10 @@ namespace XYZFileLoader
         {
             this.color = color;
             this.points = Reader.getPoints();
-            foreach (Point p in points)
+            /*foreach (Point p in points)
             {
                 
-            }
+            }*/
         }
 
     }

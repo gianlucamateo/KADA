@@ -15,20 +15,22 @@ namespace KADA
         private PipelineDataContainer dataContainer;
         public ConcurrentQueue<PipelineContainer> NormalInput;
         public ConcurrentQueue<Matrix> NormalOutput;
+        public ConcurrentQueue<List<Vector3>> PointsInput;
         private Matrix[] possibleRotations;
+
 
         public BackgroundEvaluator(PipelineDataContainer dataContainer)
         {
+            this.PointsInput = new ConcurrentQueue<List<Vector3>>();
             this.NormalOutput = new ConcurrentQueue<Matrix>();
             this.NormalInput = new ConcurrentQueue<PipelineContainer>();
             this.dataContainer = dataContainer;
             possibleRotations = new Matrix[64];
 
-            Matrix XRot = Matrix.CreateRotationX((float)Math.PI/2);
-            Matrix YRot = Matrix.CreateRotationY((float)Math.PI/2);
-            Matrix ZRot = Matrix.CreateRotationZ((float)Math.PI/2);
+            Matrix XRot = Matrix.CreateRotationX((float)Math.PI / 2);
+            Matrix YRot = Matrix.CreateRotationY((float)Math.PI / 2);
+            Matrix ZRot = Matrix.CreateRotationZ((float)Math.PI / 2);
 
-            
             int x = 0, y = 0, z = 0;
             int count = 0;
             for (int i = 0; i < 64; i++)
@@ -65,12 +67,15 @@ namespace KADA
                     }
                 }
             }
-            Thread normalAnalyzer = new Thread(new ThreadStart(() => AnalyzeNormal()));
+            Thread normalAnalyzer = new Thread(new ThreadStart(() => analyzeNormal()));
             normalAnalyzer.Start();
-           
+
+            Thread blockTracker = new Thread(new ThreadStart(() => trackAdditionalBlock()));
+            blockTracker.Start();
+
         }
 
-        private void AnalyzeNormal()
+        private void analyzeNormal()
         {
             StreamWriter file = new StreamWriter("rotationScores.txt");
             Thread.Sleep(3000);
@@ -101,7 +106,7 @@ namespace KADA
                     points.Add(Vector3.Transform(p, R));
                 }
                 double minDist = double.MaxValue;
-                
+
 
                 Random rand = new Random();
                 double totalDist = 0;
@@ -121,7 +126,7 @@ namespace KADA
                     foreach (Vector3 p in points)
                     {
                         Vector3 point = p;
-                        
+
                         point = Vector3.Transform(point, rot);
                         if (rand.NextDouble() < 0.2)
                         {
@@ -131,19 +136,19 @@ namespace KADA
                             KDTree.NearestNeighbour<Point> neighbour = kdTree.NearestNeighbors(searchArr, 1);
                             neighbour.MoveNext();
                             totalDist += neighbour.CurrentDistance;
-                            pointsCalculated++;                            
-                            values.Add(neighbour.CurrentDistance);                           
+                            pointsCalculated++;
+                            values.Add(neighbour.CurrentDistance);
                         }
                     }
-                    avg = totalDist/pointsCalculated;
+                    avg = totalDist / pointsCalculated;
 
                     foreach (double value in values)
                     {
                         variance += (value - avg) * (value - avg);
                     }
-                    
+
                     variance /= pointsCalculated;
-                    measure = avg + 2*variance;
+                    measure = avg + 2 * variance;
                     file.WriteLine(++count + " : " + avg + " and var: " + variance + " and measure: " + measure);
                     if (measure < minDist)
                     {
@@ -156,6 +161,92 @@ namespace KADA
 
             }
         }
+
+        private void trackAdditionalBlock()
+        {
+            List<Vector3> PointsList;
+            List<Vector3> Outliers = new List<Vector3>();
+            int[,] grid = new int[200, 200], outputGrid = new int[200, 200];
+            float[,] zVals = new float[200, 200];
+            while (this.dataContainer.Run)
+            {
+                PointsInput.TryDequeue(out PointsList);
+                if (PointsList == null)
+                {
+                    Thread.Sleep(3 * dataContainer.SLEEPTIME);
+                    continue;
+                }
+                Outliers.Clear();
+                for (int X = 0; X < grid.GetLength(0); X++)
+                {
+                    for (int Y = 0; Y < grid.GetLength(1); Y++)
+                    {
+                        grid[X, Y] = 0;
+                        zVals[X, Y] = 0;
+                    }
+                }
+                //float minX = float.MaxValue, maxX = 0, minY = float.MaxValue, maxY = 0;
+                foreach (Vector3 p in PointsList)
+                {
+                    
+
+                        /*minX = p.position.X < minX ? p.position.X : minX;
+                        minY = p.position.Y < minY ? p.position.Y : minY;
+
+                        maxX = p.position.X > maxX ? p.position.X : maxX;
+                        maxY = p.position.Y > maxY ? p.position.Y : maxX;*/
+
+                        int X = (int)Math.Floor(p.X / 10) + grid.GetLength(0) / 2;
+                        int Y = (int)Math.Floor(p.Y / 10) + grid.GetLength(1) / 2;
+
+                        
+                            grid[X, Y]++;
+                            zVals[X, Y] += p.Z;
+                        
+                    
+                }
+                for (int X = 0; X < grid.GetLength(0); X++)
+                {
+                    for (int Y = 0; Y < grid.GetLength(1); Y++)
+                    {
+                        if (grid[X, Y] > 0)
+                        {
+                            zVals[X, Y] /= grid[X, Y];
+                            grid[X, Y] = 1;
+                        }
+
+                    }
+                }
+
+
+
+                _2DProcessor.Erode(grid.GetLength(0), grid.GetLength(1), grid, outputGrid);
+                
+
+                Vector3 pos = Vector3.Zero;
+                int count = 0;
+                for (int X = 0; X < outputGrid.GetLength(0); X++)
+                {
+                    for (int Y = 0; Y < outputGrid.GetLength(1); Y++)
+                    {
+                        if (outputGrid[X, Y] > 0)
+                        {
+                            count++;
+                            Vector3 currentPos = new Vector3((X - outputGrid.GetLength(0) / 2) * 10, (Y - outputGrid.GetLength(0) / 2) * 10, zVals[X, Y]);
+                            pos += currentPos;
+                        }
+                    }
+                }
+                pos /= count;
+
+                dataContainer.outlierCenter = pos;
+                Console.WriteLine(pos);
+            }
+
+
+        }
+
+
     }
 
 }

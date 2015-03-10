@@ -31,6 +31,7 @@ namespace XYZFileLoader
             this.points.Add(data);
             Vector v = new Vector(pos);
             this.qi_prime.Add(v);
+            //Console.WriteLine(""+position + "  "+data);
         }
     }
 }

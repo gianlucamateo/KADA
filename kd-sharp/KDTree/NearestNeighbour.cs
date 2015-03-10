@@ -181,6 +181,10 @@ namespace KDTree
             iPointsRemaining--;
             _CurrentDistance = pEvaluated.MinKey;
             _Current = pEvaluated.Min;
+            if (_Current == null)
+            {
+                return false;
+            }
             pEvaluated.RemoveMin();
             return true;
         }

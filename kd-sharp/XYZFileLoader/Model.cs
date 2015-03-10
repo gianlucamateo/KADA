@@ -75,10 +75,11 @@ namespace XYZFileLoader
 
             foreach (Point p in this.points)
             {
-                if (p.normal != Vector3.Zero)
+                if (p.normal != Vector3.Zero && p.position != Vector3.Zero)
                 {
-                    kdTree.AddPoint(p.position, p.Copy());
+                    kdTree.AddPoint(p.position, p);
                 }
+                
             }
             return kdTree;
         }
@@ -108,8 +109,7 @@ namespace XYZFileLoader
                             #region check Z
                             newVoxel = new List<Point>(pointGrid[x, y, z - 1]);
                             foreach (Point p in pointGrid[x, y, z - 1])
-                            {
-                                
+                            {                                
                                 if (p.normal.Z > 0)
                                 {
                                     newVoxel.Remove(p);

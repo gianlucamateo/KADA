@@ -30,11 +30,9 @@ namespace KADA
         public const float POINTTOPLANEWEIGHT = 0.5f;
         public const float MAXROTATION = (float)Math.PI / 3;
         public const float TRANSLATIONWEIGHT = 1f;
-        public const float MAX_INLIERDISTANCE = 8;
+        public const float MAX_INLIERDISTANCE = 12;
         private const int ICPITERATIONS = 1;
         private const int WORKERCOUNT = 5;
-
-
 
         public Vector3 oldCenter = Vector3.Zero;
 
@@ -44,13 +42,10 @@ namespace KADA
         private KDTreeWrapper brickWrapper;
         private static XNAMatrix prevR;
         private static bool prevRKnown = false;
-
-
+        
         private Vector3 ICPTranslation = Vector3.Zero;
 
-
         private Model model;
-
 
         private int normalCounter = 0;
 
@@ -207,7 +202,7 @@ namespace KADA
                     int counter = 0;
                     DepthColor c;
                     Vector3 center;
-                    Point point = new Point();
+                    Point point = new Point(Vector3.Zero, Vector3.Zero);
 
                     if (oldCenter == Vector3.Zero)
                     {
@@ -238,7 +233,7 @@ namespace KADA
                     y = 0;
                     z = 0;
                     counter = 0;
-                    container.outliers.Clear();
+                    container.OutlierPoints.Clear();
                     for (int xP = 0; xP < dc.GetLength(0); xP++)
                     {
                         for (int yP = 0; yP < dc.GetLength(1); yP++)
@@ -249,23 +244,26 @@ namespace KADA
                             {
                                 float dist;
                                 Vector3.Distance(ref center, ref c.Position, out dist);
+                                
+                                
+                                double[] arr = { c.Position.X, c.Position.Y, c.Position.Z };
+
+                                point.position = c.Position;
+                                point.normal = container.Normals[639 - xP, 479 - yP];
+                                point.brickColorInteger = c.BrickColorInteger;
                                 if (dist < dataContainer.ICPThreshold)
                                 {
                                     x += c.Position.X;
                                     y += c.Position.Y;
                                     z += c.Position.Z;
                                     counter++;
-                                    double[] arr = { c.Position.X, c.Position.Y, c.Position.Z };
-
-                                    point.position = c.Position;
-                                    point.normal = container.Normals[639 - xP, 479 - yP];
-                                    point.brickColorInteger = c.BrickColorInteger;
                                     qi.Add(point);
                                 }
                                 else
                                 {
-                                    container.outliers.Add(c.Position);
+                                    container.OutlierPoints.Add(point.position);
                                 }
+                                
                             }
                         }
                     }
@@ -296,6 +294,7 @@ namespace KADA
             int icpCount = 0;
             float total = 0;
             Matrix H;
+            List<Vector3> Outliers = null;
 
 
             while (this.dataContainer.Run)
@@ -408,7 +407,7 @@ namespace KADA
                         int discard = 0;
                         for (int count = 0; count < qi.Count; count++)
                         {
-
+                            
                             if (discard++ % 1 != 0)
                             {
                                 continue;
@@ -421,7 +420,9 @@ namespace KADA
                             int upperLimit = count + 100;
                             for (int innerCount = count; innerCount < qi.Count && innerCount < upperLimit; innerCount++)
                             {
+                               
                                 worker.input.Enqueue(qi[innerCount]);
+                                
                                 count++;
                             }
                             workers.Enqueue(worker);
@@ -516,6 +517,7 @@ namespace KADA
                         container.outlierCenter = Vector3.Zero;
                         List<Vector3> outliers = new List<Vector3>(5000);
                         int workerOutlierCount = 0;
+                        Outliers = new List<Vector3>();
                         Vector3 workerOutlierSum = Vector3.Zero;
                         foreach (ICPWorker w in workers)
                         {
@@ -528,13 +530,22 @@ namespace KADA
                             totalWeight += w.totalWeight;
                             container.ICPOutliers += w.ICPOutliers;
                             container.ICPInliers += w.ICPInliers;
+                            while (w.Outliers.Count > 0)
+                            {
+                                Vector3 v;
+                                w.Outliers.TryDequeue(out v);
+                                Outliers.Add(v);
+                            }
                             w.reset();
-                            if (w.OutlierSum.Length() > 1)
+                            /*if (w.OutlierSum.Length() > 1)
                                 workerOutlierSum += w.OutlierSum;
-                            workerOutlierCount += w.OutlierCount;
+                            workerOutlierCount += w.OutlierCount;*/
                         }
+                        Outliers.AddRange(container.OutlierPoints);
                         Vector3 outlierCenter = Vector3.Zero;
 
+                        
+                        /*
                         foreach (Vector3 outlier in container.outliers)
                         {
                             if(!float.IsNaN(outlier.X))
@@ -577,8 +588,7 @@ namespace KADA
                         }
                         
 
-                        //if ((container.outliers.Count + workerOutlierCount) > 50)
-                        //    dataContainer.outlierCenters.Enqueue(container.outlierCenter);
+                        
 
                        
 
@@ -598,7 +608,7 @@ namespace KADA
                             averagedOutlierCenter /= dataContainer.outlierCenters.Count();
                         container.outlierCenter = averagedOutlierCenter;
                         dataContainer.outlierCenter = averagedOutlierCenter;
-
+                        */
                         //container.outlierCenter /= workers.Count;
                         //Console.WriteLine(container.outlierCenter);
                         //container.center = currentCenter;
@@ -785,6 +795,10 @@ namespace KADA
                 else
                 {
                     total += (DateTime.Now - start).Milliseconds;
+                }
+                if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL && icpCount % 1 == 0)
+                {
+                    this.dataContainer.backgroundEvaluator.PointsInput.Enqueue(Outliers);
                 }
             }
 
