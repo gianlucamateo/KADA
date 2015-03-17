@@ -10,12 +10,12 @@ using Image = System.Drawing.Image;
 using System.Drawing;
 using Color = System.Drawing.Color;
 using KDTree;
-using XYZFileLoader;
-using Point = XYZFileLoader.Point;
+using KADA;
+using Point = KADA.Point;
 using DotNumerics.LinearAlgebra;
 using Matrix = DotNumerics.LinearAlgebra.Matrix;
 using XNAMatrix = Microsoft.Xna.Framework.Matrix;
-using Model = XYZFileLoader.Model;
+using Model = KADA.Model;
 
 using System.Threading.Tasks;
 
@@ -69,7 +69,7 @@ namespace KADA
             Thread Stage4 = new Thread(new ThreadStart(() => GenerateCenter()));
             Stage4.Start();            
 
-            KDTreeWrapper tree = dataContainer.model.generateKDTree();
+            KDTreeWrapper tree = dataContainer.model.GenerateKDTree();
             ConcurrentQueue<ICPWorker> workers1, workers2;
             workers1 = new ConcurrentQueue<ICPWorker>();
             workers2 = new ConcurrentQueue<ICPWorker>();
@@ -97,7 +97,7 @@ namespace KADA
 
             for (int i = 0; i < 1; i++)
             {
-                Thread x = new Thread(new ThreadStart(() => tryAlign()));
+                Thread x = new Thread(new ThreadStart(() => TryAlign()));
                 x.Start();
                 Stage7.Add(x);
             }
@@ -239,7 +239,8 @@ namespace KADA
                                 }
                                 else
                                 {
-                                    container.OutlierPoints.Add(point.position);
+                                    point.ConsideredICP = false;
+                                    container.OutlierPoints.Add(point);
                                 }
                                 
                             }
@@ -255,6 +256,7 @@ namespace KADA
 
 
                     container.center = center;
+                    DataContainer.center = center;
 
                 }
 
@@ -305,7 +307,7 @@ namespace KADA
             int icpCount = 0;
             float total = 0;
             Matrix H;
-            List<Vector3> Outliers = null;
+            List<Point> Outliers = null;
 
             while (this.DataContainer.Run)
             {
@@ -441,7 +443,7 @@ namespace KADA
                         float totalWeight = 0;
                         container.outlierCenter = Vector3.Zero;
                         
-                        Outliers = new List<Vector3>();
+                        Outliers = new List<Point>();
                         
                         foreach (ICPWorker w in workers)
                         {
@@ -456,7 +458,9 @@ namespace KADA
                             {
                                 Vector3 v;
                                 w.Outliers.TryDequeue(out v);
-                                Outliers.Add(v);
+                                Point p = new Point(v, Vector3.Zero);
+                                p.ConsideredICP = true;
+                                Outliers.Add(p);
                             }
                             w.reset();
                             
@@ -519,7 +523,6 @@ namespace KADA
                         catch (Exception)
                         {
                             Vector3 prominentNormal = container.NormalsList[2];
-                            
                             skip = true;
                             break;
                         }
@@ -528,7 +531,7 @@ namespace KADA
 
                         if (!skip)
                         {
-                            float currentWeight = 0.2f + Math.Min(0.8f, 1f / container.ICPRatio);
+                            float currentWeight = 1;//0.2f + Math.Min(0.8f, 1f / container.ICPRatio);
                             double[] XArrTrans = X.ToArray();
 
                             X = X.Multiply(POINTTOPLANEWEIGHT * currentWeight);
@@ -572,6 +575,7 @@ namespace KADA
                             RTemp = RTemp * pointR;
                             RTemp = XNAMatrix.CreateTranslation(trans) * RTemp;
                             R = RTemp * R;
+                            DataContainer.R = R;
 
                         }
                         if (NormalAligner)
@@ -614,12 +618,16 @@ namespace KADA
                         }
                         if (trackingLostCount > 100)
                         {
-                            this.reset();
+                            this.Reset();
                             trackingLostCount = 0;
                         }
                         PrevRKnown = true;
                         PrevR = R;
 
+                    }
+                    if (this.DataContainer.editMode)
+                    {
+                        this.DataContainer.trackingConfidence = TrackingConfidenceLevel.ICPFULL;
                     }
 
 
@@ -649,7 +657,7 @@ namespace KADA
 
         }
 
-        public void tryAlign()
+        public void TryAlign()
         {
             int stage = 7;
             bool work = false;
@@ -807,23 +815,24 @@ namespace KADA
 
         }
 
-        public void reset()
+        public void Reset()
         {
             System.Diagnostics.Debug.WriteLine("RESET");
-            if (Math.Abs(this.DataContainer.lastConfidentR.Determinant() - 1) < 0.001f)
+            /*if (Math.Abs(this.DataContainer.lastConfidentR.Determinant() - 1) < 0.001f)
             {
                 PrevR = this.DataContainer.lastConfidentR;
             }
             else
             {
                 PrevRKnown = false;
-            }
+            }*/
+            PrevR = XNAMatrix.Identity;
             //this.ICPTranslation = Vector3.Zero;
             this.OldCenter = Vector3.Zero;
         }
 
 
-        public Vector3[] kMeans(Vector3[,] normals)
+        public Vector3[] KMeans(Vector3[,] normals)
         {
             //Bitmap norm = new Bitmap(640, 480);
             Vector3 X = new Vector3(1, 0, 0);
@@ -985,7 +994,7 @@ namespace KADA
                             }
                         }
                     }
-                    container.NormalsList = this.kMeans(container.Normals);
+                    container.NormalsList = this.KMeans(container.Normals);
                 }
                 //container.Timings.Add(DateTime.Now);
                 Manager.ProcessingQueues[++container.Stage].Enqueue(container);

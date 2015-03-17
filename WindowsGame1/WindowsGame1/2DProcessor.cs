@@ -48,19 +48,19 @@ namespace KADA
             if (!dataContainer.UseYUV)
             {
                 Bitmap red = (Bitmap)Image.FromFile("ressources/histogram/Red_cleaned_filled.png", true);
-                IHistogram r = new RGBHistogram(red, 15, 16, XYZFileLoader.BrickColor.RED, dataContainer, new Vector3(123, -20, 118));
+                IHistogram r = new RGBHistogram(red, 15, 16, KADA.BrickColor.RED, dataContainer, new Vector3(123, -20, 118));
                 Histograms.Add(r);
 
                 Bitmap green = (Bitmap)Image.FromFile("ressources/histogram/Green_cleaned_filled.png", true);
-                IHistogram g = new RGBHistogram(green, 8, 16, XYZFileLoader.BrickColor.GREEN, dataContainer, new Vector3(125, -16, -28));
+                IHistogram g = new RGBHistogram(green, 8, 16, KADA.BrickColor.GREEN, dataContainer, new Vector3(125, -16, -28));
                 Histograms.Add(g);
 
                 Bitmap blue = (Bitmap)Image.FromFile("ressources/histogram/Blue_cleaned_filled.png", true);
-                IHistogram b = new RGBHistogram(blue, 8, 16, XYZFileLoader.BrickColor.BLUE, dataContainer, new Vector3(126, 39, -18));
+                IHistogram b = new RGBHistogram(blue, 8, 16, KADA.BrickColor.BLUE, dataContainer, new Vector3(126, 39, -18));
                 Histograms.Add(b);
 
                 Bitmap yellow = (Bitmap)Image.FromFile("ressources/histogram/Yellow_cleaned_filled.png", true);
-                IHistogram ye = new RGBHistogram(yellow, 12, 16, XYZFileLoader.BrickColor.YELLOW, dataContainer, new Vector3(126, -65, 41));
+                IHistogram ye = new RGBHistogram(yellow, 12, 16, KADA.BrickColor.YELLOW, dataContainer, new Vector3(126, -65, 41));
                 Histograms.Add(ye);
             }
             else
@@ -70,13 +70,13 @@ namespace KADA
                 Bitmap green = (Bitmap)Image.FromFile("ressources/histogram/YUV_green.bmp", true);
                 Bitmap blue = (Bitmap)Image.FromFile("ressources/histogram/YUV_blue.bmp", true);
                 Bitmap yellow = (Bitmap)Image.FromFile("ressources/histogram/YUV_yellow.bmp", true);               
-                IHistogram g = new YUVHistogram(green, blacklist, XYZFileLoader.BrickColor.GREEN);
+                IHistogram g = new YUVHistogram(green, blacklist, KADA.BrickColor.GREEN);
                 Histograms.Add(g);
-                IHistogram r = new YUVHistogram(red, blacklist, XYZFileLoader.BrickColor.RED);
+                IHistogram r = new YUVHistogram(red, blacklist, KADA.BrickColor.RED);
                 Histograms.Add(r);
-                IHistogram b = new YUVHistogram(blue, blacklist, XYZFileLoader.BrickColor.BLUE);
+                IHistogram b = new YUVHistogram(blue, blacklist, KADA.BrickColor.BLUE);
                 Histograms.Add(b);
-                IHistogram y = new YUVHistogram(yellow, blacklist, XYZFileLoader.BrickColor.YELLOW);
+                IHistogram y = new YUVHistogram(yellow, blacklist, KADA.BrickColor.YELLOW);
                 //Histograms.Add(y);
             }
 

@@ -8,7 +8,7 @@
     <ProjectGuid>{3E8764A8-729E-4E6F-84A7-D01608AAD9DA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>XYZFileLoader</RootNamespace>
+    <RootNamespace>KADA</RootNamespace>
     <AssemblyName>XYZFileLoader</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
@@ -53,6 +53,7 @@
     <Compile Include="KDTreeWrapper.cs" />
     <Compile Include="Reader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TentativeModel.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\dotNumerics\DotNumerics\DotNumerics VS2008.csproj">

@@ -9,9 +9,9 @@ using System.Threading;
 using Matrix = DotNumerics.LinearAlgebra.Matrix;
 using XNAMatrix = Microsoft.Xna.Framework.Matrix;
 using Vector = DotNumerics.LinearAlgebra.Vector;
-using Point = XYZFileLoader.Point;
+using Point = KADA.Point;
 using KDTree;
-using XYZFileLoader;
+using KADA;
 
 namespace KADA
 {
@@ -168,7 +168,7 @@ namespace KADA
                     if (!found)
                     {
                         this.ICPOutliers++;
-                        //this.OutlierAvg += p;
+                        
                         this.Outliers.Enqueue(p+center);
                         continue;                       
                     }
@@ -179,14 +179,14 @@ namespace KADA
 
                 
                 
-                if (/*q == null||*/q.normal == Vector3.Zero||q.position == Vector3.Zero)
+                if (q.normal == Vector3.Zero||q.position == Vector3.Zero)
                 {
-                    //p = firstGuess;
+                   
 
                     this.ICPOutliers++;
-                    //this.OutlierAvg += p;
+                    
                     this.Outliers.Enqueue(p + center);
-                    //return;
+                    
                     continue;
                 }
                 transformedNormal = Vector3.Transform(q.normal, onlyRot);
@@ -207,7 +207,7 @@ namespace KADA
 
 
                 float weight = Math.Abs(Vector3.Dot(transformedNormal, point.normal));
-                weight = (1 - weight);//(float)Math.Log((1-weight)*2+1)+0.05f;//
+                weight = (1 - weight);
                 foreach (BrickColor bc in possibleColors)
                 {
                     int number = (int)bc;
@@ -318,7 +318,7 @@ namespace KADA
                 if (neighbour.CurrentDistance < _3DProcessor.MAX_INLIERDISTANCE)
                 {
                     this.ICPInliers++;
-                    point.inlier = true;
+                    point.ConsideredICP = true;
                 }
                 else
                 {

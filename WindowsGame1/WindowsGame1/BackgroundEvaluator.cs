@@ -6,7 +6,8 @@ using System.Threading;
 using Microsoft.Xna.Framework;
 using System.Collections.Concurrent;
 using System.IO;
-using Point = XYZFileLoader.Point;
+using Point = KADA.Point;
+
 
 namespace KADA
 {
@@ -15,13 +16,13 @@ namespace KADA
         private PipelineDataContainer dataContainer;
         public ConcurrentQueue<PipelineContainer> NormalInput;
         public ConcurrentQueue<Matrix> NormalOutput;
-        public ConcurrentQueue<List<Vector3>> PointsInput;
+        public ConcurrentQueue<List<Point>> PointsInput;
         private Matrix[] possibleRotations;
 
 
         public BackgroundEvaluator(PipelineDataContainer dataContainer)
         {
-            this.PointsInput = new ConcurrentQueue<List<Vector3>>();
+            this.PointsInput = new ConcurrentQueue<List<Point>>();
             this.NormalOutput = new ConcurrentQueue<Matrix>();
             this.NormalInput = new ConcurrentQueue<PipelineContainer>();
             this.dataContainer = dataContainer;
@@ -68,7 +69,7 @@ namespace KADA
                 }
             }
             Thread normalAnalyzer = new Thread(new ThreadStart(() => analyzeNormal()));
-            normalAnalyzer.Start();
+            //normalAnalyzer.Start();
 
             Thread blockTracker = new Thread(new ThreadStart(() => trackAdditionalBlock()));
             blockTracker.Start();
@@ -78,10 +79,10 @@ namespace KADA
         private void analyzeNormal()
         {
             StreamWriter file = new StreamWriter("rotationScores.txt");
-            Thread.Sleep(3000);
+            Thread.Sleep(10000);
             List<Vector3> points = new List<Vector3>();
             PipelineContainer container = null;
-            XYZFileLoader.KDTreeWrapper kdTree = dataContainer.model.getKDTree();
+            KADA.KDTreeWrapper kdTree = dataContainer.model.getKDTree();
             double[] searchArr = new double[3];
             List<double> values = new List<double>();
             Matrix bestRot = Matrix.Identity;
@@ -164,9 +165,10 @@ namespace KADA
 
         private void trackAdditionalBlock()
         {
-            List<Vector3> PointsList;
-            List<Vector3> Outliers = new List<Vector3>();
+            List<Point> PointsList;
+            //List<Vector3> Outliers = new List<Vector3>();
             int[,] grid = new int[200, 200], outputGrid = new int[200, 200];
+            bool[,] excludeFromErosion = new bool[200, 200];
             float[,] zVals = new float[200, 200];
             while (this.dataContainer.Run)
             {
@@ -176,34 +178,32 @@ namespace KADA
                     Thread.Sleep(3 * dataContainer.SLEEPTIME);
                     continue;
                 }
-                Outliers.Clear();
+                //Outliers.Clear();
                 for (int X = 0; X < grid.GetLength(0); X++)
                 {
                     for (int Y = 0; Y < grid.GetLength(1); Y++)
                     {
                         grid[X, Y] = 0;
                         zVals[X, Y] = 0;
+                        outputGrid[X, Y] = 0;
+                        excludeFromErosion[X, Y] = false;
                     }
                 }
                 //float minX = float.MaxValue, maxX = 0, minY = float.MaxValue, maxY = 0;
-                foreach (Vector3 p in PointsList)
+                foreach (Point p in PointsList)
                 {
-                    
 
-                        /*minX = p.position.X < minX ? p.position.X : minX;
-                        minY = p.position.Y < minY ? p.position.Y : minY;
+                    int X = (int)Math.Floor(p.position.X / 10) + grid.GetLength(0) / 2;
+                    int Y = (int)Math.Floor(p.position.Y / 10) + grid.GetLength(1) / 2;
 
-                        maxX = p.position.X > maxX ? p.position.X : maxX;
-                        maxY = p.position.Y > maxY ? p.position.Y : maxX;*/
 
-                        int X = (int)Math.Floor(p.X / 10) + grid.GetLength(0) / 2;
-                        int Y = (int)Math.Floor(p.Y / 10) + grid.GetLength(1) / 2;
+                    grid[X, Y]++;
+                    zVals[X, Y] += p.position.Z;
+                    if (p.ConsideredICP)
+                    {
+                        excludeFromErosion[X, Y] = true;
+                    }
 
-                        
-                            grid[X, Y]++;
-                            zVals[X, Y] += p.Z;
-                        
-                    
                 }
                 for (int X = 0; X < grid.GetLength(0); X++)
                 {
@@ -221,7 +221,17 @@ namespace KADA
 
 
                 _2DProcessor.Erode(grid.GetLength(0), grid.GetLength(1), grid, outputGrid);
-                
+                for (int X = 0; X < grid.GetLength(0); X++)
+                {
+                    for (int Y = 0; Y < grid.GetLength(1); Y++)
+                    {
+                        if (excludeFromErosion[X, Y])
+                        {
+                            outputGrid[X, Y] = grid[X, Y];
+                        }
+                    }
+                }
+
 
                 Vector3 pos = Vector3.Zero;
                 int count = 0;
@@ -240,7 +250,24 @@ namespace KADA
                 pos /= count;
 
                 dataContainer.outlierCenter = pos;
-                Console.WriteLine(pos);
+
+                TentativeModel bestGuess = null;
+                float distance = float.MaxValue;
+                foreach (TentativeModel model in dataContainer.model.tentativeModels)
+                {
+                    Vector3 p = model.TentativeBrick.center;
+                    p = Vector3.Transform(p, dataContainer.R);
+                    p += dataContainer.center;
+                    float tentativeDistance = Math.Abs((p - pos).Length());
+                    if (tentativeDistance < distance)
+                    {
+                        distance = tentativeDistance;
+                        bestGuess = model;
+                    }
+                }
+                dataContainer.tentativeModel = bestGuess;
+                Console.WriteLine(distance);
+
             }
 
 

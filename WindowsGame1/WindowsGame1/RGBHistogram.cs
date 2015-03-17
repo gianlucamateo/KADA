@@ -13,13 +13,13 @@ namespace KADA
         public float[, ,] colorBins;
         private readonly int RESOLUTION;
         private readonly int BINSIZE;
-        public XYZFileLoader.BrickColor color;
+        public KADA.BrickColor color;
         Matrix RGBToYUV, YUVToRGB;
         PipelineDataContainer dataContainer;
         private Vector3 YUV;
 
         private float threshold;
-        public RGBHistogram(Bitmap image, float threshold, int resolution, XYZFileLoader.BrickColor color, PipelineDataContainer dataContainer, Vector3 YUV)
+        public RGBHistogram(Bitmap image, float threshold, int resolution, KADA.BrickColor color, PipelineDataContainer dataContainer, Vector3 YUV)
         {
             this.dataContainer = dataContainer;
             this.RGBToYUV = new Matrix(0.299f, 0.587f, 0.144f, 0f, -0.14713f, -0.28886f, 0.436f, 0f, 0.615f, -0.51499f, -0.10001f, 0f, 0f, 0f, 0f, 1f);
@@ -142,7 +142,7 @@ namespace KADA
 
         }
 
-        public XYZFileLoader.BrickColor GetColor()
+        public KADA.BrickColor GetColor()
         {
             return this.color;
         }

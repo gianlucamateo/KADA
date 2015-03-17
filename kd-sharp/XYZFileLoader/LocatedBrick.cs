@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 
-namespace XYZFileLoader
+namespace KADA
 {
 
     public class LocatedBrick
@@ -15,6 +15,7 @@ namespace XYZFileLoader
         private Brick brick;
         private Vector3 root = new Vector3(Model.DIMENSION / 2, Model.DIMENSION / 2, Model.DIMENSION / 2);
         private Vector3 voxelDimensions = new Vector3(64.0f / 4, 19.2f, 32.0f / 2);
+        public Vector3 center;
 
         public LocatedBrick(bool rotated, Vector3 voxelOffset, BrickColor color)
         {
@@ -57,9 +58,15 @@ namespace XYZFileLoader
             //Vector3 val = new Vector3(this.brick.color.R, this.brick.color.G, this.brick.color.B);
             //return val/255f;
         }
-
-        public void insert(List<Point>[, ,] pointGrid, Brick[, ,] voxelGrid)
+        Brick[, ,] tentative;
+        public bool insert(List<Point>[, ,] pointGrid, Brick[, ,] voxelGrid,bool apply)
         {
+            if (tentative == null)
+            {
+                tentative = new Brick[voxelGrid.GetLength(0), voxelGrid.GetLength(1), voxelGrid.GetLength(2)];
+            }
+            Array.Copy(voxelGrid, tentative, voxelGrid.GetLength(0) * voxelGrid.GetLength(1) * voxelGrid.GetLength(2));
+
             this.Transformation = Matrix.Identity;
             Vector3 translation = new Vector3();
             translation.X = voxelDimensions.X * voxelOffset.X;
@@ -79,23 +86,109 @@ namespace XYZFileLoader
 
 
             this.Transformation = Matrix.Multiply(this.Transformation, Matrix.CreateTranslation(translation));
+
+            int lowerConnections = 0, upperConnections = 0;
             for (int BrickX = 0; BrickX < 4; BrickX++)
             {
                 for (int BrickY = 0; BrickY > -2; BrickY--)
                 {
                     if (rotated == false)
                     {
-                        voxelGrid[(int)voxelOffset.X + BrickX + (int)root.X, (int)voxelOffset.Y + (int)root.Y, (int)voxelOffset.Z + BrickY + (int)root.Z] = this.brick;
+
+                        int x = (int)voxelOffset.X + BrickX + (int)root.X;
+                        int y = (int)voxelOffset.Y + (int)root.Y;
+                        int z = (int)voxelOffset.Z + BrickY + (int)root.Z;
+
+                        if (x < 0 || y < 0 || z < 0 ||
+                            x >= tentative.GetLength(0) || y >= tentative.GetLength(1) || z >= tentative.GetLength(2))
+                        {
+                            return false;
+                        }
+                        Brick b = tentative[x, y, z];
+                        if (b == null)
+                        {
+                            tentative[x, y, z] = this.brick;                            
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                        if (y > 0)
+                        {
+                            if (tentative[x, y - 1, z] != null)
+                            {
+                                lowerConnections++;
+                            }
+                        }
+                        if (y < tentative.GetLength(1)-1)
+                        {
+                            if (tentative[x, y + 1, z] != null)
+                            {
+                                upperConnections++;
+                            }
+                        }
                     }
                     else
                     {
                         int x = (int)voxelOffset.Z + BrickY + (int)root.X-1;
                         int y = (int)voxelOffset.Y + (int)root.Y;
                         int z = (int)voxelOffset.X + BrickX + (int)root.Z+1;
-                        voxelGrid[x, y, z] = this.brick;
+
+                        if (x < 0 || y < 0 || z < 0 ||
+                            x >= tentative.GetLength(0) || y >= tentative.GetLength(1) || z >= tentative.GetLength(2))
+                        {
+                            return false;
+                        }
+
+                        Brick b = tentative[x, y, z];
+                        if (b == null)
+                        {
+                            tentative[x, y, z] = this.brick;                            
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                        if (y > 0)
+                        {
+                            if (tentative[x, y - 1, z] != null)
+                            {
+                                lowerConnections++;
+                            }
+                        }
+                        if (y < tentative.GetLength(1) - 1)
+                        {
+                            if (tentative[x, y + 1, z] != null)
+                            {
+                                upperConnections++;
+                            }
+                        }
+                    }
+                    
+                }
+            }
+            if (apply == false)
+            {
+                if (lowerConnections > 0 && upperConnections > 0)
+                {
+                    return false;
+                }
+                if (lowerConnections == 0)
+                {
+                    if (upperConnections < 2)
+                    {
+                        return false;
+                    }
+                }
+                if (upperConnections == 0)
+                {
+                    if (lowerConnections < 2)
+                    {
+                        return false;
                     }
                 }
             }
+            int count = 0;
             foreach (Point p in this.brick.points)
             {
 
@@ -146,10 +239,20 @@ namespace XYZFileLoader
                 }
                 Vector3 offset = new Vector3(-36.5f, -17f, 15f);
                 pCopy.position += offset;
-                pointGrid[x, y, z].Add(pCopy);
-
+                center += pCopy.position;
+                count++;
+               
+                if (apply)
+                {
+                    pointGrid[x, y, z].Add(pCopy);
+                }
 
             }
+            if (apply){ 
+                Array.Copy(tentative, voxelGrid, tentative.GetLength(0) * tentative.GetLength(1) * tentative.GetLength(2));
+            }
+            this.center /= count;
+            return true;
 
         }
     }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
-using Model = XYZFileLoader.Model;
+using Model = KADA.Model;
 
 namespace KADA
 {
@@ -26,6 +26,7 @@ namespace KADA
         public DateTime lastTick = DateTime.Now, lastGeneration = DateTime.Now;
         public int COLORLENGTH, DEPTHLENGTH;
         public Model model;
+        public TentativeModel tentativeModel;
         public bool GenerateBackground = false;
         public bool DeNoiseAndICP = false;
         public int SLEEPTIME = 1;
@@ -37,17 +38,24 @@ namespace KADA
         public Queue<Vector3> outlierCenters;
         public Vector3 outlierCenter;
         public Vector3[] modelNormals;
+        public Vector3 center;
         public BackgroundEvaluator backgroundEvaluator;
+        public Matrix R;
+        public bool editMode;
 
         public float ICPThreshold = 200;
 
         public PipelineDataContainer()
         {
+            this.editMode = false;
+            this.R = new Matrix();
+            this.center = Vector3.Zero;
             this.outlierCenter = Vector3.Zero;
             this.outlierCenters = new Queue<Vector3>();
             this.backgroundEvaluator = new BackgroundEvaluator(this);
             this.modelNormals = new Vector3[3];
-            this.model = new Model();
+            this.model = new Model(true);
+            this.tentativeModel = new TentativeModel(model.Bricks,new LocatedBrick(false,Vector3.Zero,BrickColor.NONE));
             this.normalMappings = new int[3];
             this.modelNormals[0] = Vector3.UnitX;
             this.modelNormals[1] = Vector3.UnitY;
@@ -71,9 +79,9 @@ namespace KADA
             this.lastGeneration = DateTime.Now;
         }
 
-        public XYZFileLoader.KDTreeWrapper generateKDTree()
+        public KADA.KDTreeWrapper generateKDTree()
         {
-            return model.generateKDTree();
+            return model.GenerateKDTree();
         }
     }
 }

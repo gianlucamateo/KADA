@@ -15,10 +15,10 @@ using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.Collections.Concurrent;
 
-using XYZFileLoader;
-using Point = XYZFileLoader.Point;
+using KADA;
+using Point = KADA.Point;
 using XNAModel = Microsoft.Xna.Framework.Graphics.Model;
-using Model = XYZFileLoader.Model;
+using Model = KADA.Model;
 
 
 namespace KADA
@@ -43,7 +43,7 @@ namespace KADA
         }
     }
     #endregion
-    #region PCViewer
+
 
     public class PCViewer : Microsoft.Xna.Framework.Game
     {
@@ -99,6 +99,7 @@ namespace KADA
         bool freeze = false;
 
         private Model model;
+        private TentativeModel tentativeModel;
         private PipelineManager manager;
 
         private PipelineDataContainer dataContainer;
@@ -159,7 +160,7 @@ namespace KADA
         //Stage 8
         private void UpdateInstanceInformation()
         {
-            
+
             int stage = 8;
             int lastFrame = 0;
             bool fromOutOfOrder = false;
@@ -171,7 +172,7 @@ namespace KADA
                     continue;
                 }
                 PipelineContainer container = null;
-                
+
                 while (container == null && this.dataContainer.Run)
                 {
                     //container = manager.dequeue(stage);
@@ -222,7 +223,7 @@ namespace KADA
                     }
                     continue; //causes lockup
                 }*/
-                
+
 
                 DepthColor[,] depth = container.DC;
                 int i = 0;
@@ -251,23 +252,25 @@ namespace KADA
                 }
 
 
-                
+
                 this.model = dataContainer.model;
+                this.tentativeModel = dataContainer.tentativeModel;
+
 
                 this.SetBrickTranslate(Matrix.CreateTranslation(container.center));
                 Matrix R = container.R;
                 switch (dataContainer.trackingConfidence)
                 {
-                    case TrackingConfidenceLevel.ICPFULL: 
+                    case TrackingConfidenceLevel.ICPFULL:
                         R = container.R;
                         break;
-                    case TrackingConfidenceLevel.ICPTENTATIVE :
+                    case TrackingConfidenceLevel.ICPTENTATIVE:
                         R = container.R;
                         break;
                     /*case TrackingConfidenceLevel.NORMALS :
                         R = container.normalR;
                         break;*/
-                    default :
+                    default:
                         //R = container.R;
                         R = container.R;
                         break;
@@ -349,15 +352,15 @@ namespace KADA
                     }
                 }
 
-                if (container.estimatedVectors[0]!= null)
+                if (container.estimatedVectors[0] != null)
                 {
                     for (int segment = 0; segment < 90; segment++)
                     {
                         instances[i].ScreenPos = center + container.modelVectors[0] * segment;
                         instances[i].Scale = 1;
                         Vector3 c = Vector3.Zero;
-                        
-                        instances[i].Color = new Vector3(0.5f,0,0);
+
+                        instances[i].Color = new Vector3(0.5f, 0, 0);
                         i++;
                     }
                     for (int segment = 0; segment < 90; segment++)
@@ -530,7 +533,7 @@ namespace KADA
                     transformationUpdater.Start();
                 }
             }*/
-            this.Window.Title = "" + dataContainer.backgroundEvaluator.NormalOutput.Count +"" + dataContainer.backgroundEvaluator.NormalInput.Count +" | "+dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " +dataContainer.trackingConfidence + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
+            this.Window.Title = "" + dataContainer.backgroundEvaluator.NormalOutput.Count + "" + dataContainer.backgroundEvaluator.NormalInput.Count + " | " + dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " + dataContainer.trackingConfidence + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
 
             base.Update(gameTime);
         }
@@ -644,13 +647,22 @@ namespace KADA
             }
             if (kS.IsKeyDown(Keys.R))
             {
-                this.manager.processor3D.reset();
+                this.manager.processor3D.Reset();
                 this.dataContainer.prevNormalR = Matrix.Identity;
             }
 
             if (kS.IsKeyDown(Keys.L))
             {
                 this.manager.processor3D.NormalAligner = true;
+            }
+
+            if (kS.IsKeyDown(Keys.M))
+            {
+                this.dataContainer.editMode = true;
+            }
+            if (kS.IsKeyDown(Keys.N))
+            {
+                this.dataContainer.editMode = false;
             }
 
 
@@ -746,12 +758,12 @@ namespace KADA
         /// </summary>
         protected override void UnloadContent()
         {
-            
+
         }
         protected override void OnExiting(Object sender, EventArgs args)
         {
             base.OnExiting(sender, args);
-            this.dataContainer.Run = false;            
+            this.dataContainer.Run = false;
         }
 
         /// <summary>
@@ -784,7 +796,7 @@ namespace KADA
             Matrix[] transforms = new Matrix[brick.Bones.Count];
             brick.CopyAbsoluteBoneTransformsTo(transforms);
 
-            foreach (LocatedBrick b in model.bricks)
+            foreach (LocatedBrick b in model.Bricks)
             {
                 foreach (ModelMesh mesh in brick.Meshes)
                 {
@@ -801,6 +813,28 @@ namespace KADA
                     }
 
                     mesh.Draw();
+                }
+            }
+            if (tentativeModel != null)
+            {
+                if (tentativeModel.TentativeBrick != null)
+                {
+                    foreach (ModelMesh mesh in brick.Meshes)
+                    {
+
+                        foreach (BasicEffect eff in mesh.Effects)
+                        {
+                            eff.TextureEnabled = false;
+                            eff.DiffuseColor = new Vector3(0.2f, 1f, 0.2f);
+                            //eff.Alpha = 0.5f;
+                            eff.EnableDefaultLighting();
+                            eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * this.tentativeModel.TentativeBrick.getTransformation() * Matrix.CreateTranslation(this.offset) * this.brickRotation * brickTranslation;// *
+
+                            eff.View = View;
+                            eff.Projection = Projection;
+                        }
+                        mesh.Draw();
+                    }
                 }
             }
 
@@ -828,4 +862,3 @@ namespace KADA
 
     }
 }
-    #endregion

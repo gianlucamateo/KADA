@@ -11,10 +11,10 @@ namespace KADA
         int counter = 0;
         Bitmap b;
         Matrix RGBToYUV, YUVToRGB;
-        XYZFileLoader.BrickColor brickColor;
+        KADA.BrickColor brickColor;
         private int[,] values;
 
-        public YUVHistogram(Bitmap mask, Bitmap blacklist, XYZFileLoader.BrickColor brickColor)
+        public YUVHistogram(Bitmap mask, Bitmap blacklist, KADA.BrickColor brickColor)
         {
             this.brickColor = brickColor;
             this.values = new int[512, 512];
@@ -75,7 +75,7 @@ namespace KADA
         }
 
 
-        public XYZFileLoader.BrickColor GetColor()
+        public KADA.BrickColor GetColor()
         {
             return this.brickColor;
         }

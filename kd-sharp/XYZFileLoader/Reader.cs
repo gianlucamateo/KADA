@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 
-namespace XYZFileLoader
+namespace KADA
 {
     public enum BrickColor
     {
@@ -14,14 +14,14 @@ namespace XYZFileLoader
     {
         public Vector3 position;
         public Vector3 normal;
-        public bool inlier;
+        public bool ConsideredICP;
         //public double[] positionArr;
         public int brickColorInteger;
         public BrickColor brickColor;
 
         public Point(Vector3 pos, Vector3 nor)
         {
-            inlier = false;
+            ConsideredICP = false;
             position = pos;
             normal = nor;
             //positionArr = new double[] { pos.X, pos.Y, pos.Z };
@@ -31,7 +31,7 @@ namespace XYZFileLoader
         public Point Copy()
         {
             Point p = new Point(this.position, this.normal);
-            p.inlier = this.inlier;
+            p.ConsideredICP = this.ConsideredICP;
             p.brickColorInteger = this.brickColorInteger;
             p.brickColor = this.brickColor;
             return p;

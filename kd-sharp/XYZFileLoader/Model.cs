@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 
-namespace XYZFileLoader
+namespace KADA
 {
 
     public class Model
@@ -13,24 +13,27 @@ namespace XYZFileLoader
         public const int DIMENSION = 20;
         private Brick[, ,] voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
         private List<Point>[, ,] pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
-        public List<LocatedBrick> bricks;
+        public List<LocatedBrick> Bricks;
         private KDTreeWrapper kdTree;
         public float radius;
         private Vector3 center;
+        public List<TentativeModel> tentativeModels;
 
-        public Model()
+        public Model(bool computeTentative)
         {
-            this.bricks = new List<LocatedBrick>();
-            this.bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0),BrickColor.GREEN));
+            this.Bricks = new List<LocatedBrick>();
+            this.Bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0), BrickColor.GREEN));
 
-            this.bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
-            this.bricks.Add(new LocatedBrick(false, new Vector3(-1, 2, -1), BrickColor.BLUE));
-            this.bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
-            this.bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
-            
+            this.Bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
+            this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, 2, -1), BrickColor.BLUE));
+            this.Bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
+            this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
+
             //this.bricks.Add(new LocatedBrick(true, new Vector3(3, -1, -3)));
             //this.bricks.Add(new LocatedBrick(false, new Vector3(0, 2, 0)));
             //this.bricks.Add(new LocatedBrick(false, new Vector3(0, -2, 0)));
+
+            this.tentativeModels = new List<TentativeModel>();
 
             for (int x = 0; x < voxelGrid.GetLength(0); x++)
             {
@@ -44,9 +47,38 @@ namespace XYZFileLoader
             }
             this.points = new List<Point>();
             //points = Reader.getPoints();
+            if (computeTentative)
+            {
+                GenerateKDTree();
+                ComputeTentativeBricks();
+            }
         }
 
-        private void reset()
+        public void ComputeTentativeBricks()
+        {
+            LocatedBrick tentativeBrick;
+            for (int y = -DIMENSION; y < DIMENSION; y++)
+            {
+                for (int x = -DIMENSION; x < DIMENSION; x++)
+                {
+                    for (int z = -DIMENSION; z < DIMENSION; z++)
+                    {
+                        tentativeBrick = new LocatedBrick(true, new Vector3(x, y, z), BrickColor.NONE);
+                        if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
+                        {
+                            this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick));
+                        }
+                        tentativeBrick = new LocatedBrick(false, new Vector3(x, y, z), BrickColor.NONE);
+                        if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
+                        {
+                            this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick));
+                        }
+                    }
+                }
+            }
+        }
+
+        private void Reset()
         {
             this.voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
             this.pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
@@ -62,12 +94,12 @@ namespace XYZFileLoader
                 }
             }
         }
-        public KDTreeWrapper generateKDTree()
+        public KDTreeWrapper GenerateKDTree()
         {
-            this.reset();
-            foreach (LocatedBrick b in bricks)
+            this.Reset();
+            foreach (LocatedBrick b in Bricks)
             {
-                b.insert(this.pointGrid, this.voxelGrid);
+                b.insert(this.pointGrid, this.voxelGrid, true);
             }
             this.kdTree = new KDTreeWrapper();
 
@@ -79,7 +111,7 @@ namespace XYZFileLoader
                 {
                     kdTree.AddPoint(p.position, p);
                 }
-                
+
             }
             return kdTree;
         }
@@ -103,13 +135,13 @@ namespace XYZFileLoader
                         }
                         else
                         {
-                            
+
                             List<Point> newVoxel;
 
                             #region check Z
                             newVoxel = new List<Point>(pointGrid[x, y, z - 1]);
                             foreach (Point p in pointGrid[x, y, z - 1])
-                            {                                
+                            {
                                 if (p.normal.Z > 0)
                                 {
                                     newVoxel.Remove(p);
@@ -117,11 +149,11 @@ namespace XYZFileLoader
                             }
                             pointGrid[x, y, z - 1] = newVoxel;
 
-                            
+
                             newVoxel = new List<Point>(pointGrid[x, y, z + 1]);
                             foreach (Point p in pointGrid[x, y, z + 1])
                             {
-                                
+
                                 if (p.normal.Z < 0)
                                 {
                                     newVoxel.Remove(p);
@@ -130,52 +162,62 @@ namespace XYZFileLoader
                             pointGrid[x, y, z + 1] = newVoxel;
                             #endregion
                             #region check X
-                            newVoxel = new List<Point>(pointGrid[x-1, y, z]);
-                            foreach (Point p in pointGrid[x-1, y, z])
+                            if (x > 0)
                             {
-                                
-                                if (p.normal.X > 0)
+                                newVoxel = new List<Point>(pointGrid[x - 1, y, z]);
+                                foreach (Point p in pointGrid[x - 1, y, z])
                                 {
-                                    newVoxel.Remove(p);
+
+                                    if (p.normal.X > 0)
+                                    {
+                                        newVoxel.Remove(p);
+                                    }
                                 }
+                                pointGrid[x - 1, y, z] = newVoxel;
                             }
-                            pointGrid[x-1, y, z] = newVoxel;
 
-
-                            newVoxel = new List<Point>(pointGrid[x+1, y, z]);
-                            foreach (Point p in pointGrid[x+1, y, z])
+                            if (x < voxelGrid.GetLength(0) - 1)
                             {
-                                
-                                if (p.normal.X < 0)
+                                newVoxel = new List<Point>(pointGrid[x + 1, y, z]);
+                                foreach (Point p in pointGrid[x + 1, y, z])
                                 {
-                                    newVoxel.Remove(p);
+
+                                    if (p.normal.X < 0)
+                                    {
+                                        newVoxel.Remove(p);
+                                    }
                                 }
+                                pointGrid[x + 1, y, z] = newVoxel;
                             }
-                            pointGrid[x+1, y, z] = newVoxel;
                             #endregion
                             #region check Y
-                            newVoxel = new List<Point>(pointGrid[x, y-1, z]);
-                            foreach (Point p in pointGrid[x, y-1, z])
+                            if (y > 0)
                             {
-                               // System.Diagnostics.Debug.WriteLine(p.normal);
-                                if (p.normal.Y > 0)
+                                newVoxel = new List<Point>(pointGrid[x, y - 1, z]);
+                                foreach (Point p in pointGrid[x, y - 1, z])
                                 {
-                                    newVoxel.Remove(p);
+                                    // System.Diagnostics.Debug.WriteLine(p.normal);
+                                    if (p.normal.Y > 0)
+                                    {
+                                        newVoxel.Remove(p);
+                                    }
                                 }
+                                pointGrid[x, y - 1, z] = newVoxel;
                             }
-                            pointGrid[x, y-1, z] = newVoxel;
 
-
-                            newVoxel = new List<Point>(pointGrid[x, y+1, z]);
-                            foreach (Point p in pointGrid[x, y+1, z])
+                            if (y < voxelGrid.GetLength(1) - 1)
                             {
-                                
-                                if (p.normal.Y < 0)
+                                newVoxel = new List<Point>(pointGrid[x, y + 1, z]);
+                                foreach (Point p in pointGrid[x, y + 1, z])
                                 {
-                                    newVoxel.Remove(p);
+
+                                    if (p.normal.Y < 0)
+                                    {
+                                        newVoxel.Remove(p);
+                                    }
                                 }
+                                pointGrid[x, y + 1, z] = newVoxel;
                             }
-                            pointGrid[x, y+1, z] = newVoxel;
                             #endregion
                         }
                     }
@@ -201,18 +243,18 @@ namespace XYZFileLoader
             for (int i = 0; i < this.points.Count; i++)
             {
                 Point p = this.points[i];
-                p.position = p.position- this.center;
+                p.position = p.position - this.center;
             }
 
-                foreach (Point p in this.points)
+            foreach (Point p in this.points)
+            {
+                float length = (p.position - this.center).Length();
+                if (length > radius)
                 {
-                    float length = (p.position - this.center).Length();
-                    if (length > radius)
-                    {
-                        radius = length;
-                    }
+                    radius = length;
                 }
-            
-        }   
+            }
+
+        }
     }
 }

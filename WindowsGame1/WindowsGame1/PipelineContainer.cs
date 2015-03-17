@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Kinect;
-using Point = XYZFileLoader.Point;
+using Point = KADA.Point;
 
 namespace KADA
 {
@@ -15,7 +15,7 @@ namespace KADA
         public Matrix R;
         public Matrix onlyRot;
         public List<Point> Qi;
-        public List<Vector3> OutlierPoints;
+        public List<Point> OutlierPoints;
         public Vector3 center, computedCenter;
         public DepthImagePixel[] DepthPixels;
         public byte[] ColorPixels;
@@ -47,7 +47,7 @@ namespace KADA
             this.DC = new DepthColor[640, 480];
             this.R = Matrix.Identity;
             this.Qi = new List<Point>();
-            this.OutlierPoints = new List<Vector3>();
+            this.OutlierPoints = new List<Point>();
             this.center = Vector3.Zero;
             this.computedCenter = Vector3.Zero;
             this.DepthPixels = new DepthImagePixel[dataContainer.DEPTHLENGTH];

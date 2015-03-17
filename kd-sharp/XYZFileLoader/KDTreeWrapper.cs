@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework;
 using DotNumerics;
 using Vector = DotNumerics.LinearAlgebra.Vector;
 
-namespace XYZFileLoader
+namespace KADA
 {
     public class KDTreeWrapper
     {
