@@ -37,7 +37,7 @@ namespace KADA
 
         private readonly bool REQUIRE_HIGH_QUALITY_RESULT = false;
 
-        public Vector3 OldCenter = Vector3.Zero;        
+        public Vector3 OldCenter = Vector3.Zero, EditModeCenter = Vector3.Zero, CompensateVector = Vector3.Zero;        
         public bool NormalAligner = false;
 
         private KDTreeWrapper BrickWrapper;
@@ -254,9 +254,18 @@ namespace KADA
                     OldCenter = center;
 
 
-
-                    container.center = center;
-                    DataContainer.center = center;
+                    if (!DataContainer.editMode)
+                    {
+                        container.center = center;
+                        DataContainer.center = center;
+                        EditModeCenter = center;                        
+                    }
+                    else
+                    {
+                        container.center = EditModeCenter;
+                        DataContainer.center = center;
+                        CompensateVector = EditModeCenter-center;                    
+                    }
 
                 }
 
@@ -308,6 +317,7 @@ namespace KADA
             float total = 0;
             Matrix H;
             List<Point> Outliers = null;
+            int afterEditMode = 1;
 
             while (this.DataContainer.Run)
             {
@@ -545,11 +555,25 @@ namespace KADA
                             Vector3 trans = new Vector3((float)(XArrTrans[3]), (float)(XArrTrans[4]), (float)(XArrTrans[5]));
                             trans *= TRANSLATIONWEIGHT;
                             trans *= Model.radius;
+                            /*if (!DataContainer.editMode&&afterEditMode>0)
+                            {
+                                trans = -trans + CompensateVector;
+                                CompensateVector *= 0.2f;
+                                afterEditMode--;
+                            }
+                            if (DataContainer.editMode)
+                            {
+                                afterEditMode = 1;
+                            }*/
+                            /*if (DataContainer.editMode)
+                            {
+                                trans *= 2;
+                            }*/
                             //this.ICPTranslation += trans;
-                            if (trans.Length() > 2)
+                            /*if (trans.Length() > 2)
                             {
                                 trans.Normalize();
-                            }
+                            }*/
                             RTemp.M41 = 0;
                             RTemp.M42 = 0;
                             RTemp.M43 = 0;

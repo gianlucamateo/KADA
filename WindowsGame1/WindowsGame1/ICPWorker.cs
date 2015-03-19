@@ -181,11 +181,9 @@ namespace KADA
                 
                 if (q.normal == Vector3.Zero||q.position == Vector3.Zero)
                 {
-                   
-
                     this.ICPOutliers++;
                     
-                    this.Outliers.Enqueue(p + center);
+                    this.Outliers.Enqueue(p + dataContainer.center);
                     
                     continue;
                 }
@@ -231,7 +229,7 @@ namespace KADA
                 {
                     this.ICPOutliers++;
                     //this.OutlierAvg += p;
-                    this.Outliers.Enqueue(p + center);
+                    this.Outliers.Enqueue(p + dataContainer.center);
                     //return;
                     continue;
                 }
@@ -322,7 +320,7 @@ namespace KADA
                 }
                 else
                 {
-                    this.Outliers.Enqueue(p + center);
+                    this.Outliers.Enqueue(p + dataContainer.center);
                     this.ICPOutliers++;
                 }
             }

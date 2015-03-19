@@ -26,7 +26,7 @@ namespace KADA
         public DateTime lastTick = DateTime.Now, lastGeneration = DateTime.Now;
         public int COLORLENGTH, DEPTHLENGTH;
         public Model model;
-        public TentativeModel tentativeModel;
+        public SortedDictionary<float,TentativeModel> tentativeModels;
         public bool GenerateBackground = false;
         public bool DeNoiseAndICP = false;
         public int SLEEPTIME = 1;
@@ -55,7 +55,7 @@ namespace KADA
             this.backgroundEvaluator = new BackgroundEvaluator(this);
             this.modelNormals = new Vector3[3];
             this.model = new Model(true);
-            this.tentativeModel = new TentativeModel(model.Bricks,new LocatedBrick(false,Vector3.Zero,BrickColor.NONE));
+            //this.tentativeModel = new TentativeModel(model.Bricks,new LocatedBrick(false,Vector3.Zero,BrickColor.NONE));
             this.normalMappings = new int[3];
             this.modelNormals[0] = Vector3.UnitX;
             this.modelNormals[1] = Vector3.UnitY;

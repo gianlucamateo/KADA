@@ -16,6 +16,14 @@ namespace KADA
             this.TentativeBrick = tentativeBrick;
             //this.GenerateKDTree();
         }
+        //new code, could be buggy
+        public Model validate()
+        {
+            Model model = new Model(true);
+            model.Bricks = this.Bricks;
+            model.GenerateKDTree();
+            return model;
+        }
         
 
     }

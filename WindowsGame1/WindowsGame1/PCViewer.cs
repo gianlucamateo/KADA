@@ -58,7 +58,7 @@ namespace KADA
         Int32 count = 640 * 480 + 100000;
         Viewport PCViewport;
         Viewport BrickViewport;
-        XNAModel brick;
+        XNAModel brick, secondaryBrick;
         Texture2D brickTexture;
 
         GraphicsDeviceManager graphics;
@@ -99,7 +99,7 @@ namespace KADA
         bool freeze = false;
 
         private Model model;
-        private TentativeModel tentativeModel;
+        private SortedDictionary<float, TentativeModel> tentativeModels;
         private PipelineManager manager;
 
         private PipelineDataContainer dataContainer;
@@ -254,7 +254,7 @@ namespace KADA
 
 
                 this.model = dataContainer.model;
-                this.tentativeModel = dataContainer.tentativeModel;
+                this.tentativeModels = dataContainer.tentativeModels;
 
 
                 this.SetBrickTranslate(Matrix.CreateTranslation(container.center));
@@ -490,6 +490,8 @@ namespace KADA
             GenerateInstanceInformation();
             spriteFont = Content.Load<SpriteFont>("FPS");
             brick = Content.Load<XNAModel>("Models\\duploblock");
+            secondaryBrick = Content.Load<XNAModel>("Models\\duploblock");
+
             brickTexture = Content.Load<Texture2D>("Textures\\Exploded_cube_map");
 
 
@@ -805,6 +807,7 @@ namespace KADA
                     {
                         eff.TextureEnabled = false;
                         eff.DiffuseColor = b.getColor() * 0.7f;
+                        eff.Alpha = 1;
                         eff.EnableDefaultLighting();
                         eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * b.getTransformation() * Matrix.CreateTranslation(this.offset) * this.brickRotation * brickTranslation;// *
 
@@ -815,47 +818,59 @@ namespace KADA
                     mesh.Draw();
                 }
             }
-            if (tentativeModel != null)
+
+            
+            if (tentativeModels != null && dataContainer.editMode)
             {
-                if (tentativeModel.TentativeBrick != null)
+                SortedDictionary<float, TentativeModel> cachedTentativeModels = new SortedDictionary<float, TentativeModel>(tentativeModels);
+                for (int i = 0; i < 3; i++)
                 {
-                    foreach (ModelMesh mesh in brick.Meshes)
+                    if (cachedTentativeModels.Keys.Count > i)
                     {
-
-                        foreach (BasicEffect eff in mesh.Effects)
+                        float key = cachedTentativeModels.Keys.ElementAt(i);
+                        TentativeModel tentativeModel = cachedTentativeModels[key];
+                        if (tentativeModel.TentativeBrick != null)
                         {
-                            eff.TextureEnabled = false;
-                            eff.DiffuseColor = new Vector3(0.2f, 1f, 0.2f);
-                            //eff.Alpha = 0.5f;
-                            eff.EnableDefaultLighting();
-                            eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * this.tentativeModel.TentativeBrick.getTransformation() * Matrix.CreateTranslation(this.offset) * this.brickRotation * brickTranslation;// *
+                            foreach (ModelMesh mesh in secondaryBrick.Meshes)
+                            {
 
-                            eff.View = View;
-                            eff.Projection = Projection;
+                                foreach (BasicEffect eff in mesh.Effects)
+                                {
+                                    eff.TextureEnabled = false;
+                                    eff.DiffuseColor = new Vector3(0.2f, 1f, 0.2f);
+                                    eff.Alpha = 0.5f;
+                                    eff.EnableDefaultLighting();
+                                    eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * tentativeModel.TentativeBrick.getTransformation() * Matrix.CreateTranslation(this.offset) * this.brickRotation * brickTranslation;// *
+
+                                    eff.View = View;
+                                    eff.Projection = Projection;
+                                }
+                                mesh.Draw();
+                            }
                         }
-                        mesh.Draw();
                     }
                 }
             }
 
-
-            foreach (ModelMesh mesh in brick.Meshes)
+            if (dataContainer.editMode)
             {
-
-                foreach (BasicEffect eff in mesh.Effects)
+                foreach (ModelMesh mesh in brick.Meshes)
                 {
-                    eff.TextureEnabled = false;
-                    eff.DiffuseColor = Vector3.One * 0.7f;
-                    eff.EnableDefaultLighting();
-                    eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * Matrix.CreateTranslation(this.offset) * Matrix.CreateTranslation(this.outlierCenter);// *
 
-                    eff.View = View;
-                    eff.Projection = Projection;
+                    foreach (BasicEffect eff in mesh.Effects)
+                    {
+                        eff.TextureEnabled = false;
+                        eff.DiffuseColor = Vector3.One * 0.7f;
+                        eff.EnableDefaultLighting();
+                        eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * Matrix.CreateTranslation(this.offset) * Matrix.CreateTranslation(this.outlierCenter);// *
+
+                        eff.View = View;
+                        eff.Projection = Projection;
+                    }
+
+                    mesh.Draw();
                 }
-
-                mesh.Draw();
             }
-
             base.Draw(gameTime);
 
         }

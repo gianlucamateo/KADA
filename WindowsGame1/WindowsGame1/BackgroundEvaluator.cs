@@ -165,11 +165,13 @@ namespace KADA
 
         private void trackAdditionalBlock()
         {
+            Vector3 oldCenter = Vector3.Zero;
             List<Point> PointsList;
             //List<Vector3> Outliers = new List<Vector3>();
             int[,] grid = new int[200, 200], outputGrid = new int[200, 200];
             bool[,] excludeFromErosion = new bool[200, 200];
             float[,] zVals = new float[200, 200];
+            SortedDictionary<float, TentativeModel> dict = new SortedDictionary<float, TentativeModel>();
             while (this.dataContainer.Run)
             {
                 PointsInput.TryDequeue(out PointsList);
@@ -227,12 +229,12 @@ namespace KADA
                     {
                         if (excludeFromErosion[X, Y])
                         {
-                            outputGrid[X, Y] = grid[X, Y];
+                            outputGrid[X, Y] = grid[X,Y];
                         }
                     }
                 }
 
-
+                
                 Vector3 pos = Vector3.Zero;
                 int count = 0;
                 for (int X = 0; X < outputGrid.GetLength(0); X++)
@@ -248,9 +250,16 @@ namespace KADA
                     }
                 }
                 pos /= count;
-
+                if (pos.Length() > 0)
+                {
+                    oldCenter = pos;
+                }
+                else
+                {
+                    pos = oldCenter;
+                }
                 dataContainer.outlierCenter = pos;
-
+                dict.Clear();
                 TentativeModel bestGuess = null;
                 float distance = float.MaxValue;
                 foreach (TentativeModel model in dataContainer.model.tentativeModels)
@@ -259,13 +268,22 @@ namespace KADA
                     p = Vector3.Transform(p, dataContainer.R);
                     p += dataContainer.center;
                     float tentativeDistance = Math.Abs((p - pos).Length());
-                    if (tentativeDistance < distance)
+                    /*if (tentativeDistance < distance)
                     {
                         distance = tentativeDistance;
                         bestGuess = model;
+                    }*/
+                    if (!float.IsNaN(tentativeDistance)&&tentativeDistance<1000)
+                    {
+                        while (dict.ContainsKey(tentativeDistance))
+                        {
+                            tentativeDistance += 0.0001f;
+                        }
+                        dict.Add(tentativeDistance, model);
                     }
                 }
-                dataContainer.tentativeModel = bestGuess;
+                //dataContainer.tentativeModel = bestGuess;
+                dataContainer.tentativeModels = new SortedDictionary<float,TentativeModel>(dict);
                 Console.WriteLine(distance);
 
             }
