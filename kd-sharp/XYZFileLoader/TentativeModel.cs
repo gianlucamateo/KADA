@@ -19,9 +19,9 @@ namespace KADA
         //new code, could be buggy
         public Model validate()
         {
-            Model model = new Model(true);
-            model.Bricks = this.Bricks;
-            model.GenerateKDTree();
+            Model model = new Model(true,this.Bricks,fast: true);
+            //model.Bricks = this.Bricks;
+            //model.GenerateKDTree();
             return model;
         }
         

@@ -15,9 +15,11 @@ namespace KADA
     {
         private PipelineDataContainer dataContainer;
         public ConcurrentQueue<PipelineContainer> NormalInput;
+        public ConcurrentQueue<PipelineContainer> ModificationInput;
         public ConcurrentQueue<Matrix> NormalOutput;
         public ConcurrentQueue<List<Point>> PointsInput;
         private Matrix[] possibleRotations;
+        public bool ModificationRunning = false;
 
 
         public BackgroundEvaluator(PipelineDataContainer dataContainer)
@@ -25,6 +27,7 @@ namespace KADA
             this.PointsInput = new ConcurrentQueue<List<Point>>();
             this.NormalOutput = new ConcurrentQueue<Matrix>();
             this.NormalInput = new ConcurrentQueue<PipelineContainer>();
+            this.ModificationInput = new ConcurrentQueue<PipelineContainer>();
             this.dataContainer = dataContainer;
             possibleRotations = new Matrix[64];
 
@@ -74,6 +77,88 @@ namespace KADA
             Thread blockTracker = new Thread(new ThreadStart(() => trackAdditionalBlock()));
             blockTracker.Start();
 
+            Thread modificationApplier = new Thread(new ThreadStart(() => applyModification()));
+            modificationApplier.Start();
+
+        }
+
+        private void applyModification()
+        {
+            PipelineContainer container;
+            while (this.dataContainer.Run)
+            {
+
+                ModificationInput.TryDequeue(out container);
+                if (container == null)
+                {
+                    Thread.Sleep(100);
+                    continue;
+                }
+                if (dataContainer.editMode == false)
+                {
+                    continue;
+                }
+                this.ModificationRunning = true;
+                this.dataContainer.attach = false;
+
+                while (this.ModificationInput.Count > 0)
+                {
+                    PipelineContainer dumpContainer;
+                    this.ModificationInput.TryDequeue(out dumpContainer);
+                }
+                Console.WriteLine("working");
+                List<Point> qi = new List<Point>(container.Qi);
+                SortedDictionary<float, TentativeModel> dict = new SortedDictionary<float, TentativeModel>(dataContainer.tentativeModels);
+
+                float maxRatio = float.MinValue;
+                int i = 0;
+                Model currentModel = null;
+                foreach (float key in dict.Keys)
+                {
+                    if (!this.dataContainer.Run)
+                    {
+                        return;
+                    }
+
+                    Console.WriteLine("working on model");
+                    Model model = dict[key].validate();
+                    KDTreeWrapper tree = model.getKDTree();
+
+                    int outliers = 0, inliers = 0;
+                    float ratio = 0;
+                    Matrix Rinv = Matrix.Invert(dataContainer.R);
+                    foreach (Point p in qi)
+                    {
+                        Vector3 transformedP = Vector3.Zero;
+                        
+                        transformedP = Vector3.Transform(p.position-dataContainer.center, Rinv);
+                        double[] arr = { transformedP.X, transformedP.Y, transformedP.Z };
+                        KDTree.NearestNeighbor<Point> neighbor = tree.NearestNeighbors(arr, 1, -1);
+                        neighbor.MoveNext();
+                        if (neighbor.CurrentDistance > 10)
+                        {
+                            outliers++;
+                        }
+                        else
+                        {
+                            inliers++;
+                        }
+                    }
+                    ratio = inliers / (float)outliers;
+                    if (ratio > maxRatio)
+                    {
+                        maxRatio = ratio;
+                        currentModel = model;
+                    }
+
+                }
+
+                Model finalModel = new Model(true, currentModel.Bricks, false);                
+                dataContainer.model = finalModel;
+                dataContainer.editMode = false;
+                this.ModificationRunning = false;
+                               
+            }
         }
 
         private void analyzeNormal()
@@ -134,7 +219,7 @@ namespace KADA
                             searchArr[0] = point.X;
                             searchArr[1] = point.Y;
                             searchArr[2] = point.Z;
-                            KDTree.NearestNeighbour<Point> neighbour = kdTree.NearestNeighbors(searchArr, 1);
+                            KDTree.NearestNeighbor<Point> neighbour = kdTree.NearestNeighbors(searchArr, 1);
                             neighbour.MoveNext();
                             totalDist += neighbour.CurrentDistance;
                             pointsCalculated++;
@@ -229,12 +314,12 @@ namespace KADA
                     {
                         if (excludeFromErosion[X, Y])
                         {
-                            outputGrid[X, Y] = grid[X,Y];
+                            outputGrid[X, Y] = grid[X, Y];
                         }
                     }
                 }
 
-                
+
                 Vector3 pos = Vector3.Zero;
                 int count = 0;
                 for (int X = 0; X < outputGrid.GetLength(0); X++)
@@ -273,7 +358,7 @@ namespace KADA
                         distance = tentativeDistance;
                         bestGuess = model;
                     }*/
-                    if (!float.IsNaN(tentativeDistance)&&tentativeDistance<1000)
+                    if (!float.IsNaN(tentativeDistance) && tentativeDistance < 1000)
                     {
                         while (dict.ContainsKey(tentativeDistance))
                         {
@@ -283,7 +368,7 @@ namespace KADA
                     }
                 }
                 //dataContainer.tentativeModel = bestGuess;
-                dataContainer.tentativeModels = new SortedDictionary<float,TentativeModel>(dict);
+                dataContainer.tentativeModels = new SortedDictionary<float, TentativeModel>(dict);
                 Console.WriteLine(distance);
 
             }

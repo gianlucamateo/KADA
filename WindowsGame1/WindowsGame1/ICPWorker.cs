@@ -104,7 +104,7 @@ namespace KADA
             int i = 0;
             double[] vArr = new double[3];
             double maxDistance = dataContainer.ICPThreshold;
-            NearestNeighbour<Point> neighbour;
+            NearestNeighbor<Point> neighbour;
             while (this.dataContainer.Run)
             {
                 if (this.input.Count > maxCount)

@@ -42,11 +42,13 @@ namespace KADA
         public BackgroundEvaluator backgroundEvaluator;
         public Matrix R;
         public bool editMode;
+        public bool attach;
 
         public float ICPThreshold = 200;
 
         public PipelineDataContainer()
         {
+            this.attach = false;
             this.editMode = false;
             this.R = new Matrix();
             this.center = Vector3.Zero;

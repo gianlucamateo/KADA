@@ -19,15 +19,21 @@ namespace KADA
         private Vector3 center;
         public List<TentativeModel> tentativeModels;
 
-        public Model(bool computeTentative)
+        public Model(bool definitive, List<LocatedBrick> bricks = null, bool fast = false)
         {
-            this.Bricks = new List<LocatedBrick>();
-            this.Bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0), BrickColor.GREEN));
-
-            this.Bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
-            this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, 2, -1), BrickColor.BLUE));
-            this.Bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
-            this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
+            if (bricks == null)
+            {
+                this.Bricks = new List<LocatedBrick>();
+                this.Bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0), BrickColor.GREEN));
+                this.Bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
+                this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, 2, -1), BrickColor.BLUE));
+                this.Bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
+                this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
+            }
+            else
+            {
+                this.Bricks = new List<LocatedBrick>(bricks);
+            }
 
             //this.bricks.Add(new LocatedBrick(true, new Vector3(3, -1, -3)));
             //this.bricks.Add(new LocatedBrick(false, new Vector3(0, 2, 0)));
@@ -47,10 +53,13 @@ namespace KADA
             }
             this.points = new List<Point>();
             //points = Reader.getPoints();
-            if (computeTentative)
+            if (definitive)
             {
-                GenerateKDTree();
-                ComputeTentativeBricks();
+                GenerateKDTree(fast);
+                if (!fast)
+                {
+                    ComputeTentativeBricks();
+                }
             }
         }
 
@@ -94,7 +103,7 @@ namespace KADA
                 }
             }
         }
-        public KDTreeWrapper GenerateKDTree()
+        public KDTreeWrapper GenerateKDTree(bool fast = false)
         {
             this.Reset();
             foreach (LocatedBrick b in Bricks)
@@ -103,7 +112,8 @@ namespace KADA
             }
             this.kdTree = new KDTreeWrapper();
 
-            updatePoints();
+            updatePoints(fast);
+
 
             foreach (Point p in this.points)
             {
@@ -119,111 +129,112 @@ namespace KADA
         {
             return this.kdTree;
         }
-        private void updatePoints()
+        private void updatePoints(bool fast = false)
         {
             this.points.Clear();
-
-            for (int x = 0; x < voxelGrid.GetLength(0); x++)
+            if (!fast)
             {
-                for (int y = 0; y < voxelGrid.GetLength(1); y++)
+                for (int x = 0; x < voxelGrid.GetLength(0); x++)
                 {
-                    for (int z = 0; z < voxelGrid.GetLength(2); z++)
+                    for (int y = 0; y < voxelGrid.GetLength(1); y++)
                     {
-                        if (voxelGrid[x, y, z] == null)
+                        for (int z = 0; z < voxelGrid.GetLength(2); z++)
                         {
-                            continue;
-                        }
-                        else
-                        {
-
-                            List<Point> newVoxel;
-
-                            #region check Z
-                            newVoxel = new List<Point>(pointGrid[x, y, z - 1]);
-                            foreach (Point p in pointGrid[x, y, z - 1])
+                            if (voxelGrid[x, y, z] == null)
                             {
-                                if (p.normal.Z > 0)
-                                {
-                                    newVoxel.Remove(p);
-                                }
+                                continue;
                             }
-                            pointGrid[x, y, z - 1] = newVoxel;
-
-
-                            newVoxel = new List<Point>(pointGrid[x, y, z + 1]);
-                            foreach (Point p in pointGrid[x, y, z + 1])
+                            else
                             {
 
-                                if (p.normal.Z < 0)
-                                {
-                                    newVoxel.Remove(p);
-                                }
-                            }
-                            pointGrid[x, y, z + 1] = newVoxel;
-                            #endregion
-                            #region check X
-                            if (x > 0)
-                            {
-                                newVoxel = new List<Point>(pointGrid[x - 1, y, z]);
-                                foreach (Point p in pointGrid[x - 1, y, z])
-                                {
+                                List<Point> newVoxel;
 
-                                    if (p.normal.X > 0)
+                                #region check Z
+                                newVoxel = new List<Point>(pointGrid[x, y, z - 1]);
+                                foreach (Point p in pointGrid[x, y, z - 1])
+                                {
+                                    if (p.normal.Z > 0)
                                     {
                                         newVoxel.Remove(p);
                                     }
                                 }
-                                pointGrid[x - 1, y, z] = newVoxel;
-                            }
+                                pointGrid[x, y, z - 1] = newVoxel;
 
-                            if (x < voxelGrid.GetLength(0) - 1)
-                            {
-                                newVoxel = new List<Point>(pointGrid[x + 1, y, z]);
-                                foreach (Point p in pointGrid[x + 1, y, z])
+
+                                newVoxel = new List<Point>(pointGrid[x, y, z + 1]);
+                                foreach (Point p in pointGrid[x, y, z + 1])
                                 {
 
-                                    if (p.normal.X < 0)
+                                    if (p.normal.Z < 0)
                                     {
                                         newVoxel.Remove(p);
                                     }
                                 }
-                                pointGrid[x + 1, y, z] = newVoxel;
-                            }
-                            #endregion
-                            #region check Y
-                            if (y > 0)
-                            {
-                                newVoxel = new List<Point>(pointGrid[x, y - 1, z]);
-                                foreach (Point p in pointGrid[x, y - 1, z])
+                                pointGrid[x, y, z + 1] = newVoxel;
+                                #endregion
+                                #region check X
+                                if (x > 0)
                                 {
-                                    // System.Diagnostics.Debug.WriteLine(p.normal);
-                                    if (p.normal.Y > 0)
+                                    newVoxel = new List<Point>(pointGrid[x - 1, y, z]);
+                                    foreach (Point p in pointGrid[x - 1, y, z])
                                     {
-                                        newVoxel.Remove(p);
-                                    }
-                                }
-                                pointGrid[x, y - 1, z] = newVoxel;
-                            }
 
-                            if (y < voxelGrid.GetLength(1) - 1)
-                            {
-                                newVoxel = new List<Point>(pointGrid[x, y + 1, z]);
-                                foreach (Point p in pointGrid[x, y + 1, z])
+                                        if (p.normal.X > 0)
+                                        {
+                                            newVoxel.Remove(p);
+                                        }
+                                    }
+                                    pointGrid[x - 1, y, z] = newVoxel;
+                                }
+
+                                if (x < voxelGrid.GetLength(0) - 1)
                                 {
-
-                                    if (p.normal.Y < 0)
+                                    newVoxel = new List<Point>(pointGrid[x + 1, y, z]);
+                                    foreach (Point p in pointGrid[x + 1, y, z])
                                     {
-                                        newVoxel.Remove(p);
+
+                                        if (p.normal.X < 0)
+                                        {
+                                            newVoxel.Remove(p);
+                                        }
                                     }
+                                    pointGrid[x + 1, y, z] = newVoxel;
                                 }
-                                pointGrid[x, y + 1, z] = newVoxel;
+                                #endregion
+                                #region check Y
+                                if (y > 0)
+                                {
+                                    newVoxel = new List<Point>(pointGrid[x, y - 1, z]);
+                                    foreach (Point p in pointGrid[x, y - 1, z])
+                                    {
+                                        // System.Diagnostics.Debug.WriteLine(p.normal);
+                                        if (p.normal.Y > 0)
+                                        {
+                                            newVoxel.Remove(p);
+                                        }
+                                    }
+                                    pointGrid[x, y - 1, z] = newVoxel;
+                                }
+
+                                if (y < voxelGrid.GetLength(1) - 1)
+                                {
+                                    newVoxel = new List<Point>(pointGrid[x, y + 1, z]);
+                                    foreach (Point p in pointGrid[x, y + 1, z])
+                                    {
+
+                                        if (p.normal.Y < 0)
+                                        {
+                                            newVoxel.Remove(p);
+                                        }
+                                    }
+                                    pointGrid[x, y + 1, z] = newVoxel;
+                                }
+                                #endregion
                             }
-                            #endregion
                         }
                     }
                 }
             }
-
             foreach (List<Point> l in pointGrid)
             {
                 this.points.AddRange(l);
@@ -240,11 +251,15 @@ namespace KADA
             //compute max Distance, radius of wrapping sphere
             this.radius = 0f;
 
-            for (int i = 0; i < this.points.Count; i++)
+            /*if (!fast)
             {
-                Point p = this.points[i];
-                p.position = p.position - this.center;
-            }
+                for (int i = 0; i < this.points.Count; i++)
+                {
+                    Point p = this.points[i];
+                    p.position = p.position - this.center;
+                    this.points[i] = p;
+                }
+            }*/
 
             foreach (Point p in this.points)
             {

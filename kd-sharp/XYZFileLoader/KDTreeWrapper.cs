@@ -20,7 +20,7 @@ namespace KADA
             qi_prime = new List<Vector>();
         }
 
-        public KDTree.NearestNeighbour<Point> NearestNeighbors(double[] tSearchPoint, int iMaxReturned, double fDistance = -1)
+        public KDTree.NearestNeighbor<Point> NearestNeighbors(double[] tSearchPoint, int iMaxReturned, double fDistance = -1)
         {
             return this.kdTree.NearestNeighbors(tSearchPoint, iMaxReturned, fDistance);
         }

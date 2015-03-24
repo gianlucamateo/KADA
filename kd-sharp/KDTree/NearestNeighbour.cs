@@ -10,7 +10,7 @@ namespace KDTree
     /// A NearestNeighbour iterator for the KD-tree which intelligently iterates and captures relevant data in the search space.
     /// </summary>
     /// <typeparam name="T">The type of data the iterator should handle.</typeparam>
-    public class NearestNeighbour<T> : IEnumerator
+    public class NearestNeighbor<T> : IEnumerator
     {
         /// <summary>The point from which are searching in n-dimensional space.</summary>
         private double[] tSearchPoint;
@@ -43,7 +43,7 @@ namespace KDTree
         /// <param name="kDistance">The distance function used to evaluate the points.</param>
         /// <param name="iMaxPoints">The max number of points which can be returned by this iterator.  Capped to max in tree.</param>
         /// <param name="fThreshold">Threshold to apply to the search space.  Negative numbers indicate that no threshold is applied.</param>
-        public NearestNeighbour(KDNode<T> pRoot, double[] tSearchPoint, DistanceFunctions kDistance, int iMaxPoints, double fThreshold)
+        public NearestNeighbor(KDNode<T> pRoot, double[] tSearchPoint, DistanceFunctions kDistance, int iMaxPoints, double fThreshold)
         {
             // Check the dimensionality of the search point.
             if (tSearchPoint.Length != pRoot.iDimensions)
