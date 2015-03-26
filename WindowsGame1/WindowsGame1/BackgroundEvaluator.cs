@@ -115,10 +115,16 @@ namespace KADA
                 Model currentModel = null;
                 foreach (float key in dict.Keys)
                 {
+                    /*if (i++ > 20)
+                    {
+                        continue;
+                    }*/
                     if (!this.dataContainer.Run)
                     {
                         return;
                     }
+                    
+
 
                     Console.WriteLine("working on model");
                     Model model = dict[key].validate();
@@ -135,7 +141,7 @@ namespace KADA
                         double[] arr = { transformedP.X, transformedP.Y, transformedP.Z };
                         KDTree.NearestNeighbor<Point> neighbor = tree.NearestNeighbors(arr, 1, -1);
                         neighbor.MoveNext();
-                        if (neighbor.CurrentDistance > 10)
+                        if (neighbor.CurrentDistance > 200)
                         {
                             outliers++;
                         }
@@ -150,6 +156,7 @@ namespace KADA
                         maxRatio = ratio;
                         currentModel = model;
                     }
+                    
 
                 }
 

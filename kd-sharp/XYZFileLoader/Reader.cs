@@ -8,7 +8,7 @@ namespace KADA
 {
     public enum BrickColor
     {
-        NONE = 0,RED = 2,GREEN = 3,BLUE = 5,YELLOW = 7
+        NONE = 0, RED = 2, GREEN = 3, BLUE = 5, YELLOW = 7
     }
     public struct Point
     {
@@ -18,6 +18,7 @@ namespace KADA
         //public double[] positionArr;
         public int brickColorInteger;
         public BrickColor brickColor;
+        public PointState state;
 
         public Point(Vector3 pos, Vector3 nor)
         {
@@ -27,6 +28,7 @@ namespace KADA
             //positionArr = new double[] { pos.X, pos.Y, pos.Z };
             brickColor = BrickColor.NONE;
             brickColorInteger = 1;
+            this.state = new PointState();
         }
         public Point Copy()
         {
@@ -36,6 +38,13 @@ namespace KADA
             p.brickColor = this.brickColor;
             return p;
         }
+    }
+
+    public class PointState
+    {
+        public bool dismiss = false;
+        public PointState() { }
+
     }
 
     public class Reader

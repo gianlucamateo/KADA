@@ -66,7 +66,7 @@ namespace KADA
         {
             while (this.DataContainer.Run)
             {
-                if (this.Manager.Recycle.Count > 3)
+                if (this.Manager.Recycle.Count > 3 && this.DataContainer.backgroundEvaluator.ModificationRunning==false)
                 {
                     while (this.Manager.Recycle.TryDequeue(out container) == false)
                     {

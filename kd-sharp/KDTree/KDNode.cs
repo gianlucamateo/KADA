@@ -132,7 +132,7 @@ namespace KDTree
         private void AddLeafPoint(double[] tPoint, T kValue)
         {
             // Add the data point to this node.
-            tPoints[Size] = tPoint;
+             tPoints[Size] = tPoint;
             tData[Size] = kValue;
             ExtendBounds(tPoint);
             Size++;

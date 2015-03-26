@@ -53,6 +53,8 @@ namespace KADA
 
         public Vector3[,] NormalMap = new Vector3[640, 480];
 
+        
+
         Matrix RGBToYUV;
         Matrix YUVToRGB;
         Int32 count = 640 * 480 + 100000;
@@ -535,7 +537,7 @@ namespace KADA
                     transformationUpdater.Start();
                 }
             }*/
-            this.Window.Title = "" + dataContainer.backgroundEvaluator.ModificationInput.Count + " " + dataContainer.backgroundEvaluator.NormalOutput.Count + "" + dataContainer.backgroundEvaluator.NormalInput.Count + " | " + dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " + dataContainer.trackingConfidence + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
+            this.Window.Title = ""  + dataContainer.backgroundEvaluator.ModificationInput.Count + " " + dataContainer.backgroundEvaluator.NormalOutput.Count + "" + dataContainer.backgroundEvaluator.NormalInput.Count + " | " + dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " + dataContainer.trackingConfidence + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
 
             base.Update(gameTime);
         }
@@ -779,7 +781,14 @@ namespace KADA
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Viewport = PCViewport;
-            GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.CornflowerBlue);
+            if (!dataContainer.editMode)
+            {
+                GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.CornflowerBlue);
+            }
+            else
+            {
+                GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.Orange);
+            }
 
 
             effect.CurrentTechnique = effect.Techniques["Instancing"];

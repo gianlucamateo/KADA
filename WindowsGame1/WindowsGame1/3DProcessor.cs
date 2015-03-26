@@ -30,7 +30,7 @@ namespace KADA
         public const float POINTTOPLANEWEIGHT = 0.5f;
         public const float MAXROTATION = (float)Math.PI / 6;
         public const float TRANSLATIONWEIGHT = 1f;
-        public const float MAX_INLIERDISTANCE = 8;
+        public const float MAX_INLIERDISTANCE = 12;
         private const int ICPITERATIONS = 1;
         private const int WORKERCOUNT = 5;
         private const double MINICPRATIO = 2.5;
@@ -40,7 +40,7 @@ namespace KADA
         public Vector3 OldCenter = Vector3.Zero, EditModeCenter = Vector3.Zero, CompensateVector = Vector3.Zero;
         public bool NormalAligner = false;
 
-        private KDTreeWrapper BrickWrapper;
+       
         private static XNAMatrix PrevR;
         private static bool PrevRKnown = false;
 
@@ -64,12 +64,12 @@ namespace KADA
             this.DataContainer = dataContainer;
             this.Manager = manager;
             this.Model = dataContainer.model;
-            this.BrickWrapper = dataContainer.generateKDTree();
+            
 
             Thread Stage4 = new Thread(new ThreadStart(() => GenerateCenter()));
             Stage4.Start();
 
-            KDTreeWrapper tree = dataContainer.model.GenerateKDTree();
+            KDTreeWrapper tree = dataContainer.model.getKDTree();
             ConcurrentQueue<ICPWorker> workers1, workers2;
             workers1 = new ConcurrentQueue<ICPWorker>();
             workers2 = new ConcurrentQueue<ICPWorker>();
@@ -321,6 +321,9 @@ namespace KADA
 
             while (this.DataContainer.Run)
             {
+
+                this.Model = DataContainer.model;
+                
                 DateTime start = DateTime.Now;
                 PipelineContainer container = null;
                 while (container == null && this.DataContainer.Run)
@@ -418,6 +421,7 @@ namespace KADA
 
                         foreach (ICPWorker w in workers)
                         {
+                            w.brickWrapper = Model.getKDTree();
                             w.ModelRadius = Model.radius;
                             w.center = center;
                             w.dataContainer = this.DataContainer;

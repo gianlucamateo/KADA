@@ -81,9 +81,6 @@ namespace KADA
             this.lastGeneration = DateTime.Now;
         }
 
-        public KADA.KDTreeWrapper generateKDTree()
-        {
-            return model.GenerateKDTree();
-        }
+        
     }
 }

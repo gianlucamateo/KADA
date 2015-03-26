@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 
+
 namespace KADA
 {
 
@@ -12,7 +13,7 @@ namespace KADA
         public List<Point> points;
         public const int DIMENSION = 20;
         private Brick[, ,] voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
-        private List<Point>[, ,] pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
+        private List<Point>[, ,] pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];//, newGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
         public List<LocatedBrick> Bricks;
         private KDTreeWrapper kdTree;
         public float radius;
@@ -26,7 +27,7 @@ namespace KADA
                 this.Bricks = new List<LocatedBrick>();
                 this.Bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0), BrickColor.GREEN));
                 this.Bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
-                this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, 2, -1), BrickColor.BLUE));
+                //this.Bricks.Add(new LocatedBrick(false, new Vector3(3, 2, -1), BrickColor.GREEN));
                 this.Bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
                 this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
             }
@@ -51,6 +52,18 @@ namespace KADA
                     }
                 }
             }
+
+            /*for (int x = 0; x < voxelGrid.GetLength(0); x++)
+            {
+                for (int y = 0; y < voxelGrid.GetLength(1); y++)
+                {
+                    for (int z = 0; z < voxelGrid.GetLength(2); z++)
+                    {
+                        newGrid[x, y, z] = new List<Point>();
+                    }
+                }
+            }*/
+
             this.points = new List<Point>();
             //points = Reader.getPoints();
             if (definitive)
@@ -72,12 +85,12 @@ namespace KADA
                 {
                     for (int z = -DIMENSION; z < DIMENSION; z++)
                     {
-                        tentativeBrick = new LocatedBrick(true, new Vector3(x, y, z), BrickColor.NONE);
+                        tentativeBrick = new LocatedBrick(true, new Vector3(x, y, z), BrickColor.GREEN);
                         if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
                         {
                             this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick));
                         }
-                        tentativeBrick = new LocatedBrick(false, new Vector3(x, y, z), BrickColor.NONE);
+                        tentativeBrick = new LocatedBrick(false, new Vector3(x, y, z), BrickColor.GREEN);
                         if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
                         {
                             this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick));
@@ -102,6 +115,16 @@ namespace KADA
                     }
                 }
             }
+            /*for (int x = 0; x < voxelGrid.GetLength(0); x++)
+            {
+                for (int y = 0; y < voxelGrid.GetLength(1); y++)
+                {
+                    for (int z = 0; z < voxelGrid.GetLength(2); z++)
+                    {
+                        newGrid[x, y, z]=new List<Point>();
+                    }
+                }
+            }*/
         }
         public KDTreeWrapper GenerateKDTree(bool fast = false)
         {
@@ -118,8 +141,8 @@ namespace KADA
             foreach (Point p in this.points)
             {
                 if (p.normal != Vector3.Zero && p.position != Vector3.Zero)
-                {
-                    kdTree.AddPoint(p.position, p);
+                {                    
+                    kdTree.AddPoint(p.position, p);                    
                 }
 
             }
@@ -134,7 +157,117 @@ namespace KADA
             this.points.Clear();
             if (!fast)
             {
+                
+                /*for (int x = 0; x < voxelGrid.GetLength(0); x++)
+                {
+                    for (int y = 0; y < voxelGrid.GetLength(1); y++)
+                    {
+                        for (int z = 0; z < voxelGrid.GetLength(2); z++)
+                        {
+                            newGrid[x, y, z] = new List<Point>();
+                        }
+                    }
+                } */
+                //int blockCount = 0;
                 for (int x = 0; x < voxelGrid.GetLength(0); x++)
+                {
+                    for (int y = 0; y < voxelGrid.GetLength(1); y++)
+                    {
+                        for (int z = 0; z < voxelGrid.GetLength(2); z++)
+                        {
+                            //Console.WriteLine(blockCount++);
+                            if (voxelGrid[x, y, z] == null)
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                #region check Z
+
+                                
+                                foreach (Point p in pointGrid[x, y, z - 1])
+                                {
+                                    if (p.normal.Z > 0)
+                                    {
+                                        p.state.dismiss = true;
+                                        
+                                    }
+                                }                             
+
+                               
+                                
+                                foreach (Point p in pointGrid[x, y, z + 1])
+                                {
+                                    if (p.normal.Z < 0)
+                                    {
+                                        p.state.dismiss = true;
+                                    }
+                                }
+                                
+                                #endregion
+                                #region check X
+                                if (x > 0)
+                                {
+                                    
+                                    foreach (Point p in pointGrid[x - 1, y, z])
+                                    {
+                                        if (p.normal.X > 0)
+                                        {
+                                            p.state.dismiss = true;
+                                        }
+                                    }
+                                    
+                                }
+                                
+                                
+                                if (x < voxelGrid.GetLength(0) - 1)
+                                {
+                                    
+                                    foreach (Point p in pointGrid[x + 1, y, z])
+                                    {
+                                        if (p.normal.X < 0)
+                                        {
+                                            p.state.dismiss = true;
+                                        }
+                                    }
+                               
+                                }
+                                #endregion
+                                #region check Y
+                                if (y > 0)
+                                {
+                                   
+                                    foreach (Point p in pointGrid[x, y - 1, z])
+                                    {
+                                        if (p.normal.Y > 0)
+                                        {
+                                            p.state.dismiss = true;
+                                        }
+                                    }
+                                    
+                                }
+
+                                if (y < voxelGrid.GetLength(1) - 1)
+                                {
+
+                                    
+                                    foreach (Point p in pointGrid[x, y + 1, z])
+                                    {
+                                        if (p.normal.Y < 0)
+                                        {
+                                            p.state.dismiss = true;
+                                        }
+                                    }
+                                   
+                                }
+                                #endregion
+                            }
+                        }
+                    }
+                }
+                
+                
+                /*for (int x = 0; x < voxelGrid.GetLength(0); x++)
                 {
                     for (int y = 0; y < voxelGrid.GetLength(1); y++)
                     {
@@ -233,11 +366,18 @@ namespace KADA
                             }
                         }
                     }
-                }
+                }*/
             }
             foreach (List<Point> l in pointGrid)
             {
-                this.points.AddRange(l);
+                foreach (Point p in l)
+                {
+                    if (p.state.dismiss == false)
+                    {
+                        this.points.Add(p);
+                    }
+                }
+                
             }
             this.center = Vector3.Zero;
 
@@ -251,7 +391,7 @@ namespace KADA
             //compute max Distance, radius of wrapping sphere
             this.radius = 0f;
 
-            /*if (!fast)
+            if (!fast)
             {
                 for (int i = 0; i < this.points.Count; i++)
                 {
@@ -259,7 +399,7 @@ namespace KADA
                     p.position = p.position - this.center;
                     this.points[i] = p;
                 }
-            }*/
+            }
 
             foreach (Point p in this.points)
             {
