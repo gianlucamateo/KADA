@@ -672,7 +672,10 @@ namespace KADA
             {
                 this.dataContainer.attach = true;
             }
-
+            if (kS.IsKeyDown(Keys.O))
+            {
+                this.dataContainer.wrongModel = true;
+            }
 
             UpdateView();
         }

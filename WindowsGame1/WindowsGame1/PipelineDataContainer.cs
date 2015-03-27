@@ -43,6 +43,7 @@ namespace KADA
         public Matrix R;
         public bool editMode;
         public bool attach;
+        public bool wrongModel=false;
 
         public float ICPThreshold = 200;
 

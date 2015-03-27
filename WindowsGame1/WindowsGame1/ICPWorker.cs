@@ -143,6 +143,11 @@ namespace KADA
                     maxDistance = 2*_3DProcessor.MAX_INLIERDISTANCE;
                 }
 
+                /*if (dataContainer.model.Bricks.Count < 3 && dataContainer.editMode)
+                {
+                    maxDistance = 4;
+                }*/
+
                 neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: maxDistance);
                 neighbour.MoveNext();
 
@@ -168,8 +173,8 @@ namespace KADA
                     if (!found)
                     {
                         this.ICPOutliers++;
-                        
-                        this.Outliers.Enqueue(p+center);
+
+                        this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
                         continue;                       
                     }
                 }
@@ -182,8 +187,8 @@ namespace KADA
                 if (q.normal == Vector3.Zero||q.position == Vector3.Zero)
                 {
                     this.ICPOutliers++;
-                    
-                    this.Outliers.Enqueue(p + dataContainer.center);
+
+                    this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
                     
                     continue;
                 }
@@ -214,6 +219,7 @@ namespace KADA
                         if (point.brickColor == bc)
                         {
                             weight *= 10f;
+                            
                             break;
                         }
                     }
@@ -229,7 +235,7 @@ namespace KADA
                 {
                     this.ICPOutliers++;
                     //this.OutlierAvg += p;
-                    this.Outliers.Enqueue(p + dataContainer.center);
+                    this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
                     //return;
                     continue;
                 }
@@ -320,7 +326,7 @@ namespace KADA
                 }
                 else
                 {
-                    this.Outliers.Enqueue(p + dataContainer.center);
+                    this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
                     this.ICPOutliers++;
                 }
             }

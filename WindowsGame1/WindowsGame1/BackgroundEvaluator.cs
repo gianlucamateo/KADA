@@ -15,11 +15,12 @@ namespace KADA
     {
         private PipelineDataContainer dataContainer;
         public ConcurrentQueue<PipelineContainer> NormalInput;
-        public ConcurrentQueue<PipelineContainer> ModificationInput;
+        public ConcurrentQueue<List<Point>> ModificationInput;
         public ConcurrentQueue<Matrix> NormalOutput;
         public ConcurrentQueue<List<Point>> PointsInput;
         private Matrix[] possibleRotations;
         public bool ModificationRunning = false;
+        public SortedDictionary<float, Model> guesses;
 
 
         public BackgroundEvaluator(PipelineDataContainer dataContainer)
@@ -27,7 +28,8 @@ namespace KADA
             this.PointsInput = new ConcurrentQueue<List<Point>>();
             this.NormalOutput = new ConcurrentQueue<Matrix>();
             this.NormalInput = new ConcurrentQueue<PipelineContainer>();
-            this.ModificationInput = new ConcurrentQueue<PipelineContainer>();
+            this.ModificationInput = new ConcurrentQueue<List<Point>>();
+            this.guesses = new SortedDictionary<float, Model>();
             this.dataContainer = dataContainer;
             possibleRotations = new Matrix[64];
 
@@ -84,10 +86,21 @@ namespace KADA
 
         private void applyModification()
         {
-            PipelineContainer container;
+            List<Point> container;
             while (this.dataContainer.Run)
             {
+                if (this.dataContainer.wrongModel)
+                {
+                    dataContainer.editMode = true;
+                    float tempKey = this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1);
+                    Model temp = this.guesses[tempKey];
 
+                    Model nextTry = new Model(true, temp.Bricks, false);
+                    dataContainer.model = nextTry;
+                    this.guesses.Remove(this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1));
+                    this.dataContainer.wrongModel = false;
+                    dataContainer.editMode = false;
+                }
                 ModificationInput.TryDequeue(out container);
                 if (container == null)
                 {
@@ -103,11 +116,12 @@ namespace KADA
 
                 while (this.ModificationInput.Count > 0)
                 {
-                    PipelineContainer dumpContainer;
+                    List<Point> dumpContainer;
                     this.ModificationInput.TryDequeue(out dumpContainer);
                 }
                 Console.WriteLine("working");
-                List<Point> qi = new List<Point>(container.Qi);
+                this.guesses.Clear();
+                List<Point> qi = new List<Point>(container);
                 SortedDictionary<float, TentativeModel> dict = new SortedDictionary<float, TentativeModel>(dataContainer.tentativeModels);
 
                 float maxRatio = float.MinValue;
@@ -156,9 +170,19 @@ namespace KADA
                         maxRatio = ratio;
                         currentModel = model;
                     }
-                    
+                    while (this.guesses.ContainsKey(ratio))
+                    {
+                        ratio += 0.00001f;
+                    }
+                    this.guesses.Add(ratio, model);
+                    if (this.guesses.Keys.Count > 20)
+                    {
+                        float k = this.guesses.Keys.ElementAt(0);
+                        this.guesses.Remove(k);
+                    }
 
                 }
+                this.guesses.Remove(this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1));
 
                 Model finalModel = new Model(true, currentModel.Bricks, false);                
                 dataContainer.model = finalModel;
