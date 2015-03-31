@@ -89,17 +89,26 @@ namespace KADA
             List<Point> container;
             while (this.dataContainer.Run)
             {
-                if (this.dataContainer.wrongModel)
+                if (this.dataContainer.WrongModel)
                 {
-                    dataContainer.editMode = true;
+                    dataContainer.EditMode = true;
                     float tempKey = this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1);
                     Model temp = this.guesses[tempKey];
 
-                    Model nextTry = new Model(true, temp.Bricks, false);
+                    Model nextTry = new Model(true, temp.Bricks, true);
                     dataContainer.model = nextTry;
-                    this.guesses.Remove(this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1));
-                    this.dataContainer.wrongModel = false;
-                    dataContainer.editMode = false;
+                    this.guesses.Remove(tempKey);                    
+                    Thread.Sleep(300);
+                    this.dataContainer.WrongModel = false;
+                    dataContainer.EditMode = false;
+                    
+
+                }
+                if (this.dataContainer.ApplyModel)
+                {
+                    Model temp = new Model(true, dataContainer.model.Bricks, false);
+                    dataContainer.model = temp;
+                    dataContainer.ApplyModel = false;
                 }
                 ModificationInput.TryDequeue(out container);
                 if (container == null)
@@ -107,12 +116,12 @@ namespace KADA
                     Thread.Sleep(100);
                     continue;
                 }
-                if (dataContainer.editMode == false)
+                if (dataContainer.EditMode == false)
                 {
                     continue;
                 }
                 this.ModificationRunning = true;
-                this.dataContainer.attach = false;
+                this.dataContainer.Attach = false;
 
                 while (this.ModificationInput.Count > 0)
                 {
@@ -129,6 +138,8 @@ namespace KADA
                 Model currentModel = null;
                 foreach (float key in dict.Keys)
                 {
+                    i++;
+                    dataContainer.ModelsWorked = i;
                     /*if (i++ > 20)
                     {
                         continue;
@@ -137,7 +148,7 @@ namespace KADA
                     {
                         return;
                     }
-                    
+
 
 
                     Console.WriteLine("working on model");
@@ -146,12 +157,12 @@ namespace KADA
 
                     int outliers = 0, inliers = 0;
                     float ratio = 0;
-                    Matrix Rinv = Matrix.Invert(dataContainer.R);
+                    //Matrix Rinv = Matrix.Invert(dataContainer.R);
                     foreach (Point p in qi)
                     {
                         Vector3 transformedP = Vector3.Zero;
-                        
-                        transformedP = Vector3.Transform(p.position-dataContainer.center, Rinv);
+
+                        transformedP = p.position;//Vector3.Transform(p.position - dataContainer.center, Rinv);
                         double[] arr = { transformedP.X, transformedP.Y, transformedP.Z };
                         KDTree.NearestNeighbor<Point> neighbor = tree.NearestNeighbors(arr, 1, -1);
                         neighbor.MoveNext();
@@ -164,31 +175,35 @@ namespace KADA
                             inliers++;
                         }
                     }
-                    ratio = inliers / (float)outliers;
+                    ratio = inliers / ((float)outliers + 1f);
                     if (ratio > maxRatio)
                     {
                         maxRatio = ratio;
                         currentModel = model;
                     }
-                    while (this.guesses.ContainsKey(ratio))
+                    while (this.guesses.ContainsKey(ratio) && ratio < 100000)
                     {
-                        ratio += 0.00001f;
+                        ratio += 0.1f;
+                        Console.WriteLine(ratio);
                     }
-                    this.guesses.Add(ratio, model);
-                    if (this.guesses.Keys.Count > 20)
+                    if (ratio <= 1000000)
+                    {
+                        this.guesses.Add(ratio, model);
+                    }
+                    if (this.guesses.Keys.Count > 50)
                     {
                         float k = this.guesses.Keys.ElementAt(0);
                         this.guesses.Remove(k);
                     }
 
                 }
-                this.guesses.Remove(this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1));
+                //this.guesses.Remove(this.guesses.Keys.ElementAt(this.guesses.Keys.Count-1));
 
-                Model finalModel = new Model(true, currentModel.Bricks, false);                
+                Model finalModel = new Model(true, currentModel.Bricks, true);
                 dataContainer.model = finalModel;
-                dataContainer.editMode = false;
+                dataContainer.EditMode = false;
                 this.ModificationRunning = false;
-                               
+
             }
         }
 
@@ -400,7 +415,7 @@ namespace KADA
                 }
                 //dataContainer.tentativeModel = bestGuess;
                 dataContainer.tentativeModels = new SortedDictionary<float, TentativeModel>(dict);
-                Console.WriteLine(distance);
+                //Console.WriteLine(distance);
 
             }
 
