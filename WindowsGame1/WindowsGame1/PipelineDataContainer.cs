@@ -41,16 +41,21 @@ namespace KADA
         public Vector3 center;
         public BackgroundEvaluator backgroundEvaluator;
         public Matrix R;
-        public bool editMode;
-        public bool attach;
-        public bool wrongModel=false;
+        public bool EditMode;
+        public bool Attach;
+        public bool WrongModel=false;
+        public bool ApplyModel = false;
+        public int ModelsWorked = 0;
+        public Vector3 g = Vector3.Zero;
+        public Matrix BaseRotation;
 
         public float ICPThreshold = 200;
 
         public PipelineDataContainer()
         {
-            this.attach = false;
-            this.editMode = false;
+            this.BaseRotation = Matrix.Identity;
+            this.Attach = false;
+            this.EditMode = false;
             this.R = new Matrix();
             this.center = Vector3.Zero;
             this.outlierCenter = Vector3.Zero;

@@ -5,6 +5,7 @@ using System.Text;
 using System.IO;
 using Microsoft.Kinect;
 using System.Threading;
+using Microsoft.Xna.Framework;
 
 namespace KADA
 {
@@ -53,6 +54,22 @@ namespace KADA
                 {
                     this.Kinect = null;
                 }
+
+                dataContainer.g = Microsoft.Xna.Framework.Vector3.Zero;
+                for (int i = 0; i < 40; i++)
+                {
+                    dataContainer.g -= new Microsoft.Xna.Framework.Vector3(-this.Kinect.AccelerometerGetCurrentReading().X, this.Kinect.AccelerometerGetCurrentReading().Y, -this.Kinect.AccelerometerGetCurrentReading().Z);
+                    Thread.Sleep(50);
+                }
+                dataContainer.g.Normalize();
+
+                Vector3 axis = Vector3.Cross(Vector3.Up, dataContainer.g);
+                axis.Normalize();
+
+                float angle = (float)Math.Acos(Vector3.Dot(Vector3.Up, dataContainer.g) / (Vector3.Up.Length() * dataContainer.g.Length()));
+
+                Matrix initialRot = Matrix.CreateFromAxisAngle(axis, angle);
+                dataContainer.BaseRotation = initialRot;
 
                 // this.kinect.AllFramesReady += this.KinectAllFramesReady;
                 frameCreator.Start();

@@ -326,7 +326,18 @@ namespace KADA
                     instances[o].Scale = 0f;
                 }
                 Vector3 center = Vector3.Transform(Vector3.One, brickTranslation);
-                for (int o = 0; o < 3; o++)
+
+                for (int segment = 0; segment < 90; segment++)
+                {
+                    instances[i].ScreenPos = center + dataContainer.g * segment;
+                    instances[i].Scale = 1;
+                    Vector3 c = Vector3.Zero;                    
+                    c = new Vector3(0, 0, 255);                    
+                    instances[i].Color = c;
+                    i++;
+                }
+                
+                /*for (int o = 0; o < 3; o++)
                 {
                     if (container.NormalsList[o] != null)
                     {
@@ -352,9 +363,9 @@ namespace KADA
                             i++;
                         }
                     }
-                }
+                }*/
 
-                if (container.estimatedVectors[0] != null)
+                /*if (container.estimatedVectors[0] != null)
                 {
                     for (int segment = 0; segment < 90; segment++)
                     {
@@ -383,7 +394,7 @@ namespace KADA
                         instances[i].Color = new Vector3(0, 0, 0.5f);
                         i++;
                     }
-                }
+                }*/
 
 
 
@@ -537,7 +548,7 @@ namespace KADA
                     transformationUpdater.Start();
                 }
             }*/
-            this.Window.Title = ""  + dataContainer.backgroundEvaluator.ModificationInput.Count + " " + dataContainer.backgroundEvaluator.NormalOutput.Count + "" + dataContainer.backgroundEvaluator.NormalInput.Count + " | " + dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " + dataContainer.trackingConfidence + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
+            this.Window.Title = dataContainer.ModelsWorked + " -  "  + dataContainer.backgroundEvaluator.ModificationInput.Count + " " + dataContainer.backgroundEvaluator.NormalOutput.Count + "" + dataContainer.backgroundEvaluator.NormalInput.Count + " | " + dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " + dataContainer.trackingConfidence + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
 
             base.Update(gameTime);
         }
@@ -662,20 +673,26 @@ namespace KADA
 
             if (kS.IsKeyDown(Keys.M))
             {
-                this.dataContainer.editMode = true;
+                this.dataContainer.EditMode = true;
             }
             if (kS.IsKeyDown(Keys.N))
             {
-                this.dataContainer.editMode = false;
+                this.dataContainer.EditMode = false;
             }
             if (kS.IsKeyDown(Keys.Enter))
             {
-                this.dataContainer.attach = true;
+                this.dataContainer.Attach = true;
             }
             if (kS.IsKeyDown(Keys.O))
             {
-                this.dataContainer.wrongModel = true;
+                this.dataContainer.WrongModel = true;
             }
+
+            if (kS.IsKeyDown(Keys.NumPad5))
+            {
+                this.dataContainer.ApplyModel = true;
+            }
+
 
             UpdateView();
         }
@@ -784,13 +801,17 @@ namespace KADA
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Viewport = PCViewport;
-            if (!dataContainer.editMode)
+            if (dataContainer.EditMode)
             {
-                GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.CornflowerBlue);
+                GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.Orange);
+            }
+            else if (dataContainer.ApplyModel)
+            {
+                GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.Purple);
             }
             else
             {
-                GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.Orange);
+                GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.CornflowerBlue);
             }
 
 
@@ -836,7 +857,7 @@ namespace KADA
             }
 
             
-            if (tentativeModels != null && dataContainer.editMode)
+            if (tentativeModels != null && dataContainer.EditMode)
             {
                 SortedDictionary<float, TentativeModel> cachedTentativeModels = new SortedDictionary<float, TentativeModel>(tentativeModels);
                 for (int i = 0; i < 3; i++)
@@ -868,7 +889,7 @@ namespace KADA
                 }
             }
 
-            if (dataContainer.editMode)
+            if (dataContainer.EditMode)
             {
                 foreach (ModelMesh mesh in brick.Meshes)
                 {

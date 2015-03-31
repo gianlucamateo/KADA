@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
+using System.Threading.Tasks;
 
 
 namespace KADA
@@ -78,14 +79,18 @@ namespace KADA
 
         public void ComputeTentativeBricks()
         {
-            LocatedBrick tentativeBrick;
+
+
             for (int y = -DIMENSION; y < DIMENSION; y++)
             {
+
                 for (int x = -DIMENSION; x < DIMENSION; x++)
                 {
-                    for (int z = -DIMENSION; z < DIMENSION; z++)
+                    //for (int z = -DIMENSION; z < DIMENSION; z++)
+                    //{
+                    Parallel.For(-DIMENSION, DIMENSION, new ParallelOptions { MaxDegreeOfParallelism = 10 }, z =>
                     {
-                        tentativeBrick = new LocatedBrick(true, new Vector3(x, y, z), BrickColor.GREEN);
+                        LocatedBrick tentativeBrick = new LocatedBrick(true, new Vector3(x, y, z), BrickColor.GREEN);
                         if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
                         {
                             this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick));
@@ -95,7 +100,7 @@ namespace KADA
                         {
                             this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick));
                         }
-                    }
+                    });
                 }
             }
         }
@@ -141,8 +146,8 @@ namespace KADA
             foreach (Point p in this.points)
             {
                 if (p.normal != Vector3.Zero && p.position != Vector3.Zero)
-                {                    
-                    kdTree.AddPoint(p.position, p);                    
+                {
+                    kdTree.AddPoint(p.position, p);
                 }
 
             }
@@ -157,7 +162,7 @@ namespace KADA
             this.points.Clear();
             if (!fast)
             {
-                
+
                 /*for (int x = 0; x < voxelGrid.GetLength(0); x++)
                 {
                     for (int y = 0; y < voxelGrid.GetLength(1); y++)
@@ -184,18 +189,18 @@ namespace KADA
                             {
                                 #region check Z
 
-                                
+
                                 foreach (Point p in pointGrid[x, y, z - 1])
                                 {
                                     if (p.normal.Z > 0)
                                     {
                                         p.state.dismiss = true;
-                                        
-                                    }
-                                }                             
 
-                               
-                                
+                                    }
+                                }
+
+
+
                                 foreach (Point p in pointGrid[x, y, z + 1])
                                 {
                                     if (p.normal.Z < 0)
@@ -203,12 +208,12 @@ namespace KADA
                                         p.state.dismiss = true;
                                     }
                                 }
-                                
+
                                 #endregion
                                 #region check X
                                 if (x > 0)
                                 {
-                                    
+
                                     foreach (Point p in pointGrid[x - 1, y, z])
                                     {
                                         if (p.normal.X > 0)
@@ -216,13 +221,13 @@ namespace KADA
                                             p.state.dismiss = true;
                                         }
                                     }
-                                    
+
                                 }
-                                
-                                
+
+
                                 if (x < voxelGrid.GetLength(0) - 1)
                                 {
-                                    
+
                                     foreach (Point p in pointGrid[x + 1, y, z])
                                     {
                                         if (p.normal.X < 0)
@@ -230,13 +235,13 @@ namespace KADA
                                             p.state.dismiss = true;
                                         }
                                     }
-                               
+
                                 }
                                 #endregion
                                 #region check Y
                                 if (y > 0)
                                 {
-                                   
+
                                     foreach (Point p in pointGrid[x, y - 1, z])
                                     {
                                         if (p.normal.Y > 0)
@@ -244,13 +249,13 @@ namespace KADA
                                             p.state.dismiss = true;
                                         }
                                     }
-                                    
+
                                 }
 
                                 if (y < voxelGrid.GetLength(1) - 1)
                                 {
 
-                                    
+
                                     foreach (Point p in pointGrid[x, y + 1, z])
                                     {
                                         if (p.normal.Y < 0)
@@ -258,15 +263,15 @@ namespace KADA
                                             p.state.dismiss = true;
                                         }
                                     }
-                                   
+
                                 }
                                 #endregion
                             }
                         }
                     }
                 }
-                
-                
+
+
                 /*for (int x = 0; x < voxelGrid.GetLength(0); x++)
                 {
                     for (int y = 0; y < voxelGrid.GetLength(1); y++)
@@ -377,7 +382,7 @@ namespace KADA
                         this.points.Add(p);
                     }
                 }
-                
+
             }
             this.center = Vector3.Zero;
 

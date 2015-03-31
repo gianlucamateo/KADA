@@ -9,7 +9,7 @@ namespace KADA
     {
         public LocatedBrick TentativeBrick;
 
-        public TentativeModel(List<LocatedBrick> bricks, LocatedBrick tentativeBrick) : base(false,fast:false)
+        public TentativeModel(List<LocatedBrick> bricks, LocatedBrick tentativeBrick) : base(false,fast:true)
         {
             this.Bricks = new List<LocatedBrick>(bricks);
             this.Bricks.Add(tentativeBrick);
