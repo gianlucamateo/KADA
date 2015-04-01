@@ -250,7 +250,7 @@ namespace KADA
                 //System.Diagnostics.Debug.WriteLine(weight);
                 tmA.MultiplyInplace(weight);
 
-                tmAPoint[0, 0] = p.Y * p.Y + p.Z * p.Z;
+                /*tmAPoint[0, 0] = p.Y * p.Y + p.Z * p.Z;
                 tmAPoint[0, 1] = -p.Y * p.X;
                 tmAPoint[0, 2] = -p.Z * p.X;
                 tmAPoint[0, 3] = 0;
@@ -290,7 +290,7 @@ namespace KADA
                 tmAPoint[5, 2] = 0;
                 tmAPoint[5, 3] = 0;
                 tmAPoint[5, 4] = 0;
-                tmAPoint[5, 5] = 1;
+                tmAPoint[5, 5] = 1;*/
                 //double[] tempB = new double[6];
                 //tmAPoint.MultiplyInplace(weight);
                 float pMinqTimesN = Vector3.Dot(pos - p, n);
@@ -302,12 +302,12 @@ namespace KADA
                 tempB[4] = pMinqTimesN * n.Y;
                 tempB[5] = pMinqTimesN * n.Z;
 
-                tempBPoint[0] = p.Z * (p.Y - q.position.Y) - p.Y * (p.Z - q.position.Z);
+                /*tempBPoint[0] = p.Z * (p.Y - q.position.Y) - p.Y * (p.Z - q.position.Z);
                 tempBPoint[1] = -p.Z * (p.X - q.position.X) + p.X * (p.Z - q.position.Z);
                 tempBPoint[2] = p.Y * (p.X - q.position.X) - p.X * (p.Y - q.position.Y);
                 tempBPoint[0] = -p.X + q.position.X;
                 tempBPoint[0] = -p.Y + q.position.Y;
-                tempBPoint[0] = -p.Z + q.position.Z;
+                tempBPoint[0] = -p.Z + q.position.Z;*/
 
                 tempB.MultiplyInplace(weight);
 

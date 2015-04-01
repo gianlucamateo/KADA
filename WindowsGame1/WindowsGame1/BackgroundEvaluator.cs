@@ -152,7 +152,7 @@ namespace KADA
 
 
                     Console.WriteLine("working on model");
-                    Model model = dict[key].validate();
+                    Model model = dict[key].validate(dataContainer.addColor);
                     KDTreeWrapper tree = model.getKDTree();
 
                     int outliers = 0, inliers = 0;
@@ -323,6 +323,12 @@ namespace KADA
                     }
                 }
                 //float minX = float.MaxValue, maxX = 0, minY = float.MaxValue, maxY = 0;
+
+                foreach (TentativeModel t in dataContainer.model.tentativeModels)
+                {
+                    t.TentativeBrick.setColor(dataContainer.addColor);
+                }
+                
                 foreach (Point p in PointsList)
                 {
 

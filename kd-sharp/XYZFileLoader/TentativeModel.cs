@@ -17,8 +17,9 @@ namespace KADA
             //this.GenerateKDTree();
         }
         //new code, could be buggy
-        public Model validate()
+        public Model validate(BrickColor color)
         {
+            this.TentativeBrick.setColor(color);
             Model model = new Model(true,this.Bricks,fast: true);
             //model.Bricks = this.Bricks;
             //model.GenerateKDTree();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
+using System.Threading.Tasks;
 
 namespace KADA
 {
@@ -16,9 +17,11 @@ namespace KADA
         private Vector3 root = new Vector3(Model.DIMENSION / 2, Model.DIMENSION / 2, Model.DIMENSION / 2);
         private Vector3 voxelDimensions = new Vector3(64.0f / 4, 19.2f, 32.0f / 2);
         public Vector3 center;
+        private BrickColor color;
 
         public LocatedBrick(bool rotated, Vector3 voxelOffset, BrickColor color)
         {
+            this.color = color;
             this.rotated = rotated;
             this.voxelOffset = voxelOffset;
             this.brick = new Brick(color);
@@ -29,6 +32,12 @@ namespace KADA
                 this.voxelOffset.Z = save;
             }
             this.Transformation = Matrix.Identity;
+        }
+
+        public void setColor(BrickColor color)
+        {
+            this.color = color;
+            this.brick.color = color;
         }
 
         public Matrix getTransformation()
@@ -190,6 +199,7 @@ namespace KADA
             }
             int count = 0;
             foreach (Point p in this.brick.points)
+            //Parallel.ForEach(this.brick.points, p =>
             {
 
                 Vector3 position = p.position;
@@ -241,13 +251,13 @@ namespace KADA
                 pCopy.position += offset;
                 center += pCopy.position;
                 count++;
-               
+
                 if (apply)
                 {
                     pointGrid[x, y, z].Add(pCopy);
                 }
 
-            }
+            }//);
             if (apply){ 
                 Array.Copy(tentative, voxelGrid, tentative.GetLength(0) * tentative.GetLength(1) * tentative.GetLength(2));
             }

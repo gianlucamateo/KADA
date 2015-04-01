@@ -48,6 +48,7 @@ namespace KADA
         public int ModelsWorked = 0;
         public Vector3 g = Vector3.Zero;
         public Matrix BaseRotation;
+        public BrickColor addColor = BrickColor.NONE;
 
         public float ICPThreshold = 200;
 

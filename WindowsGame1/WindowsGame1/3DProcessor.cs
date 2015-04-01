@@ -40,7 +40,7 @@ namespace KADA
         public Vector3 OldCenter = Vector3.Zero, EditModeCenter = Vector3.Zero, CompensateVector = Vector3.Zero;
         public bool NormalAligner = false;
 
-       
+
         private static XNAMatrix PrevR;
         private static bool PrevRKnown = false;
 
@@ -64,7 +64,7 @@ namespace KADA
             this.DataContainer = dataContainer;
             this.Manager = manager;
             this.Model = dataContainer.model;
-            
+
 
             Thread Stage4 = new Thread(new ThreadStart(() => GenerateCenter()));
             Stage4.Start();
@@ -528,14 +528,16 @@ namespace KADA
 
                         pointR = XNAMatrix.Transpose(pointR);
 
+                                                
 
                         Vector X = null;
                         try
                         {
                             X = LE.Solve(A, B);
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
+                            Console.WriteLine(e);
                             Vector3 prominentNormal = container.NormalsList[2];
                             skip = true;
                             break;
@@ -546,28 +548,33 @@ namespace KADA
                         if (!skip)
                         {
                             float currentWeight = 1;//0.2f + Math.Min(0.8f, 1f / container.ICPRatio);
-                            double[] XArrTrans = X.ToArray();
+                            
 
                             X = X.Multiply(POINTTOPLANEWEIGHT * currentWeight);
-                            double[] XArr = X.ToArray();
+                            
                             float maxRotation = MAXROTATION;
                             if (DataContainer.EditMode)
                             {
                                 maxRotation /= 10;
                             }
-                            if (Model.Bricks.Count < 3)
+                            double[] XArr = X.ToArray();
+                            if (Model.Bricks.Count < 2 || (DataContainer.EditMode && Model.Bricks.Count<5))
                             {
                                 XArr[0] = 0;
                                 XArr[2] = 0;
                                 //XArr[4] = 0;
                             }
                             
+                            
+                            
+                            
                             XNAMatrix XRot = XNAMatrix.CreateRotationX(Math.Min((float)XArr[0], maxRotation));
                             XNAMatrix YRot = XNAMatrix.CreateRotationY(Math.Min((float)XArr[1], maxRotation));
                             XNAMatrix ZRot = XNAMatrix.CreateRotationZ(Math.Min((float)XArr[2], maxRotation));
                             XNAMatrix RTemp = ZRot * YRot * XRot;
 
-                            Vector3 trans = new Vector3((float)(XArrTrans[3]), (float)(XArrTrans[4]), (float)(XArrTrans[5]));
+                            
+                            Vector3 trans = new Vector3((float)(XArr[3]), (float)(XArr[4]), (float)(XArr[5]));
                             trans *= TRANSLATIONWEIGHT;
                             trans *= Model.radius;
                             float maxTrans = 15;
@@ -575,7 +582,7 @@ namespace KADA
                             {
                                 float dist = Vector3.Dot(trans, DataContainer.g);
                                 trans-=(dist)*DataContainer.g;
-                                maxTrans = 0.1f;
+                                maxTrans = Model.Bricks.Count/10f;
                                 if (Model.Bricks.Count == 1)
                                 {
                                     trans = Vector3.Zero;
@@ -618,7 +625,7 @@ namespace KADA
                             double pointThetaY = -Math.Atan2(-pointR.M31, Math.Sqrt(pointR.M32 * pointR.M32 + pointR.M33 * pointR.M33));
                             double pointThetaZ = -Math.Atan2(pointR.M21, pointR.M11);
 
-                            if (Model.Bricks.Count < 3)
+                            if (Model.Bricks.Count < 2 || (DataContainer.EditMode && Model.Bricks.Count < 5))
                             {
                                 pointThetaX = 0;
                                 pointThetaZ = 0;
@@ -643,10 +650,10 @@ namespace KADA
                              
                            
                             RTemp = XNAMatrix.CreateTranslation(trans) * RTemp;
-                            /*if (this.DataContainer.EditMode && Model.Bricks.Count < 2)
+                            if (this.DataContainer.EditMode && Model.Bricks.Count < 2)
                             {
                                 RTemp = XNAMatrix.Identity;
-                            }*/
+                            }
 
                             R = RTemp * R;
                             DataContainer.R = R;
@@ -896,7 +903,7 @@ namespace KADA
                 }
                 //container.Timings.Add(DateTime.Now);
                 Manager.ProcessingQueues[++container.Stage].Enqueue(container);
-                
+
                 //manager.enqueue(container);
             }
 

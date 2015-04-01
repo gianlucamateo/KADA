@@ -693,6 +693,26 @@ namespace KADA
                 this.dataContainer.ApplyModel = true;
             }
 
+            if (kS.IsKeyDown(Keys.NumPad1))
+            {
+                this.dataContainer.addColor = BrickColor.RED;
+            }
+
+            if (kS.IsKeyDown(Keys.NumPad2))
+            {
+                this.dataContainer.addColor = BrickColor.GREEN;
+            }
+
+            if (kS.IsKeyDown(Keys.NumPad3))
+            {
+                this.dataContainer.addColor = BrickColor.BLUE;
+            }
+
+            if (kS.IsKeyDown(Keys.NumPad4))
+            {
+                this.dataContainer.addColor = BrickColor.YELLOW;
+            }            
+
 
             UpdateView();
         }
@@ -874,8 +894,8 @@ namespace KADA
                                 foreach (BasicEffect eff in mesh.Effects)
                                 {
                                     eff.TextureEnabled = false;
-                                    eff.DiffuseColor = new Vector3(0.2f, 1f, 0.2f);
-                                    eff.Alpha = 0.5f;
+                                    eff.DiffuseColor = tentativeModel.TentativeBrick.getColor();
+                                    eff.Alpha = 0.6f;
                                     eff.EnableDefaultLighting();
                                     eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * tentativeModel.TentativeBrick.getTransformation() * Matrix.CreateTranslation(this.offset) * this.brickRotation * brickTranslation;// *
 
