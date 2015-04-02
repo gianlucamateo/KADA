@@ -49,6 +49,8 @@ namespace KADA
         public Vector3 g = Vector3.Zero;
         public Matrix BaseRotation;
         public BrickColor addColor = BrickColor.NONE;
+        public float currentMinRatio;
+        public int differentViewCounter = 0;
 
         public float ICPThreshold = 200;
 

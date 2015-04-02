@@ -12,13 +12,13 @@ namespace KADA
     public class Model
     {
         public List<Point> points;
-        public const int DIMENSION = 20;
-        private Brick[, ,] voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
-        private List<Point>[, ,] pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];//, newGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
+        public const int DIMENSION = 18;
+        public Brick[, ,] voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
+        public List<Point>[, ,] pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];//, newGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
         public List<LocatedBrick> Bricks;
-        private KDTreeWrapper kdTree;
+        public KDTreeWrapper kdTree;
         public float radius;
-        private Vector3 center;
+        public Vector3 center;
         public List<TentativeModel> tentativeModels;
 
         public Model(bool definitive, List<LocatedBrick> bricks = null, bool fast = false)

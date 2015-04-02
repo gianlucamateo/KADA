@@ -21,6 +21,7 @@ namespace KADA
         private Matrix[] possibleRotations;
         public bool ModificationRunning = false;
         public SortedDictionary<float, Model> guesses;
+        
 
 
         public BackgroundEvaluator(PipelineDataContainer dataContainer)
@@ -100,8 +101,7 @@ namespace KADA
                     this.guesses.Remove(tempKey);                    
                     Thread.Sleep(300);
                     this.dataContainer.WrongModel = false;
-                    dataContainer.EditMode = false;
-                    
+                    dataContainer.EditMode = false;                    
 
                 }
                 if (this.dataContainer.ApplyModel)

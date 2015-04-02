@@ -319,11 +319,14 @@ namespace KADA
             List<Point> Outliers = null;
             int afterEditMode = 1;
 
+            double angleSum = 0;
+            List<Point> backgroundData = new List<Point>();
+
             while (this.DataContainer.Run)
             {
 
                 this.Model = DataContainer.model;
-                
+
                 DateTime start = DateTime.Now;
                 PipelineContainer container = null;
                 while (container == null && this.DataContainer.Run)
@@ -353,7 +356,7 @@ namespace KADA
 
 
 
-                this.DataContainer.ICPThreshold = Math.Max(Model.radius,100);
+                this.DataContainer.ICPThreshold = Math.Max(Model.radius, 100);
 
                 //container.Timings.Add(DateTime.Now);
                 if (this.DataContainer.DeNoiseAndICP)
@@ -528,7 +531,7 @@ namespace KADA
 
                         pointR = XNAMatrix.Transpose(pointR);
 
-                                                
+
 
                         Vector X = null;
                         try
@@ -548,41 +551,42 @@ namespace KADA
                         if (!skip)
                         {
                             float currentWeight = 1;//0.2f + Math.Min(0.8f, 1f / container.ICPRatio);
-                            
+
 
                             X = X.Multiply(POINTTOPLANEWEIGHT * currentWeight);
-                            
+
                             float maxRotation = MAXROTATION;
                             if (DataContainer.EditMode)
                             {
                                 maxRotation /= 10;
                             }
                             double[] XArr = X.ToArray();
-                            if (Model.Bricks.Count < 2 || (DataContainer.EditMode && Model.Bricks.Count<5))
+                            if (Model.Bricks.Count < 2 || (DataContainer.EditMode && Model.Bricks.Count < 3))
                             {
                                 XArr[0] = 0;
                                 XArr[2] = 0;
                                 //XArr[4] = 0;
                             }
-                            
-                            
-                            
-                            
+
+
+
+
                             XNAMatrix XRot = XNAMatrix.CreateRotationX(Math.Min((float)XArr[0], maxRotation));
                             XNAMatrix YRot = XNAMatrix.CreateRotationY(Math.Min((float)XArr[1], maxRotation));
                             XNAMatrix ZRot = XNAMatrix.CreateRotationZ(Math.Min((float)XArr[2], maxRotation));
                             XNAMatrix RTemp = ZRot * YRot * XRot;
 
-                            
+                            angleSum += (Math.Abs(XArr[0]) + Math.Abs(XArr[1]) + Math.Abs(XArr[2])) * POINTTOPLANEWEIGHT;
+
                             Vector3 trans = new Vector3((float)(XArr[3]), (float)(XArr[4]), (float)(XArr[5]));
                             trans *= TRANSLATIONWEIGHT;
                             trans *= Model.radius;
                             float maxTrans = 15;
-                            if (DataContainer.EditMode && Model.Bricks.Count < 5)
+                            if (DataContainer.EditMode && Model.Bricks.Count < 3)
                             {
                                 float dist = Vector3.Dot(trans, DataContainer.g);
-                                trans-=(dist)*DataContainer.g;
-                                maxTrans = Model.Bricks.Count/10f;
+                                trans -= (dist) * DataContainer.g;
+                                maxTrans = Model.Bricks.Count / 10f;
                                 if (Model.Bricks.Count == 1)
                                 {
                                     trans = Vector3.Zero;
@@ -594,9 +598,9 @@ namespace KADA
                                 trans *= 0.5f;
                             }
 
-                            
 
-                            
+
+
                             /*if (!DataContainer.editMode&&afterEditMode>0)
                             {
                                 trans = -trans + CompensateVector;
@@ -625,7 +629,7 @@ namespace KADA
                             double pointThetaY = -Math.Atan2(-pointR.M31, Math.Sqrt(pointR.M32 * pointR.M32 + pointR.M33 * pointR.M33));
                             double pointThetaZ = -Math.Atan2(pointR.M21, pointR.M11);
 
-                            if (Model.Bricks.Count < 2 || (DataContainer.EditMode && Model.Bricks.Count < 5))
+                            if (Model.Bricks.Count < 2 || (DataContainer.EditMode && Model.Bricks.Count < 3))
                             {
                                 pointThetaX = 0;
                                 pointThetaZ = 0;
@@ -635,6 +639,7 @@ namespace KADA
                             pointThetaY *= Math.Min(POINTTOPOINTWEIGHT * currentWeight, maxRotation);
                             pointThetaZ *= Math.Min(POINTTOPOINTWEIGHT * currentWeight, maxRotation);
 
+                            angleSum += (Math.Abs(pointThetaX) + Math.Abs(pointThetaX) + Math.Abs(pointThetaX)) * POINTTOPOINTWEIGHT;
 
                             ZRot = XNAMatrix.CreateRotationZ((float)pointThetaZ);
                             YRot = XNAMatrix.CreateRotationY((float)pointThetaY);
@@ -647,8 +652,8 @@ namespace KADA
 
 
                             RTemp = RTemp * pointR;
-                             
-                           
+
+
                             RTemp = XNAMatrix.CreateTranslation(trans) * RTemp;
                             if (this.DataContainer.EditMode && Model.Bricks.Count < 2)
                             {
@@ -715,22 +720,46 @@ namespace KADA
                     this.DataContainer.recordTick();
 
                 }
-
+                container.Qi.AddRange(backgroundData);
+                int c = 0;
+                /*foreach (Point p in Model.points)
+                {
+                    if (c++ % 10 == 0)
+                    {
+                        container.Qi.Add(p);
+                    }
+                }*/
                 //container.Timings.Add(DateTime.Now);
                 Manager.ProcessingQueues[++container.Stage].Enqueue(container);
                 if (DataContainer.Attach && DataContainer.backgroundEvaluator.ModificationInput.Count == 0 && !DataContainer.backgroundEvaluator.ModificationRunning)
                 {
-                    List<Point> backgroundData = new List<Point>();
-                    XNAMatrix Rinv = XNAMatrix.Invert(DataContainer.R);
-                    foreach (Point p in container.Qi)
+                    DataContainer.ModelsWorked = 0;
+                    if ((Math.Abs(angleSum) > Math.PI / 6 && DataContainer.ICPRatio > DataContainer.currentMinRatio) || Model.Bricks.Count < 3)
                     {
-                        Vector3 transformedP = Vector3.Transform(p.position - DataContainer.center, Rinv);
-                        Point transformed = new Point(transformedP,Vector3.Zero);
-                        backgroundData.Add(transformed);
+                        DataContainer.differentViewCounter++;
+                        angleSum = 0;
+                        XNAMatrix Rinv = XNAMatrix.Invert(DataContainer.R);
+                        int i = 0;
+                        foreach (Point p in container.Qi)
+                        {
+                            if (i++ % 2 == 0)
+                            {
+                                Vector3 transformedP = Vector3.Transform(p.position - DataContainer.center, Rinv);
+                                Point transformed = new Point(transformedP, Vector3.Zero);
+                                backgroundData.Add(transformed);
+                            }
+                        }
                     }
-                    DataContainer.backgroundEvaluator.ModificationInput.Enqueue(backgroundData);
-                    DataContainer.Attach = false;
+                    if (DataContainer.differentViewCounter > 5 || Model.Bricks.Count < 3)
+                    {
+                        DataContainer.backgroundEvaluator.ModificationInput.Enqueue(new List<Point>(backgroundData));
+                        backgroundData.Clear();
+                        DataContainer.Attach = false;
+                        DataContainer.differentViewCounter = 0;
+                    }
                 }
+
+
                 if (icpCount++ % 90 == 0)
                 {
                     float time = total / 90;
