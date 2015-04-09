@@ -27,11 +27,11 @@ namespace KADA
                     float brightness = c.GetBrightness();
                     if (brightness > 0.5f)
                     {
-                        values[x, y] = 1;
+                        values[x, y] = 0;
                     }
                     else
                     {
-                        values[x, y] = 0;//(int)brickColor;
+                        values[x, y] = 1;//(int)brickColor;
                     }
                     c = blacklist.GetPixel(x, y);
                     brightness = c.GetBrightness();

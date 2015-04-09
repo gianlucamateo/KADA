@@ -407,7 +407,7 @@ namespace KADA
                 this.dataContainer.recordTick();
                 this.dataContainer.ICPInliers = container.ICPInliers;
                 this.dataContainer.ICPOutliers = container.ICPOutliers;
-                this.dataContainer.ICPRatio = container.ICPRatio;
+                this.dataContainer.ICPMSE = container.ICPMSE;
                 //System.Diagnostics.Debug.WriteLine(container.number);
                 Thread.Sleep(5);
                 //this.manager.enqueue(container);
@@ -548,7 +548,7 @@ namespace KADA
                     transformationUpdater.Start();
                 }
             }*/
-            this.Window.Title = dataContainer.ModelsWorked + " - minICPRatio:" +dataContainer.currentMinRatio +  " views: " +dataContainer.differentViewCounter +" - "  + dataContainer.backgroundEvaluator.ModificationInput.Count + " " + dataContainer.backgroundEvaluator.NormalOutput.Count + "" + dataContainer.backgroundEvaluator.NormalInput.Count + " | " + dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " + dataContainer.trackingConfidence + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Ratio: " + Math.Round(dataContainer.ICPRatio, 2) + " Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
+            this.Window.Title = dataContainer.ModelsWorked + " - minICPRatio:" + dataContainer.currentMaxMSE + " views: " + dataContainer.differentViewCounter + " - " + dataContainer.backgroundEvaluator.ModificationInput.Count + " " + dataContainer.backgroundEvaluator.NormalOutput.Count + "" + dataContainer.backgroundEvaluator.NormalInput.Count + " | " + dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " + dataContainer.trackingConfidence + "Ratio: " + Math.Round(dataContainer.ICPMSE, 2) + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
 
             base.Update(gameTime);
         }
@@ -682,7 +682,7 @@ namespace KADA
             if (kS.IsKeyDown(Keys.Enter))
             {
                 this.dataContainer.Attach = true;
-                this.dataContainer.currentMinRatio = dataContainer.ICPRatio*0.7f;
+                this.dataContainer.currentMaxMSE = dataContainer.ICPMSE+2;
             }
             if (kS.IsKeyDown(Keys.O))
             {
@@ -881,7 +881,7 @@ namespace KADA
             if (tentativeModels != null && dataContainer.EditMode)
             {
                 SortedDictionary<float, TentativeModel> cachedTentativeModels = new SortedDictionary<float, TentativeModel>(tentativeModels);
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 10; i++)
                 {
                     if (cachedTentativeModels.Keys.Count > i)
                     {

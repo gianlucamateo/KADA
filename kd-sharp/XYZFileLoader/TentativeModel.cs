@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.Xna.Framework;
 
 namespace KADA
 {
@@ -9,8 +10,9 @@ namespace KADA
     {
         public LocatedBrick TentativeBrick;
 
-        public TentativeModel(List<LocatedBrick> bricks, LocatedBrick tentativeBrick) : base(false,fast:true)
+        public TentativeModel(List<LocatedBrick> bricks, LocatedBrick tentativeBrick, Vector3 center) : base(false,center,fast:true)
         {
+            this.center = center;
             this.Bricks = new List<LocatedBrick>(bricks);
             this.Bricks.Add(tentativeBrick);
             this.TentativeBrick = tentativeBrick;
@@ -20,7 +22,7 @@ namespace KADA
         public Model validate(BrickColor color)
         {
             this.TentativeBrick.setColor(color);
-            Model model = new Model(true,this.Bricks,fast: true);
+            Model model = new Model(true, this.center, this.Bricks, fast: true);
             //model.Bricks = this.Bricks;
             //model.GenerateKDTree();
             return model;

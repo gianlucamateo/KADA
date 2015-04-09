@@ -21,7 +21,7 @@ namespace KADA
         public ConcurrentQueue<Point> input;
         public Vector3 center;
         public XNAMatrix RInv;
-        public XNAMatrix onlyRot;        
+        public XNAMatrix onlyRot;
         public Matrix A;
         public Vector B;
         public Matrix H, HTemp;
@@ -39,19 +39,21 @@ namespace KADA
         public float ModelRadius = 0;
         public ConcurrentQueue<Vector3> Outliers;
         public int OutlierCount = 0;
+        public double sqDist = 0;
 
         Point q, firstGuess;
         Vector3 transformedNormal;
 
         public ICPWorker(int number, PipelineDataContainer dataContainer)
         {
+            this.sqDist = 0;
             this.ICPOutliers = 0;
             this.ICPInliers = 0;
             //this.OutlierAvg = Vector3.Zero;
             this.Outliers = new ConcurrentQueue<Vector3>();
             this.totalWeight = 0;
             this.dataContainer = dataContainer;
-           // this.file = new StreamWriter("ICP_worker" + number + "_" + DateTime.Now.Millisecond + ".txt");
+            // this.file = new StreamWriter("ICP_worker" + number + "_" + DateTime.Now.Millisecond + ".txt");
             this.number = number;
             this.reset();
             this.input = new ConcurrentQueue<Point>();
@@ -79,10 +81,12 @@ namespace KADA
                 }
             }*/
             Vector3 trash;
-           
-            while(this.Outliers.Count>0){
+
+            while (this.Outliers.Count > 0)
+            {
                 this.Outliers.TryDequeue(out trash);
             }
+            this.sqDist = 0;
             this.ICPOutliers = 0;
             this.ICPInliers = 0;
             this.totalWeight = 0;
@@ -95,15 +99,16 @@ namespace KADA
 
         private void routine()
         {
+
             Point point;
             Vector3 v, p;
-            Matrix tmA = new Matrix(6, 6), tmAPoint = new Matrix(6,6);
+            Matrix tmA = new Matrix(6, 6), tmAPoint = new Matrix(6, 6);
             Vector tempB = new Vector(6), tempBPoint = new Vector(6);
             DateTime start = DateTime.Now;
             int count = 0;
             int i = 0;
             double[] vArr = new double[3];
-            double maxDistance = dataContainer.ICPThreshold;
+            double maxDistance = dataContainer.ICPThreshold * dataContainer.ICPThreshold;
             NearestNeighbor<Point> neighbour;
             while (this.dataContainer.Run)
             {
@@ -117,6 +122,7 @@ namespace KADA
                     i++;
                     //start = DateTime.Now;
                     count = 0;
+
                     if (i > 10)
                     {
                         Thread.Sleep(1);
@@ -137,11 +143,8 @@ namespace KADA
                 vArr[0] = p.X;
                 vArr[1] = p.Y;
                 vArr[2] = p.Z;
-                maxDistance = dataContainer.ICPThreshold; 
-                if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL)
-                {
-                    maxDistance = 2*_3DProcessor.MAX_INLIERDISTANCE;
-                }
+                maxDistance = dataContainer.ICPThreshold * dataContainer.ICPThreshold;
+
 
                 /*if (dataContainer.model.Bricks.Count < 3 && dataContainer.editMode)
                 {
@@ -155,9 +158,50 @@ namespace KADA
                 firstGuess = neighbour.Current;
                 double distance = 0f;
 
+                if (firstGuess.position == Vector3.Zero)
+                {
+                    this.ICPOutliers++;
+                    //this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
+                    continue;
+                }
 
+                //sqDist += neighbour.CurrentDistance;
+                q = neighbour.Current;
+                bool foundMatch = false;
+                if (neighbour.CurrentDistance > 100)
+                {
+                    this.ICPOutliers++;
+                    foundMatch = false;
+                    foreach (BrickColor bc in possibleColors)
+                    {
+                        int number = (int)bc;
+                        if ((point.brickColorInteger / number) * number == point.brickColorInteger)
+                        {
+                            if (q.brickColor == bc)
+                            {                               
+                                foundMatch = true;
+                            }
+                        }
+                    }
+                    if (foundMatch == true)
+                    {
+                        sqDist += neighbour.CurrentDistance;
+                    }
+                    this.Outliers.Enqueue(v);// + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
+                    continue;
+                }
+                sqDist += neighbour.CurrentDistance;
+                if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL)
+                {
+                    maxDistance = 2 * _3DProcessor.MAX_INLIERDISTANCE;
+                }
+                if (neighbour.CurrentDistance > maxDistance)
+                {
+                    this.ICPOutliers++;
+                    continue;
+                }
                 bool found = true;
-                if (container.ICPRatio > 0.2f)
+                if (dataContainer.trackingConfidence!=TrackingConfidenceLevel.NONE)
                 {
                     transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
                     while (Vector3.Dot(transformedNormal, Vector3.UnitZ) < this.dataContainer.NORMAL_CULLING_LIMIT)//-0.1f)
@@ -172,24 +216,24 @@ namespace KADA
                     }
                     if (!found)
                     {
-                        this.ICPOutliers++;
+                        /*this.ICPOutliers++;
 
-                        this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
-                        continue;                       
+                        this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));*/
+                        continue;
                     }
                 }
-                
+
 
                 q = neighbour.Current;
 
-                
-                
-                if (q.normal == Vector3.Zero||q.position == Vector3.Zero)
-                {
-                    this.ICPOutliers++;
 
-                    this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
-                    
+
+                if (q.normal == Vector3.Zero || q.position == Vector3.Zero)
+                {
+                    /*this.ICPOutliers++;
+
+                    this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));*/
+
                     continue;
                 }
                 transformedNormal = Vector3.Transform(q.normal, onlyRot);
@@ -210,18 +254,26 @@ namespace KADA
 
 
                 float weight = Math.Abs(Vector3.Dot(transformedNormal, point.normal));
-                weight = (1 - weight);
+                //weight = (1 - weight);
+                foundMatch = false;
                 foreach (BrickColor bc in possibleColors)
                 {
                     int number = (int)bc;
-                    if ((q.brickColorInteger / number) * number == q.brickColorInteger)
+                    if ((point.brickColorInteger / number) * number == point.brickColorInteger)
                     {
-                        if (point.brickColor == bc)
+                        if (q.brickColor == bc)
                         {
                             weight *= 10f;
-                            
-                            break;
+                            foundMatch = true;
                         }
+                    }
+                }
+                //if (dataContainer.trackingConfidence != TrackingConfidenceLevel.NONE)
+                {
+                    if (!foundMatch)
+                    {
+                        weight = 0.01f;
+                        sqDist -= neighbour.CurrentDistance;
                     }
                 }
 
@@ -233,9 +285,9 @@ namespace KADA
 
                 if (neighbour.CurrentDistance > maxDistance)
                 {
-                    this.ICPOutliers++;
+                    /*this.ICPOutliers++;
                     //this.OutlierAvg += p;
-                    this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
+                    this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));*/
                     //return;
                     continue;
                 }
@@ -324,11 +376,11 @@ namespace KADA
                     this.ICPInliers++;
                     point.ConsideredICP = true;
                 }
-                else
+                /*else
                 {
                     this.Outliers.Enqueue(p + center + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
                     this.ICPOutliers++;
-                }
+                }*/
             }
         }
     }

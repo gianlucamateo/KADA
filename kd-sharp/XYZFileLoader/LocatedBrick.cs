@@ -254,6 +254,8 @@ namespace KADA
 
                 if (apply)
                 {
+                    pCopy.brickColor = this.color;
+                    pCopy.brickColorInteger = (int)this.color;
                     pointGrid[x, y, z].Add(pCopy);
                 }
 

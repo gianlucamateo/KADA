@@ -25,7 +25,7 @@ namespace KADA
         private short[] DepthValues;
         private float AngleFactor = (float)(1.0 / Math.Tan(43.0 / 180.0 / 480 * Math.PI)) * 0.85f;
         
-        List<IHistogram> Histograms;
+        public List<IHistogram> Histograms;
         Bitmap Bitmap = new Bitmap(640, 480);
         private PipelineDataContainer DataContainer;
         private Matrix RGBToYUV, YUVToRGB;
@@ -77,7 +77,7 @@ namespace KADA
                 IHistogram b = new YUVHistogram(blue, blacklist, KADA.BrickColor.BLUE);
                 Histograms.Add(b);
                 IHistogram y = new YUVHistogram(yellow, blacklist, KADA.BrickColor.YELLOW);
-                //Histograms.Add(y);
+                Histograms.Add(y);
             }
 
             List<Thread> stage1 = new List<Thread>();
@@ -343,9 +343,10 @@ namespace KADA
                 {
                     pixel.Position.Z = 0;
                     pixel.Depth = 0;
-                    pixel.BrickColorInteger = brickColorInteger;
+                    
 
                 }
+                pixel.BrickColorInteger = brickColorInteger;
                 dc[x, y] = pixel;
             }
         }

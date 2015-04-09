@@ -24,7 +24,7 @@ namespace KADA
         public ColorImagePoint[] ColorPoints;
         public int ICPInliers = 0;
         public int ICPOutliers = 0;
-        public float ICPRatio = 0f;
+        public float ICPMSE = 0f;
         public int Number;
         public List<DateTime> Timings;
         public Vector3[] modelVectors;

@@ -11,6 +11,7 @@ namespace KADA
 
     public class Model
     {
+
         public List<Point> points;
         public const int DIMENSION = 18;
         public Brick[, ,] voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
@@ -21,13 +22,14 @@ namespace KADA
         public Vector3 center;
         public List<TentativeModel> tentativeModels;
 
-        public Model(bool definitive, List<LocatedBrick> bricks = null, bool fast = false)
+        public Model(bool definitive, Vector3 center, List<LocatedBrick> bricks = null, bool fast = false)
         {
+            this.center = center;
             if (bricks == null)
             {
                 this.Bricks = new List<LocatedBrick>();
                 this.Bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0), BrickColor.GREEN));
-                //this.Bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));                
+                //this.Bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
                 //this.Bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
                 //this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
                 //this.Bricks.Add(new LocatedBrick(false, new Vector3(3, 2, -1), BrickColor.GREEN));
@@ -93,12 +95,12 @@ namespace KADA
                         LocatedBrick tentativeBrick = new LocatedBrick(true, new Vector3(x, y, z), BrickColor.GREEN);
                         if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
                         {
-                            this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick));
+                            this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
                         }
                         tentativeBrick = new LocatedBrick(false, new Vector3(x, y, z), BrickColor.GREEN);
                         if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
                         {
-                            this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick));
+                            this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
                         }
                     });
                 }
@@ -387,24 +389,27 @@ namespace KADA
             this.center = Vector3.Zero;
 
             //compute center
-            foreach (Point p in this.points)
+            if (this.center == Vector3.Zero)
             {
-                this.center += p.position;
+                foreach (Point p in this.points)
+                {
+                    this.center += p.position;
+                }
+                this.center /= points.Count;
             }
-            this.center /= points.Count;
 
             //compute max Distance, radius of wrapping sphere
             this.radius = 0f;
 
-            if (!fast)
+            //if (!fast)
+            //{
+            for (int i = 0; i < this.points.Count; i++)
             {
-                for (int i = 0; i < this.points.Count; i++)
-                {
-                    Point p = this.points[i];
-                    p.position = p.position - this.center;
-                    this.points[i] = p;
-                }
+                Point p = this.points[i];
+                p.position = p.position - this.center;
+                this.points[i] = p;
             }
+            //}
 
             foreach (Point p in this.points)
             {

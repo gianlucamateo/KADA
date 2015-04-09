@@ -14,7 +14,7 @@ namespace KADA
     public class PipelineDataContainer
     {
         public int ICPInliers, ICPOutliers;
-        public float ICPRatio;
+        public float ICPMSE;
         public readonly float NORMAL_CULLING_LIMIT = 0f;
 
         //public Vector3[] trackedNormals;
@@ -49,7 +49,7 @@ namespace KADA
         public Vector3 g = Vector3.Zero;
         public Matrix BaseRotation;
         public BrickColor addColor = BrickColor.NONE;
-        public float currentMinRatio;
+        public float currentMaxMSE;
         public int differentViewCounter = 0;
 
         public float ICPThreshold = 200;
@@ -65,7 +65,7 @@ namespace KADA
             this.outlierCenters = new Queue<Vector3>();
             this.backgroundEvaluator = new BackgroundEvaluator(this);
             this.modelNormals = new Vector3[3];
-            this.model = new Model(true);
+            this.model = new Model(true,Vector3.Zero);
             //this.tentativeModel = new TentativeModel(model.Bricks,new LocatedBrick(false,Vector3.Zero,BrickColor.NONE));
             this.normalMappings = new int[3];
             this.modelNormals[0] = Vector3.UnitX;

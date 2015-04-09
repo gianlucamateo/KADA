@@ -33,7 +33,7 @@ namespace KADA
         public const float MAX_INLIERDISTANCE = 12;
         private const int ICPITERATIONS = 1;
         private const int WORKERCOUNT = 5;
-        private const double MINICPRATIO = 2.5;
+        private const double MINICPMSE = 8;
 
         private readonly bool REQUIRE_HIGH_QUALITY_RESULT = false;
 
@@ -388,7 +388,7 @@ namespace KADA
                         R = PrevR;
                     }
                     XNAMatrix RInv = XNAMatrix.CreateRotationX(0);
-                    container.ICPRatio = 0f;
+                    container.ICPMSE = 0f;
                     int iterations = 0;
                     bool skip = false;
                     XNAMatrix onlyRot = new XNAMatrix();
@@ -461,7 +461,7 @@ namespace KADA
                         container.outlierCenter = Vector3.Zero;
 
                         Outliers = new List<Point>();
-
+                        
                         foreach (ICPWorker w in workers)
                         {
 
@@ -479,9 +479,11 @@ namespace KADA
                                 p.ConsideredICP = true;
                                 Outliers.Add(p);
                             }
+                            container.ICPMSE += (float)w.sqDist;
                             w.reset();
 
                         }
+                        container.ICPMSE /= (container.ICPInliers + container.ICPOutliers);
                         Outliers.AddRange(container.OutlierPoints);
                         Vector3 outlierCenter = Vector3.Zero;
 
@@ -489,7 +491,7 @@ namespace KADA
                         {
                             //A.MultiplyInplace(1f / totalWeight);
                             //B.MultiplyInplace(1f / totalWeight);
-                            H.MultiplyInplace(1f / totalWeight);
+                            //H.MultiplyInplace(1f / totalWeight);
                         }
 
                         for (int row = 0; row < 6; row++)
@@ -546,7 +548,7 @@ namespace KADA
                             break;
                         }
 
-                        container.ICPRatio = container.ICPOutliers == 0 ? 1000 : (float)container.ICPInliers / container.ICPOutliers;
+                        //container.ICPRatio = container.ICPOutliers == 0 ? 1000 : (float)container.ICPInliers / container.ICPOutliers;
 
                         if (!skip)
                         {
@@ -677,17 +679,17 @@ namespace KADA
 
                         container.onlyRot = onlyRot;
                         NormalCounter++;
-                        if (container.ICPRatio > MINICPRATIO || !this.REQUIRE_HIGH_QUALITY_RESULT)
+                        if (container.ICPMSE < MINICPMSE || !this.REQUIRE_HIGH_QUALITY_RESULT)
                         {
                             container.R = R;
                         }
-                        if (container.ICPRatio > MINICPRATIO)
+                        if (container.ICPMSE < MINICPMSE)
                         {
                             this.DataContainer.lastConfidentR = R;
                             this.DataContainer.trackingConfidence = TrackingConfidenceLevel.ICPFULL;
                             trackingLostCount = 0;
                         }
-                        else if (container.ICPRatio > 0.5f)
+                        else if (container.ICPMSE < 30f)
                         {
                             if (trackingLostCount > 0)
                             {
@@ -734,23 +736,25 @@ namespace KADA
                 if (DataContainer.Attach && DataContainer.backgroundEvaluator.ModificationInput.Count == 0 && !DataContainer.backgroundEvaluator.ModificationRunning)
                 {
                     DataContainer.ModelsWorked = 0;
-                    if ((Math.Abs(angleSum) > Math.PI / 6 && DataContainer.ICPRatio > DataContainer.currentMinRatio) || Model.Bricks.Count < 3)
+                    if ((Math.Abs(angleSum) > Math.PI / 6 && DataContainer.ICPMSE < DataContainer.currentMaxMSE) || Model.Bricks.Count < 3)
                     {
                         DataContainer.differentViewCounter++;
                         angleSum = 0;
                         XNAMatrix Rinv = XNAMatrix.Invert(DataContainer.R);
                         int i = 0;
-                        foreach (Point p in container.Qi)
+                        foreach (Point p in Outliers)
                         {
                             if (i++ % 2 == 0)
                             {
                                 Vector3 transformedP = Vector3.Transform(p.position - DataContainer.center, Rinv);
                                 Point transformed = new Point(transformedP, Vector3.Zero);
+                                transformed.brickColorInteger = p.brickColorInteger;
+                                transformed.brickColor = p.brickColor;
                                 backgroundData.Add(transformed);
                             }
                         }
                     }
-                    if (DataContainer.differentViewCounter > 5 || Model.Bricks.Count < 3)
+                    if (DataContainer.differentViewCounter > 3 || Model.Bricks.Count < 3)
                     {
                         DataContainer.backgroundEvaluator.ModificationInput.Enqueue(new List<Point>(backgroundData));
                         backgroundData.Clear();

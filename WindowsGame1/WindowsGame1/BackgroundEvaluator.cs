@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework;
 using System.Collections.Concurrent;
 using System.IO;
 using Point = KADA.Point;
+using System.Threading.Tasks;
 
 
 namespace KADA
@@ -18,6 +19,7 @@ namespace KADA
         public ConcurrentQueue<List<Point>> ModificationInput;
         public ConcurrentQueue<Matrix> NormalOutput;
         public ConcurrentQueue<List<Point>> PointsInput;
+        private List<BrickColor> possibleColors;
         private Matrix[] possibleRotations;
         public bool ModificationRunning = false;
         public SortedDictionary<float, Model> guesses;
@@ -26,6 +28,7 @@ namespace KADA
 
         public BackgroundEvaluator(PipelineDataContainer dataContainer)
         {
+            this.possibleColors = new List<BrickColor>();
             this.PointsInput = new ConcurrentQueue<List<Point>>();
             this.NormalOutput = new ConcurrentQueue<Matrix>();
             this.NormalInput = new ConcurrentQueue<PipelineContainer>();
@@ -37,6 +40,11 @@ namespace KADA
             Matrix XRot = Matrix.CreateRotationX((float)Math.PI / 2);
             Matrix YRot = Matrix.CreateRotationY((float)Math.PI / 2);
             Matrix ZRot = Matrix.CreateRotationZ((float)Math.PI / 2);
+
+            possibleColors.Add(BrickColor.RED);
+            possibleColors.Add(BrickColor.GREEN);
+            possibleColors.Add(BrickColor.BLUE);
+            possibleColors.Add(BrickColor.YELLOW);
 
             int x = 0, y = 0, z = 0;
             int count = 0;
@@ -96,7 +104,7 @@ namespace KADA
                     float tempKey = this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1);
                     Model temp = this.guesses[tempKey];
 
-                    Model nextTry = new Model(true, temp.Bricks, true);
+                    Model nextTry = new Model(true, temp.center, temp.Bricks, true);
                     dataContainer.model = nextTry;
                     this.guesses.Remove(tempKey);                    
                     Thread.Sleep(300);
@@ -106,7 +114,7 @@ namespace KADA
                 }
                 if (this.dataContainer.ApplyModel)
                 {
-                    Model temp = new Model(true, dataContainer.model.Bricks, false);
+                    Model temp = new Model(true,Vector3.Zero, dataContainer.model.Bricks, false);
                     dataContainer.model = temp;
                     dataContainer.ApplyModel = false;
                 }
@@ -136,70 +144,110 @@ namespace KADA
                 float maxRatio = float.MinValue;
                 int i = 0;
                 Model currentModel = null;
-                foreach (float key in dict.Keys)
+                ConcurrentDictionary<float, Model> concurrentDict = new ConcurrentDictionary<float, Model>();
+                Parallel.ForEach(dict.Keys, key =>
+                //foreach (float key in dict.Keys)
                 {
+                    bool skip = false;
                     i++;
                     dataContainer.ModelsWorked = i;
-                    /*if (i++ > 20)
+                    if (i++ > 50)
                     {
-                        continue;
-                    }*/
-                    if (!this.dataContainer.Run)
+                        skip = true;
+                    }
+                    /*if (!this.dataContainer.Run)
                     {
                         return;
-                    }
+                    }*/
 
 
-
-                    Console.WriteLine("working on model");
-                    Model model = dict[key].validate(dataContainer.addColor);
-                    KDTreeWrapper tree = model.getKDTree();
-
-                    int outliers = 0, inliers = 0;
-                    float ratio = 0;
-                    //Matrix Rinv = Matrix.Invert(dataContainer.R);
-                    foreach (Point p in qi)
+                    if (!skip)
                     {
-                        Vector3 transformedP = Vector3.Zero;
+                        Console.WriteLine("working on model");
+                        Model model = dict[key].validate(dataContainer.addColor);
+                        KDTreeWrapper tree = model.getKDTree();
 
-                        transformedP = p.position;//Vector3.Transform(p.position - dataContainer.center, Rinv);
-                        double[] arr = { transformedP.X, transformedP.Y, transformedP.Z };
-                        KDTree.NearestNeighbor<Point> neighbor = tree.NearestNeighbors(arr, 1, -1);
-                        neighbor.MoveNext();
-                        if (neighbor.CurrentDistance > 200)
+                        int count = 0;
+                        float MSE = 0;
+                        //Matrix Rinv = Matrix.Invert(dataContainer.R);
+                        int dismiss = 0;
+                        foreach (Point p in qi)
                         {
-                            outliers++;
+                            if (dismiss++ % 5 == 0)
+                            {
+                                continue;
+                            }
+                            Vector3 transformedP = Vector3.Zero;
+
+                            transformedP = p.position;//Vector3.Transform(p.position - dataContainer.center, Rinv);
+                            double[] arr = { transformedP.X, transformedP.Y, transformedP.Z };
+                            KDTree.NearestNeighbor<Point> neighbor = tree.NearestNeighbors(arr, 1, -1);
+                            neighbor.MoveNext();
+                            Point point = neighbor.Current;
+                            bool foundMatch = false;
+                            foreach (BrickColor bc in possibleColors)
+                            {
+                                int number = (int)bc;
+                                if ((p.brickColorInteger / number) * number == p.brickColorInteger)
+                                {
+                                    if (point.brickColor == bc)
+                                    {
+                                        foundMatch = true;
+                                    }
+                                }
+                            }
+                            if (!foundMatch)
+                            {
+                                MSE += 1000;
+                            }
+                            count++;
+                            MSE += Math.Min((float)neighbor.CurrentDistance, 400);
                         }
-                        else
+                        MSE /= (count + 1);
+                        model.kdTree = null;
+                        model.points = null;
+                        model.tentativeModels = null;
+                        model.voxelGrid = null;
+                        model.pointGrid = null;
+                        /*if (ratio > maxRatio)
                         {
-                            inliers++;
+                            maxRatio = ratio;
+                            currentModel = model;
+                        }*/
+                        while (!concurrentDict.TryAdd(1 / MSE, model) && MSE < 1000000)//concurrentDict.ContainsKey(ratio) && ratio < 1000000)
+                        {
+                            MSE += 0.01f;
+                            //Console.WriteLine(ratio);
                         }
-                    }
-                    ratio = inliers / ((float)outliers + 1f);
-                    if (ratio > maxRatio)
-                    {
-                        maxRatio = ratio;
-                        currentModel = model;
-                    }
-                    while (this.guesses.ContainsKey(ratio) && ratio < 100000)
-                    {
-                        ratio += 0.1f;
-                        Console.WriteLine(ratio);
-                    }
-                    if (ratio <= 1000000)
-                    {
-                        this.guesses.Add(ratio, model);
-                    }
-                    if (this.guesses.Keys.Count > 50)
-                    {
-                        float k = this.guesses.Keys.ElementAt(0);
-                        this.guesses.Remove(k);
+                        /*if (ratio <= 1000000)
+                        {
+                            concurrentDict.TryAdd(ratio,model);//Add(ratio, model);
+                        }*/
+                        while (concurrentDict.Keys.Count > 30)
+                        {
+                            List<float> list = concurrentDict.Keys.ToList();
+                            list.Sort();
+                            Model modelDump;
+                            int tries = 0;
+                            while (!concurrentDict.TryRemove(list[0], out modelDump) && tries < 10)
+                            {
+                                tries++;
+                            }
+                            //this.guesses.Remove(k);
+                        }
                     }
 
-                }
+                });
                 //this.guesses.Remove(this.guesses.Keys.ElementAt(this.guesses.Keys.Count-1));
-
-                Model finalModel = new Model(true, currentModel.Bricks, true);
+                List<float> fromConcurrent = concurrentDict.Keys.ToList();
+                foreach (float key in fromConcurrent)
+                {
+                    Model m;
+                    while(!concurrentDict.TryGetValue(key,out m));
+                    this.guesses.Add(key, m);
+                }
+                currentModel = this.guesses[this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1)];
+                Model finalModel = new Model(true,currentModel.center, currentModel.Bricks, true);
                 dataContainer.model = finalModel;
                 dataContainer.EditMode = false;
                 this.ModificationRunning = false;
@@ -386,7 +434,7 @@ namespace KADA
                         }
                     }
                 }
-                pos /= count;
+                pos /= count;                
                 if (pos.Length() > 0)
                 {
                     oldCenter = pos;
@@ -395,6 +443,7 @@ namespace KADA
                 {
                     pos = oldCenter;
                 }
+                pos += (this.dataContainer.g * 18);
                 dataContainer.outlierCenter = pos;
                 dict.Clear();
                 TentativeModel bestGuess = null;
