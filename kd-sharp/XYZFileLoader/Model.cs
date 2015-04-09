@@ -71,10 +71,17 @@ namespace KADA
             //points = Reader.getPoints();
             if (definitive)
             {
+                DateTime before = DateTime.Now;
                 GenerateKDTree(fast);
                 if (!fast)
                 {
+                    Console.WriteLine("GenerateKDTree took: " + (DateTime.Now - before));
+                }
+                if (!fast)
+                {
+                    before = DateTime.Now;
                     ComputeTentativeBricks();
+                    Console.WriteLine("computing tentative models took: " + (DateTime.Now - before));
                 }
             }
         }
@@ -82,7 +89,7 @@ namespace KADA
         public void ComputeTentativeBricks()
         {
 
-
+           
             for (int y = -DIMENSION; y < DIMENSION; y++)
             {
 
@@ -92,19 +99,31 @@ namespace KADA
                     //{
                     Parallel.For(-DIMENSION, DIMENSION, new ParallelOptions { MaxDegreeOfParallelism = 10 }, z =>
                     {
-                        LocatedBrick tentativeBrick = new LocatedBrick(true, new Vector3(x, y, z), BrickColor.GREEN);
-                        if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
+                        Vector3 vOffset = new Vector3(x, y, z);
+                        bool tryInsert = false;
+                        foreach (LocatedBrick b in this.Bricks)
                         {
-                            this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
+                            if((b.voxelOffset-vOffset).Length()<5){
+                                tryInsert = true;
+                            }
                         }
-                        tentativeBrick = new LocatedBrick(false, new Vector3(x, y, z), BrickColor.GREEN);
-                        if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
+                        if (tryInsert)
                         {
-                            this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
+                            LocatedBrick tentativeBrick = new LocatedBrick(true, new Vector3(x, y, z), BrickColor.GREEN);
+                            if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
+                            {
+                                this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
+                            }
+                            tentativeBrick = new LocatedBrick(false, new Vector3(x, y, z), BrickColor.GREEN);
+                            if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
+                            {
+                                this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
+                            }
                         }
                     });
                 }
             }
+            
         }
 
         private void Reset()

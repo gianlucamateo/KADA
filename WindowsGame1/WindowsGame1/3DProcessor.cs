@@ -741,20 +741,35 @@ namespace KADA
                         DataContainer.differentViewCounter++;
                         angleSum = 0;
                         XNAMatrix Rinv = XNAMatrix.Invert(DataContainer.R);
-                        int i = 0;
-                        foreach (Point p in Outliers)
+
+                        if (DataContainer.model.Bricks.Count < 3)
                         {
-                            if (i++ % 2 == 0)
+                            foreach (Point p in container.Qi)
                             {
+
                                 Vector3 transformedP = Vector3.Transform(p.position - DataContainer.center, Rinv);
                                 Point transformed = new Point(transformedP, Vector3.Zero);
                                 transformed.brickColorInteger = p.brickColorInteger;
                                 transformed.brickColor = p.brickColor;
                                 backgroundData.Add(transformed);
+
+                            }
+                        }
+                        else
+                        {
+                            foreach (Point p in Outliers)
+                            {
+
+                                Vector3 transformedP = Vector3.Transform(p.position - DataContainer.center, Rinv);
+                                Point transformed = new Point(transformedP, Vector3.Zero);
+                                transformed.brickColorInteger = p.brickColorInteger;
+                                transformed.brickColor = p.brickColor;
+                                backgroundData.Add(transformed);
+
                             }
                         }
                     }
-                    if (DataContainer.differentViewCounter > 3 || Model.Bricks.Count < 3)
+                    if (DataContainer.differentViewCounter > 4 || Model.Bricks.Count < 3)
                     {
                         DataContainer.backgroundEvaluator.ModificationInput.Enqueue(new List<Point>(backgroundData));
                         backgroundData.Clear();
