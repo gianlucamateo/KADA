@@ -21,9 +21,10 @@ namespace KADA
         public ConcurrentQueue<List<Point>> PointsInput;
         private List<BrickColor> possibleColors;
         private Matrix[] possibleRotations;
+        private Model oldModel;
         public bool ModificationRunning = false;
         public SortedDictionary<float, Model> guesses;
-        
+
 
 
         public BackgroundEvaluator(PipelineDataContainer dataContainer)
@@ -98,6 +99,11 @@ namespace KADA
             List<Point> container;
             while (this.dataContainer.Run)
             {
+                if (this.dataContainer.RevertToOld)
+                {
+                    dataContainer.model = oldModel;
+                    dataContainer.RevertToOld = false;
+                }
                 if (this.dataContainer.WrongModel)
                 {
                     dataContainer.EditMode = true;
@@ -106,15 +112,16 @@ namespace KADA
 
                     Model nextTry = new Model(true, temp.center, temp.Bricks, true);
                     dataContainer.model = nextTry;
-                    this.guesses.Remove(tempKey);                    
+                    dataContainer.comparisonPoints = dataContainer.model.points;
+                    this.guesses.Remove(tempKey);
                     Thread.Sleep(300);
                     this.dataContainer.WrongModel = false;
-                    dataContainer.EditMode = false;                    
+                    dataContainer.EditMode = false;
 
                 }
                 if (this.dataContainer.ApplyModel)
                 {
-                    Model temp = new Model(true,Vector3.Zero, dataContainer.model.Bricks, false);
+                    Model temp = new Model(true, Vector3.Zero, dataContainer.model.Bricks, false);
                     dataContainer.model = temp;
                     dataContainer.ApplyModel = false;
                 }
@@ -137,6 +144,7 @@ namespace KADA
                     this.ModificationInput.TryDequeue(out dumpContainer);
                 }
                 Console.WriteLine("working");
+                oldModel = dataContainer.model;
                 this.guesses.Clear();
                 List<Point> qi = new List<Point>(container);
                 SortedDictionary<float, TentativeModel> dict = new SortedDictionary<float, TentativeModel>(dataContainer.tentativeModels);
@@ -151,7 +159,7 @@ namespace KADA
                     bool skip = false;
                     i++;
                     dataContainer.ModelsWorked = i;
-                    if (i++ > 50)
+                    if (i++ > 100)
                     {
                         skip = true;
                     }
@@ -171,12 +179,13 @@ namespace KADA
                         float MSE = 0;
                         //Matrix Rinv = Matrix.Invert(dataContainer.R);
                         int dismiss = 0;
+                        int inliers = 0;
                         foreach (Point p in qi)
                         {
-                            if (dismiss++ % 5 == 0)
+                            /*if (dismiss++ % 5 == 0)
                             {
                                 continue;
-                            }
+                            }*/
                             Vector3 transformedP = Vector3.Zero;
 
                             transformedP = p.position;//Vector3.Transform(p.position - dataContainer.center, Rinv);
@@ -196,14 +205,23 @@ namespace KADA
                                     }
                                 }
                             }
+                            if (neighbor.CurrentDistance < 100)
+                            {
+                                inliers++;
+                            }
                             if (!foundMatch)
                             {
-                                MSE += 1000;
+                                MSE += 40000;
                             }
                             count++;
-                            MSE += Math.Min((float)neighbor.CurrentDistance, 400);
+                            
+                            {
+                                MSE += (float)neighbor.CurrentDistance;
+                            }
+                           
                         }
-                        MSE /= (count + 1);
+                        MSE /= ((float)count + 1f);
+                        
                         model.kdTree = null;
                         model.points = null;
                         model.tentativeModels = null;
@@ -214,6 +232,7 @@ namespace KADA
                             maxRatio = ratio;
                             currentModel = model;
                         }*/
+                        
                         while (!concurrentDict.TryAdd(1 / MSE, model) && MSE < 1000000)//concurrentDict.ContainsKey(ratio) && ratio < 1000000)
                         {
                             MSE += 0.01f;
@@ -243,12 +262,13 @@ namespace KADA
                 foreach (float key in fromConcurrent)
                 {
                     Model m;
-                    while(!concurrentDict.TryGetValue(key,out m));
+                    while (!concurrentDict.TryGetValue(key, out m)) ;
                     this.guesses.Add(key, m);
                 }
                 currentModel = this.guesses[this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1)];
-                Model finalModel = new Model(true,currentModel.center, currentModel.Bricks, true);
+                Model finalModel = new Model(true, currentModel.center, currentModel.Bricks, true);
                 dataContainer.model = finalModel;
+                dataContainer.comparisonPoints = finalModel.points;
                 dataContainer.EditMode = false;
                 this.ModificationRunning = false;
 
@@ -376,13 +396,14 @@ namespace KADA
                 {
                     t.TentativeBrick.setColor(dataContainer.addColor);
                 }
-                
+                int[] colors = new int[8];
                 foreach (Point p in PointsList)
                 {
 
                     int X = (int)Math.Floor(p.position.X / 10) + grid.GetLength(0) / 2;
                     int Y = (int)Math.Floor(p.position.Y / 10) + grid.GetLength(1) / 2;
-
+                    if (p.brickColorInteger < 8)
+                        colors[p.brickColorInteger]++;
 
                     grid[X, Y]++;
                     zVals[X, Y] += p.position.Z;
@@ -405,8 +426,18 @@ namespace KADA
                     }
                 }
 
-
-
+                int finalColor = 0;
+                int maxVal = 0;
+                for (int i = 0; i < 8; i++)
+                {
+                    if (colors[i] > maxVal)
+                    {
+                        finalColor = i;
+                        maxVal = colors[i];
+                    }
+                }
+                if (maxVal > 50)
+                    dataContainer.addColor = (BrickColor)finalColor;
                 _2DProcessor.Erode(grid.GetLength(0), grid.GetLength(1), grid, outputGrid);
                 for (int X = 0; X < grid.GetLength(0); X++)
                 {
@@ -434,7 +465,7 @@ namespace KADA
                         }
                     }
                 }
-                pos /= count;                
+                pos /= count;
                 if (pos.Length() > 0)
                 {
                     oldCenter = pos;

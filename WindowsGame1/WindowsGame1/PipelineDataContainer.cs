@@ -51,11 +51,14 @@ namespace KADA
         public BrickColor addColor = BrickColor.NONE;
         public float currentMaxMSE;
         public int differentViewCounter = 0;
+        public bool RevertToOld = false;
+        public List<Point> comparisonPoints;
 
         public float ICPThreshold = 200;
 
         public PipelineDataContainer()
         {
+            this.comparisonPoints = new List<Point>();
             this.BaseRotation = Matrix.Identity;
             this.Attach = false;
             this.EditMode = false;

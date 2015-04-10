@@ -18,13 +18,12 @@ namespace KADA
             this.TentativeBrick = tentativeBrick;
             //this.GenerateKDTree();
         }
-        //new code, could be buggy
+        
         public Model validate(BrickColor color)
         {
             this.TentativeBrick.setColor(color);
             Model model = new Model(true, this.center, this.Bricks, fast: true);
-            //model.Bricks = this.Bricks;
-            //model.GenerateKDTree();
+            
             return model;
         }
         

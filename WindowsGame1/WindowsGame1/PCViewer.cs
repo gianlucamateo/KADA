@@ -312,6 +312,13 @@ namespace KADA
                     }
                     i++;
                 }
+                foreach (Point v in dataContainer.comparisonPoints)
+                {
+                    instances[i].ScreenPos = v.position;
+                    instances[i].Scale = 0.15f;
+                    instances[i].Color = new Vector3(0, 255, 100);
+                    i++;
+                }
                 foreach (Point p in container.Qi)
                 {
                     Vector3 v = p.position;
@@ -712,7 +719,12 @@ namespace KADA
             if (kS.IsKeyDown(Keys.NumPad4))
             {
                 this.dataContainer.addColor = BrickColor.YELLOW;
-            }            
+            }
+
+            if (kS.IsKeyDown(Keys.NumPad0))
+            {
+                this.dataContainer.RevertToOld = true;
+            } 
 
 
             UpdateView();

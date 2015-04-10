@@ -473,11 +473,11 @@ namespace KADA
                             container.ICPInliers += w.ICPInliers;
                             while (w.Outliers.Count > 0)
                             {
-                                Vector3 v;
+                                Point v;
                                 w.Outliers.TryDequeue(out v);
-                                Point p = new Point(v, Vector3.Zero);
-                                p.ConsideredICP = true;
-                                Outliers.Add(p);
+                                //Point p = new Point(v, Vector3.Zero);
+                                v.ConsideredICP = true;
+                                Outliers.Add(v);
                             }
                             container.ICPMSE += (float)w.sqDist;
                             w.reset();
@@ -657,7 +657,7 @@ namespace KADA
 
 
                             RTemp = XNAMatrix.CreateTranslation(trans) * RTemp;
-                            if (this.DataContainer.EditMode && Model.Bricks.Count < 2)
+                            if (this.DataContainer.EditMode && Model.Bricks.Count < 3)
                             {
                                 RTemp = XNAMatrix.Identity;
                             }
@@ -742,12 +742,12 @@ namespace KADA
                         angleSum = 0;
                         XNAMatrix Rinv = XNAMatrix.Invert(DataContainer.R);
 
-                        if (DataContainer.model.Bricks.Count < 3)
+                        /*if (DataContainer.model.Bricks.Count < 3)
                         {
                             foreach (Point p in container.Qi)
                             {
 
-                                Vector3 transformedP = Vector3.Transform(p.position - DataContainer.center, Rinv);
+                                Vector3 transformedP = Vector3.Transform(p.position - container.center, Rinv);
                                 Point transformed = new Point(transformedP, Vector3.Zero);
                                 transformed.brickColorInteger = p.brickColorInteger;
                                 transformed.brickColor = p.brickColor;
@@ -755,12 +755,12 @@ namespace KADA
 
                             }
                         }
-                        else
+                        else*/
                         {
                             foreach (Point p in Outliers)
                             {
 
-                                Vector3 transformedP = Vector3.Transform(p.position - DataContainer.center, Rinv);
+                                Vector3 transformedP = Vector3.Transform(p.position - container.center, Rinv);
                                 Point transformed = new Point(transformedP, Vector3.Zero);
                                 transformed.brickColorInteger = p.brickColorInteger;
                                 transformed.brickColor = p.brickColor;
@@ -769,16 +769,17 @@ namespace KADA
                             }
                         }
                     }
-                    if (DataContainer.differentViewCounter > 4 || Model.Bricks.Count < 3)
+                    if (DataContainer.differentViewCounter > 4 || Model.Bricks.Count < 3 || DataContainer.ICPMSE>30)
                     {
                         DataContainer.backgroundEvaluator.ModificationInput.Enqueue(new List<Point>(backgroundData));
                         backgroundData.Clear();
+                        
                         DataContainer.Attach = false;
                         DataContainer.differentViewCounter = 0;
                     }
                 }
 
-
+                DataContainer.comparisonPoints = new List<Point>();
                 if (icpCount++ % 90 == 0)
                 {
                     float time = total / 90;

@@ -16,6 +16,7 @@ namespace KADA
 
         public KDTreeWrapper(){
             kdTree = new KDTree.KDTree<Point>(3,1);
+            
             points = new List<Point>();
             qi_prime = new List<Vector>();
         }

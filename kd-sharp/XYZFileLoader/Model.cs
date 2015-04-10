@@ -103,7 +103,7 @@ namespace KADA
                         bool tryInsert = false;
                         foreach (LocatedBrick b in this.Bricks)
                         {
-                            if((b.voxelOffset-vOffset).Length()<5){
+                            if((b.voxelOffset-vOffset).Length()<8){
                                 tryInsert = true;
                             }
                         }
@@ -405,7 +405,7 @@ namespace KADA
                 }
 
             }
-            this.center = Vector3.Zero;
+            //this.center = Vector3.Zero;
 
             //compute center
             if (this.center == Vector3.Zero)

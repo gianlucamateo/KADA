@@ -37,7 +37,7 @@ namespace KADA
         public int ICPInliers, ICPOutliers;
         public Vector3 OutlierSum;
         public float ModelRadius = 0;
-        public ConcurrentQueue<Vector3> Outliers;
+        public ConcurrentQueue<Point> Outliers;
         public int OutlierCount = 0;
         public double sqDist = 0;
 
@@ -50,7 +50,7 @@ namespace KADA
             this.ICPOutliers = 0;
             this.ICPInliers = 0;
             //this.OutlierAvg = Vector3.Zero;
-            this.Outliers = new ConcurrentQueue<Vector3>();
+            this.Outliers = new ConcurrentQueue<Point>();
             this.totalWeight = 0;
             this.dataContainer = dataContainer;
             // this.file = new StreamWriter("ICP_worker" + number + "_" + DateTime.Now.Millisecond + ".txt");
@@ -80,7 +80,7 @@ namespace KADA
                     this.OutlierSum += outlier;
                 }
             }*/
-            Vector3 trash;
+            Point trash;
 
             while (this.Outliers.Count > 0)
             {
@@ -168,7 +168,9 @@ namespace KADA
                 //sqDist += neighbour.CurrentDistance;
                 q = neighbour.Current;
                 bool foundMatch = false;
-                if (neighbour.CurrentDistance > 100)
+                int outsiderThreshold = 150;//<-- 200 was the most successful number up till now
+
+                if (neighbour.CurrentDistance > outsiderThreshold)
                 {
                     this.ICPOutliers++;
                     foundMatch = false;
@@ -178,7 +180,7 @@ namespace KADA
                         if ((point.brickColorInteger / number) * number == point.brickColorInteger)
                         {
                             if (q.brickColor == bc)
-                            {                               
+                            {
                                 foundMatch = true;
                             }
                         }
@@ -187,7 +189,10 @@ namespace KADA
                     {
                         sqDist += neighbour.CurrentDistance;
                     }
-                    this.Outliers.Enqueue(v);// + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
+
+                    point.position = v;
+                    if (point.brickColorInteger == (int)dataContainer.addColor)
+                        this.Outliers.Enqueue(point);// + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
                     continue;
                 }
                 sqDist += neighbour.CurrentDistance;
@@ -201,7 +206,7 @@ namespace KADA
                     continue;
                 }
                 bool found = true;
-                if (dataContainer.trackingConfidence!=TrackingConfidenceLevel.NONE)
+                if (dataContainer.trackingConfidence != TrackingConfidenceLevel.NONE)
                 {
                     transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
                     while (Vector3.Dot(transformedNormal, Vector3.UnitZ) < this.dataContainer.NORMAL_CULLING_LIMIT)//-0.1f)
@@ -274,6 +279,8 @@ namespace KADA
                     {
                         weight = 0.01f;
                         sqDist -= neighbour.CurrentDistance;
+                        if (point.brickColorInteger == (int)dataContainer.addColor)
+                            this.Outliers.Enqueue(point);// + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
                     }
                 }
 
