@@ -159,7 +159,7 @@ namespace KADA
                     bool skip = false;
                     i++;
                     dataContainer.ModelsWorked = i;
-                    if (i++ > 100)
+                    if (i++ > 75)
                     {
                         skip = true;
                     }

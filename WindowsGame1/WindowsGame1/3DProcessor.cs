@@ -28,7 +28,7 @@ namespace KADA
     {
         public const float POINTTOPOINTWEIGHT = 0.5f;
         public const float POINTTOPLANEWEIGHT = 0.5f;
-        public const float MAXROTATION = (float)Math.PI / 6;
+        public const float MAXROTATION = (float)Math.PI / 18;
         public const float TRANSLATIONWEIGHT = 1f;
         public const float MAX_INLIERDISTANCE = 12;
         private const int ICPITERATIONS = 1;
@@ -356,7 +356,7 @@ namespace KADA
 
 
 
-                this.DataContainer.ICPThreshold = Math.Max(Model.radius, 100);
+                this.DataContainer.ICPThreshold = Math.Max(2*Model.radius, 100);
 
                 //container.Timings.Add(DateTime.Now);
                 if (this.DataContainer.DeNoiseAndICP)
@@ -435,6 +435,7 @@ namespace KADA
                         }
 
 
+                        int reducer = (int)(DataContainer.ICPInliers + DataContainer.ICPOutliers) / 500 + 1;
                         for (int count = 0; count < qi.Count; count++)
                         {
 
@@ -446,8 +447,11 @@ namespace KADA
                             int upperLimit = count + 50;
                             for (int innerCount = count; innerCount < qi.Count && innerCount < upperLimit; innerCount++)
                             {
-                                worker.input.Enqueue(qi[innerCount]);
-                                count++;
+                                if (innerCount % reducer == 0)
+                                {
+                                    worker.input.Enqueue(qi[innerCount]);
+                                    count++;
+                                }
                             }
                             workers.Enqueue(worker);
                         }
@@ -461,7 +465,7 @@ namespace KADA
                         container.outlierCenter = Vector3.Zero;
 
                         Outliers = new List<Point>();
-                        
+
                         foreach (ICPWorker w in workers)
                         {
 
@@ -560,7 +564,7 @@ namespace KADA
                             float maxRotation = MAXROTATION;
                             if (DataContainer.EditMode)
                             {
-                                maxRotation /= 10;
+                                maxRotation /= 5;
                             }
                             double[] XArr = X.ToArray();
                             if (Model.Bricks.Count < 2 || (DataContainer.EditMode && Model.Bricks.Count < 3))
@@ -583,7 +587,7 @@ namespace KADA
                             Vector3 trans = new Vector3((float)(XArr[3]), (float)(XArr[4]), (float)(XArr[5]));
                             trans *= TRANSLATIONWEIGHT;
                             trans *= Model.radius;
-                            float maxTrans = 15;
+                            float maxTrans = 5;
                             if (DataContainer.EditMode && Model.Bricks.Count < 3)
                             {
                                 float dist = Vector3.Dot(trans, DataContainer.g);
@@ -769,11 +773,11 @@ namespace KADA
                             }
                         }
                     }
-                    if (DataContainer.differentViewCounter > 4 || Model.Bricks.Count < 3 || DataContainer.ICPMSE>30)
+                    if (DataContainer.differentViewCounter > 2 || Model.Bricks.Count < 3 || DataContainer.ICPMSE > 3*DataContainer.currentMaxMSE)
                     {
                         DataContainer.backgroundEvaluator.ModificationInput.Enqueue(new List<Point>(backgroundData));
                         backgroundData.Clear();
-                        
+
                         DataContainer.Attach = false;
                         DataContainer.differentViewCounter = 0;
                     }

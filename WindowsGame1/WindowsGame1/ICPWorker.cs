@@ -168,7 +168,7 @@ namespace KADA
                 //sqDist += neighbour.CurrentDistance;
                 q = neighbour.Current;
                 bool foundMatch = false;
-                int outsiderThreshold = 150;//<-- 200 was the most successful number up till now
+                int outsiderThreshold = 250;//<-- 200 was the most successful number up till now
 
                 if (neighbour.CurrentDistance > outsiderThreshold)
                 {
@@ -279,8 +279,10 @@ namespace KADA
                     {
                         weight = 0.01f;
                         sqDist -= neighbour.CurrentDistance;
-                        if (point.brickColorInteger == (int)dataContainer.addColor)
+                        if (point.brickColorInteger == (int)dataContainer.addColor && neighbour.CurrentDistance>100) //<-- last change, plus outlier from 150 to 200
+                        {
                             this.Outliers.Enqueue(point);// + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
+                        }
                     }
                 }
 

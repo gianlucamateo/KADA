@@ -59,8 +59,9 @@ namespace KADA
             {
                 readFromFile();
             }
-            List<Point> newList = new List<Point>(points);
-            return newList;
+            //List<Point> newList = new List<Point>(points);
+            //return newList;
+            return points;
         }
         public static void readFromFile()
         {

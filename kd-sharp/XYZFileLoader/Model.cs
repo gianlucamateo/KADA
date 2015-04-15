@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 using System.Threading.Tasks;
-
+using System.Collections.Concurrent;
 
 namespace KADA
 {
@@ -13,7 +13,7 @@ namespace KADA
     {
 
         public List<Point> points;
-        public const int DIMENSION = 18;
+        public const int DIMENSION = 26;
         public Brick[, ,] voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
         public List<Point>[, ,] pointGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];//, newGrid = new List<Point>[DIMENSION, DIMENSION, DIMENSION];
         public List<LocatedBrick> Bricks;
@@ -29,10 +29,10 @@ namespace KADA
             {
                 this.Bricks = new List<LocatedBrick>();
                 this.Bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0), BrickColor.GREEN));
-                //this.Bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
-                //this.Bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
-                //this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
-                //this.Bricks.Add(new LocatedBrick(false, new Vector3(3, 2, -1), BrickColor.GREEN));
+                this.Bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
+                this.Bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
+                this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
+                this.Bricks.Add(new LocatedBrick(false, new Vector3(3, 2, -1), BrickColor.GREEN));
             }
             else
             {
@@ -88,41 +88,46 @@ namespace KADA
 
         public void ComputeTentativeBricks()
         {
-
-           
-            for (int y = -DIMENSION; y < DIMENSION; y++)
+            ConcurrentBag<TentativeModel> tModels = new ConcurrentBag<TentativeModel>();
+            
+            for (int y = -(DIMENSION / 2 + 1); y < (DIMENSION / 2 + 1); y++)
             {
 
-                for (int x = -DIMENSION; x < DIMENSION; x++)
+                for (int x = -(DIMENSION / 2 + 1); x < (DIMENSION / 2 + 1); x++)
                 {
-                    //for (int z = -DIMENSION; z < DIMENSION; z++)
+                    //for (int z = -(DIMENSION / 2 + 1); z < (DIMENSION / 2 + 1); z++)
                     //{
-                    Parallel.For(-DIMENSION, DIMENSION, new ParallelOptions { MaxDegreeOfParallelism = 10 }, z =>
+                    Parallel.For(-(DIMENSION / 2 + 1), (DIMENSION / 2 + 1), new ParallelOptions { MaxDegreeOfParallelism = 10 }, z =>
                     {
                         Vector3 vOffset = new Vector3(x, y, z);
                         bool tryInsert = false;
                         foreach (LocatedBrick b in this.Bricks)
                         {
-                            if((b.voxelOffset-vOffset).Length()<8){
+                            Vector3 diff = (b.voxelOffset-vOffset);
+                            if(diff.Length()<17&&Math.Abs(diff.Y)<2f){
                                 tryInsert = true;
                             }
                         }
+                        //tryInsert = true;
                         if (tryInsert)
                         {
                             LocatedBrick tentativeBrick = new LocatedBrick(true, new Vector3(x, y, z), BrickColor.GREEN);
                             if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
                             {
-                                this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
+                                //this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
+                                tModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
                             }
                             tentativeBrick = new LocatedBrick(false, new Vector3(x, y, z), BrickColor.GREEN);
                             if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
                             {
-                                this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
+                                //this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
+                                tModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
                             }
                         }
                     });
                 }
             }
+            this.tentativeModels.AddRange(tModels);
             
         }
 
