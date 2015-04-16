@@ -209,10 +209,10 @@ namespace KADA
                             {
                                 inliers++;
                             }
-                            if (!foundMatch)
+                            /*if (!foundMatch)
                             {
                                 MSE += 40000;
-                            }
+                            }*/
                             count++;
                             
                             {

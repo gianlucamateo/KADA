@@ -316,7 +316,7 @@ namespace KADA
             int icpCount = 0;
             float total = 0;
             Matrix H;
-            List<Point> Outliers = null;
+            List<Point> Outliers = new List<Point>();
             int afterEditMode = 1;
 
             double angleSum = 0;
@@ -464,7 +464,7 @@ namespace KADA
                         float totalWeight = 0;
                         container.outlierCenter = Vector3.Zero;
 
-                        Outliers = new List<Point>();
+                        Outliers.Clear();
 
                         foreach (ICPWorker w in workers)
                         {
@@ -797,7 +797,7 @@ namespace KADA
                 }
                 if (DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL && icpCount % 1 == 0)
                 {
-                    this.DataContainer.backgroundEvaluator.PointsInput.Enqueue(Outliers);
+                    this.DataContainer.backgroundEvaluator.PointsInput.Enqueue(new List<Point>(Outliers));
                 }
             }
 

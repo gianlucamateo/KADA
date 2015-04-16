@@ -91,6 +91,8 @@ namespace KADA
         private Vector3 CameraLookAt = new Vector3(0, 0, -370);
         private Vector3 CameraUp;
 
+        private bool track = false;
+
         public Matrix World;
         public Matrix View;
         public Matrix Projection;
@@ -279,6 +281,14 @@ namespace KADA
                 }
                 //this.SetBrickRotation(container.R);
                 this.SetBrickRotation(R);
+                Vector3 up = dataContainer.g;
+                up.Normalize();
+                if (track)
+                {
+                    CameraPosition = this.brickTranslation.Translation + new Vector3(-400, 75, 340);
+                    CameraLookAt = this.brickTranslation.Translation;
+                    CameraUp = up;
+                }
 
                 this.outlierCenter = dataContainer.outlierCenter;
                 foreach (Point v in model.points)
@@ -654,14 +664,16 @@ namespace KADA
             }
             if (kS.IsKeyDown(Keys.V))
             {
-                CameraUp = new Vector3(0, 1, 1.2f);
+                /*CameraUp = new Vector3(0, 1, 1.2f);
                 CameraUp.Normalize();
                 CameraLookAt = new Vector3(-415, 270, -715);
-                CameraPosition = new Vector3(-750, 310, -580);
+                CameraPosition = new Vector3(-750, 310, -580);*/
+                track = true;
             }
 
             if (kS.IsKeyDown(Keys.K))
             {
+                track = false;
                 CameraUp = Vector3.UnitY;
                 CameraPosition = new Vector3(0, 0, 0);
                 CameraLookAt = new Vector3(0, 0, -370);

@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using System.Runtime;
 
 namespace KADA
 {
@@ -24,15 +25,17 @@ namespace KADA
 
         public Model(bool definitive, Vector3 center, List<LocatedBrick> bricks = null, bool fast = false)
         {
+            
+
             this.center = center;
             if (bricks == null)
             {
                 this.Bricks = new List<LocatedBrick>();
                 this.Bricks.Add(new LocatedBrick(false, new Vector3(0, 0, 0), BrickColor.GREEN));
-                this.Bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
-                this.Bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
-                this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
-                this.Bricks.Add(new LocatedBrick(false, new Vector3(3, 2, -1), BrickColor.GREEN));
+                //this.Bricks.Add(new LocatedBrick(true, new Vector3(4, 1, -4), BrickColor.RED));
+                //this.Bricks.Add(new LocatedBrick(true, new Vector3(2, -1, -2), BrickColor.BLUE));
+                // this.Bricks.Add(new LocatedBrick(false, new Vector3(-1, -2, 2), BrickColor.BLUE));
+                //this.Bricks.Add(new LocatedBrick(false, new Vector3(3, 2, -1), BrickColor.GREEN));
             }
             else
             {
@@ -44,7 +47,7 @@ namespace KADA
             //this.bricks.Add(new LocatedBrick(false, new Vector3(0, -2, 0)));
 
             this.tentativeModels = new List<TentativeModel>();
-
+            
             for (int x = 0; x < voxelGrid.GetLength(0); x++)
             {
                 for (int y = 0; y < voxelGrid.GetLength(1); y++)
@@ -89,22 +92,25 @@ namespace KADA
         public void ComputeTentativeBricks()
         {
             ConcurrentBag<TentativeModel> tModels = new ConcurrentBag<TentativeModel>();
-            
+            //GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect();
             for (int y = -(DIMENSION / 2 + 1); y < (DIMENSION / 2 + 1); y++)
             {
 
-                for (int x = -(DIMENSION / 2 + 1); x < (DIMENSION / 2 + 1); x++)
+                for (int z = -(DIMENSION / 2 + 1); z < (DIMENSION / 2 + 1); z++)
                 {
+                    
                     //for (int z = -(DIMENSION / 2 + 1); z < (DIMENSION / 2 + 1); z++)
                     //{
-                    Parallel.For(-(DIMENSION / 2 + 1), (DIMENSION / 2 + 1), new ParallelOptions { MaxDegreeOfParallelism = 10 }, z =>
+                    Parallel.For(-(DIMENSION / 2 + 1), (DIMENSION / 2 + 1), new ParallelOptions { MaxDegreeOfParallelism = 10 }, x =>
                     {
                         Vector3 vOffset = new Vector3(x, y, z);
                         bool tryInsert = false;
                         foreach (LocatedBrick b in this.Bricks)
                         {
-                            Vector3 diff = (b.voxelOffset-vOffset);
-                            if(diff.Length()<17&&Math.Abs(diff.Y)<2f){
+                            Vector3 diff = (b.voxelOffset - vOffset);
+                            if (diff.Length() < 17 && Math.Abs(diff.Y) < 2f)
+                            {
                                 tryInsert = true;
                             }
                         }
@@ -128,7 +134,9 @@ namespace KADA
                 }
             }
             this.tentativeModels.AddRange(tModels);
-            
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect();
+
         }
 
         private void Reset()

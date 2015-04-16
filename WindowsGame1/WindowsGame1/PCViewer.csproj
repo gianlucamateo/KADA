@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>KADA</RootNamespace>
     <AssemblyName>PCViewer</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
     <XnaFrameworkVersion>v4.0</XnaFrameworkVersion>
     <XnaPlatform>Windows</XnaPlatform>
@@ -169,6 +169,7 @@
     <ProjectReference Include="..\..\kd-sharp\XYZFileLoader\ModelManager.csproj">
       <Project>{3E8764A8-729E-4E6F-84A7-D01608AAD9DA}</Project>
       <Name>ModelManager</Name>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
     </ProjectReference>
     <ProjectReference Include="..\WindowsGame1Content\PCViewer_Content.contentproj">
       <Name>PCViewer_Content %28Content%29</Name>
