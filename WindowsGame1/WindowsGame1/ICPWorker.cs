@@ -150,7 +150,10 @@ namespace KADA
                 {
                     maxDistance = 4;
                 }*/
-
+                while (brickWrapper == null)
+                {
+                    brickWrapper = dataContainer.model.kdTree;
+                }
                 neighbour = brickWrapper.NearestNeighbors(vArr, 5, fDistance: maxDistance);
                 neighbour.MoveNext();
 

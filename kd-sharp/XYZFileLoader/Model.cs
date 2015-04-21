@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Runtime;
+using System.Threading;
 
 namespace KADA
 {
@@ -22,11 +23,15 @@ namespace KADA
         public float radius;
         public Vector3 center;
         public List<TentativeModel> tentativeModels;
+        static bool generated = false;
+        private bool destroyed = false;
+        public LocatedBrick TentativeBrick;
+        public static ConcurrentQueue<List<Point>> PointLists = new ConcurrentQueue<List<Point>>();
 
-        public Model(bool definitive, Vector3 center, List<LocatedBrick> bricks = null, bool fast = false)
+        public Model(bool definitive, Vector3 center, List<LocatedBrick> bricks = null, LocatedBrick tentBrick = null, bool fast = false)
         {
-            
 
+            this.TentativeBrick = tentBrick;
             this.center = center;
             if (bricks == null)
             {
@@ -47,14 +52,17 @@ namespace KADA
             //this.bricks.Add(new LocatedBrick(false, new Vector3(0, -2, 0)));
 
             this.tentativeModels = new List<TentativeModel>();
-            
+
             for (int x = 0; x < voxelGrid.GetLength(0); x++)
             {
                 for (int y = 0; y < voxelGrid.GetLength(1); y++)
                 {
                     for (int z = 0; z < voxelGrid.GetLength(2); z++)
                     {
-                        pointGrid[x, y, z] = new List<Point>();
+                        while (!PointLists.TryDequeue(out pointGrid[x, y, z]))
+                        {
+                            Thread.Sleep(1);
+                        };//pointGrid[x, y, z] = new List<Point>();
                     }
                 }
             }
@@ -72,38 +80,62 @@ namespace KADA
 
             this.points = new List<Point>();
             //points = Reader.getPoints();
-            if (definitive)
+
+            DateTime before = DateTime.Now;
+            GenerateKDTree(definitive, fast);
+            if (!fast)
             {
-                DateTime before = DateTime.Now;
-                GenerateKDTree(fast);
-                if (!fast)
-                {
-                    Console.WriteLine("GenerateKDTree took: " + (DateTime.Now - before));
-                }
-                if (!fast)
-                {
-                    before = DateTime.Now;
-                    ComputeTentativeBricks();
-                    Console.WriteLine("computing tentative models took: " + (DateTime.Now - before));
-                }
+                Console.WriteLine("GenerateKDTree took: " + (DateTime.Now - before));
             }
+            if (!fast && definitive)
+            {
+                before = DateTime.Now;
+                ComputeTentativeBricks();
+                Console.WriteLine("computing tentative models took: " + (DateTime.Now - before));
+            }
+
         }
 
+        public void Recycle()
+        {
+            if (!destroyed)
+            {
+                for (int x = 0; x < pointGrid.GetLength(0); x++)
+                {
+                    for (int y = 0; y < pointGrid.GetLength(1); y++)
+                    {
+                        for (int z = 0; z < pointGrid.GetLength(2); z++)
+                        {
+                            pointGrid[x, y, z].Clear();
+                            PointLists.Enqueue(pointGrid[x, y, z]);
+                        }
+                    }
+                }
+                this.kdTree = null; //<-- check this out
+                this.points = null;
+                this.pointGrid = null;
+                this.voxelGrid = null;
+            }
+            destroyed = true;
+        }
         public void ComputeTentativeBricks()
         {
             ConcurrentBag<TentativeModel> tModels = new ConcurrentBag<TentativeModel>();
-            //GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             GC.Collect();
             for (int y = -(DIMENSION / 2 + 1); y < (DIMENSION / 2 + 1); y++)
             {
 
                 for (int z = -(DIMENSION / 2 + 1); z < (DIMENSION / 2 + 1); z++)
                 {
-                    
+
                     //for (int z = -(DIMENSION / 2 + 1); z < (DIMENSION / 2 + 1); z++)
                     //{
+                    int i = 0;
                     Parallel.For(-(DIMENSION / 2 + 1), (DIMENSION / 2 + 1), new ParallelOptions { MaxDegreeOfParallelism = 10 }, x =>
                     {
+
+                        
                         Vector3 vOffset = new Vector3(x, y, z);
                         bool tryInsert = false;
                         foreach (LocatedBrick b in this.Bricks)
@@ -117,17 +149,31 @@ namespace KADA
                         //tryInsert = true;
                         if (tryInsert)
                         {
+                            
                             LocatedBrick tentativeBrick = new LocatedBrick(true, new Vector3(x, y, z), BrickColor.GREEN);
+                            TentativeModel tModel;
                             if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
                             {
+                                /*if (i++ % 100 == 0)
+                                {
+                                    GC.Collect();
+                                }*/
                                 //this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
-                                tModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
+                                tModel = new TentativeModel(this.Bricks, tentativeBrick, this.center);
+                                tModels.Add(tModel);
+                                tModel.Recycle();
                             }
                             tentativeBrick = new LocatedBrick(false, new Vector3(x, y, z), BrickColor.GREEN);
                             if (tentativeBrick.insert(this.pointGrid, this.voxelGrid, false))
                             {
+                                /*if (i++ % 100 == 0)
+                                {
+                                    GC.Collect();
+                                }*/
                                 //this.tentativeModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
-                                tModels.Add(new TentativeModel(this.Bricks, tentativeBrick, this.center));
+                                tModel = new TentativeModel(this.Bricks, tentativeBrick, this.center);
+                                tModels.Add(tModel);
+                                tModel.Recycle();
                             }
                         }
                     });
@@ -165,12 +211,19 @@ namespace KADA
                 }
             }*/
         }
-        public KDTreeWrapper GenerateKDTree(bool fast = false)
+        public KDTreeWrapper GenerateKDTree(bool definitive = true,bool fast = false)
         {
             this.Reset();
-            foreach (LocatedBrick b in Bricks)
+            if (definitive || TentativeBrick == null)
             {
-                b.insert(this.pointGrid, this.voxelGrid, true);
+                foreach (LocatedBrick b in Bricks)
+                {
+                    b.insert(this.pointGrid, this.voxelGrid, true);
+                }
+            }
+            else
+            {
+                TentativeBrick.insert(this.pointGrid, this.voxelGrid, true);
             }
             this.kdTree = new KDTreeWrapper();
 

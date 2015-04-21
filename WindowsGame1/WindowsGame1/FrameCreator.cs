@@ -83,7 +83,7 @@ namespace KADA
         {
             while (this.DataContainer.Run)
             {
-                if (this.Manager.Recycle.Count > 3 && this.DataContainer.backgroundEvaluator.ModificationRunning==false)
+                if (this.Manager.Recycle.Count > 1)
                 {
                     while (this.Manager.Recycle.TryDequeue(out container) == false)
                     {
@@ -141,6 +141,10 @@ namespace KADA
 
         private void AddToQueue()
         {
+            if (container.Number % 30 == 0)
+            {
+                GC.Collect();
+            }
             DataContainer.recordGenerationTick();
             //container.Timings.Add(DateTime.Now);
             Manager.ProcessingQueues[++container.Stage].Enqueue(container);

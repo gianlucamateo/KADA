@@ -36,6 +36,7 @@ namespace KADA
 
         public PipelineContainer(PipelineDataContainer dataContainer)
         {
+            
             this.outlierCenter = Vector3.Zero;
             this.modelVectors = new Vector3[3];
             this.rawNormalR = Matrix.Identity;

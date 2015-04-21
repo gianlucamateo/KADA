@@ -17,7 +17,7 @@ namespace KDTree
         /// <summary>
         /// The default size for a new interval heap.
         /// </summary>
-        private const int DEFAULT_SIZE = 64;
+        private const int DEFAULT_SIZE = 16;
 
         /// <summary>
         /// The internal data array which contains the stored objects.

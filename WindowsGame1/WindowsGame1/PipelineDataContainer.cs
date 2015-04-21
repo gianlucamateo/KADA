@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Model = KADA.Model;
+using System.Runtime;
 
 namespace KADA
 {
@@ -58,6 +59,14 @@ namespace KADA
 
         public PipelineDataContainer()
         {
+            //if (!generated)
+            //{
+            for (int i = 0; i < 800000; i++)
+            {
+                Model.PointLists.Enqueue(new List<Point>());
+            }
+            //    generated = true;
+            // }
             this.comparisonPoints = new List<Point>();
             this.BaseRotation = Matrix.Identity;
             this.Attach = false;
@@ -77,6 +86,8 @@ namespace KADA
             normalMappings[0] = 0;
             normalMappings[1] = 1;
             normalMappings[2] = 2;
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect();
             
         }
 

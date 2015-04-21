@@ -101,7 +101,9 @@ namespace KADA
             {
                 if (this.dataContainer.RevertToOld)
                 {
+                    dataContainer.model.Recycle();
                     dataContainer.model = oldModel;
+                    Thread.Sleep(500);
                     dataContainer.RevertToOld = false;
                 }
                 if (this.dataContainer.WrongModel)
@@ -110,8 +112,10 @@ namespace KADA
                     float tempKey = this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1);
                     Model temp = this.guesses[tempKey];
 
-                    Model nextTry = new Model(true, temp.center, temp.Bricks, true);
+                    Model old = dataContainer.model;
+                    Model nextTry = new Model(false, temp.center, temp.Bricks,null, true);
                     dataContainer.model = nextTry;
+                    old.Recycle();
                     dataContainer.comparisonPoints = dataContainer.model.points;
                     this.guesses.Remove(tempKey);
                     Thread.Sleep(300);
@@ -121,7 +125,10 @@ namespace KADA
                 }
                 if (this.dataContainer.ApplyModel)
                 {
-                    Model temp = new Model(true, Vector3.Zero, dataContainer.model.Bricks, false);
+                    //GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                    GC.Collect();
+                    Model temp = new Model(true, Vector3.Zero, dataContainer.model.Bricks,null, false);
+                    dataContainer.model.Recycle();
                     dataContainer.model = temp;
                     dataContainer.ApplyModel = false;
                 }
@@ -144,7 +151,13 @@ namespace KADA
                     this.ModificationInput.TryDequeue(out dumpContainer);
                 }
                 Console.WriteLine("working");
+                if(oldModel != null)
+                    oldModel.Recycle();
                 oldModel = dataContainer.model;
+                foreach (Model m in this.guesses.Values)
+                {
+                    m.Recycle();
+                }
                 this.guesses.Clear();
                 List<Point> qi = new List<Point>(container);
                 SortedDictionary<float, TentativeModel> dict = new SortedDictionary<float, TentativeModel>(dataContainer.tentativeModels);
@@ -157,11 +170,11 @@ namespace KADA
                 //foreach (float key in dict.Keys)
                 {
                     bool skip = false;
-                    i++;
                     dataContainer.ModelsWorked = i;
-                    if (i++ > 75)
+                    if (i++ % 50 == 0)
                     {
-                        skip = true;
+                        //skip = true;
+                        GC.Collect();
                     }
                     /*if (!this.dataContainer.Run)
                     {
@@ -222,11 +235,13 @@ namespace KADA
                         }
                         MSE /= ((float)count + 1f);
                         
+                        model.Recycle();
                         model.kdTree = null;
                         model.points = null;
                         model.tentativeModels = null;
-                        model.voxelGrid = null;
+                        model.voxelGrid = null;                        
                         model.pointGrid = null;
+
                         /*if (ratio > maxRatio)
                         {
                             maxRatio = ratio;
@@ -252,6 +267,7 @@ namespace KADA
                             {
                                 tries++;
                             }
+                            //modelDump.Destroy();
                             //this.guesses.Remove(k);
                         }
                     }
@@ -266,7 +282,8 @@ namespace KADA
                     this.guesses.Add(key, m);
                 }
                 currentModel = this.guesses[this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1)];
-                Model finalModel = new Model(true, currentModel.center, currentModel.Bricks, true);
+                Model finalModel = new Model(true, currentModel.center, currentModel.Bricks,null, true);
+                currentModel.Recycle();
                 dataContainer.model = finalModel;
                 dataContainer.comparisonPoints = finalModel.points;
                 dataContainer.EditMode = false;

@@ -69,7 +69,7 @@ namespace KADA
             Thread Stage4 = new Thread(new ThreadStart(() => GenerateCenter()));
             Stage4.Start();
 
-            KDTreeWrapper tree = dataContainer.model.getKDTree();
+            //KDTreeWrapper tree;
             ConcurrentQueue<ICPWorker> workers1, workers2;
             workers1 = new ConcurrentQueue<ICPWorker>();
             workers2 = new ConcurrentQueue<ICPWorker>();
@@ -77,7 +77,7 @@ namespace KADA
             for (int i = 0; i < WORKERCOUNT; i++)
             {
                 ICPWorker w = new ICPWorker(i, this.DataContainer);
-                w.brickWrapper = tree;
+                w.brickWrapper = dataContainer.model.getKDTree();;
                 workers1.Enqueue(w);
             }
 

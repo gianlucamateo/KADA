@@ -8,9 +8,9 @@ namespace KADA
 {
     public class TentativeModel : Model
     {
-        public LocatedBrick TentativeBrick;
+        
 
-        public TentativeModel(List<LocatedBrick> bricks, LocatedBrick tentativeBrick, Vector3 center) : base(false,center,fast:true)
+        public TentativeModel(List<LocatedBrick> bricks, LocatedBrick tentativeBrick, Vector3 center) : base(false,center,tentBrick:tentativeBrick,fast:true)
         {
             this.center = center;
             this.Bricks = new List<LocatedBrick>(bricks);
@@ -22,7 +22,12 @@ namespace KADA
         public Model validate(BrickColor color)
         {
             this.TentativeBrick.setColor(color);
-            Model model = new Model(true, this.center, this.Bricks, fast: true);
+            /*if (this.Bricks.Count > 3)
+            {
+                this.Bricks.Clear();
+                this.Bricks.Add(TentativeBrick);
+            }*/
+            Model model = new Model(false, this.center, this.Bricks, this.TentativeBrick,fast: true);
             
             return model;
         }

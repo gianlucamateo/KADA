@@ -17,10 +17,12 @@ namespace KADA
         public ConcurrentQueue<PipelineContainer> Recycle;
         public PipelineManager(PipelineDataContainer dataContainer)
         {
-            this.Recycle = new ConcurrentQueue<PipelineContainer>();
-            
+            this.Recycle = new ConcurrentQueue<PipelineContainer>();           
 
-                this.ProcessingQueues = new ConcurrentQueue<PipelineContainer>[9];
+            this.ProcessingQueues = new ConcurrentQueue<PipelineContainer>[9];
+
+            
+            
             for (int i = 0; i < this.ProcessingQueues.Length; i++)
             {
                 this.ProcessingQueues[i] = new ConcurrentQueue<PipelineContainer>();
@@ -29,7 +31,7 @@ namespace KADA
             this.processor2D = new _2DProcessor(this, this.dataContainer);
             this.processor3D = new _3DProcessor(this,this.dataContainer);
             this.frameCreator = new FrameCreator(this.dataContainer,this);
-            for (int i = 0; i < 50; i++)
+            for (int i = 0; i < 25; i++)
             {
                 Recycle.Enqueue(new PipelineContainer(dataContainer));
             }
