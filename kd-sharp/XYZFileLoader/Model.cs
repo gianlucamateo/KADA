@@ -23,6 +23,7 @@ namespace KADA
         public float radius;
         public Vector3 center;
         public List<TentativeModel> tentativeModels;
+        public List<Model> removalModels;
         static bool generated = false;
         private bool destroyed = false;
         public LocatedBrick TentativeBrick;
@@ -52,6 +53,7 @@ namespace KADA
             //this.bricks.Add(new LocatedBrick(false, new Vector3(0, -2, 0)));
 
             this.tentativeModels = new List<TentativeModel>();
+            this.removalModels = new List<Model>();
 
             for (int x = 0; x < voxelGrid.GetLength(0); x++)
             {
@@ -90,7 +92,9 @@ namespace KADA
             if (!fast && definitive)
             {
                 before = DateTime.Now;
-                ComputeTentativeBricks();
+                Thread d = new Thread(ComputeTentativeBricks);
+                d.Start();
+                //ComputeTentativeBricks();
                 Console.WriteLine("computing tentative models took: " + (DateTime.Now - before));
             }
 
@@ -176,13 +180,26 @@ namespace KADA
                                 tModel.Recycle();
                             }
                         }
-                    });
+                    });                                        
                 }
             }
             this.tentativeModels.AddRange(tModels);
+            ComputeRemovalModels();
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             GC.Collect();
 
+        }
+
+
+        private void ComputeRemovalModels()
+        {
+            foreach (LocatedBrick b in this.Bricks)
+            {
+                List<LocatedBrick> newBricks = new List<LocatedBrick>(this.Bricks);
+                newBricks.Remove(b);
+                Model m = new Model(false, this.center, newBricks);
+                this.removalModels.Add(m);
+            }
         }
 
         private void Reset()

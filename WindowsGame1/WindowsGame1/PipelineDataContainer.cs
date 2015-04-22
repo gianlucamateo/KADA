@@ -43,7 +43,7 @@ namespace KADA
         public BackgroundEvaluator backgroundEvaluator;
         public Matrix R;
         public bool EditMode;
-        public bool Attach;
+        public bool Attach, Removal;
         public bool WrongModel=false;
         public bool ApplyModel = false;
         public int ModelsWorked = 0;
@@ -70,14 +70,15 @@ namespace KADA
             this.comparisonPoints = new List<Point>();
             this.BaseRotation = Matrix.Identity;
             this.Attach = false;
+            this.Removal = false;
             this.EditMode = false;
             this.R = new Matrix();
             this.center = Vector3.Zero;
             this.outlierCenter = Vector3.Zero;
-            this.outlierCenters = new Queue<Vector3>();
-            this.backgroundEvaluator = new BackgroundEvaluator(this);
+            this.outlierCenters = new Queue<Vector3>();            
             this.modelNormals = new Vector3[3];
             this.model = new Model(true,Vector3.Zero);
+            this.backgroundEvaluator = new BackgroundEvaluator(this);
             //this.tentativeModel = new TentativeModel(model.Bricks,new LocatedBrick(false,Vector3.Zero,BrickColor.NONE));
             this.normalMappings = new int[3];
             this.modelNormals[0] = Vector3.UnitX;

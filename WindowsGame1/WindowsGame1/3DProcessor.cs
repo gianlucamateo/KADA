@@ -737,7 +737,7 @@ namespace KADA
                 }*/
                 //container.Timings.Add(DateTime.Now);
                 Manager.ProcessingQueues[++container.Stage].Enqueue(container);
-                if (DataContainer.Attach && DataContainer.backgroundEvaluator.ModificationInput.Count == 0 && !DataContainer.backgroundEvaluator.ModificationRunning)
+                if ((DataContainer.Attach||DataContainer.Removal) && DataContainer.backgroundEvaluator.ModificationInput.Count == 0 && !DataContainer.backgroundEvaluator.ModificationRunning)
                 {
                     DataContainer.ModelsWorked = 0;
                     if ((Math.Abs(angleSum) > Math.PI / 6 && DataContainer.ICPMSE < DataContainer.currentMaxMSE) || Model.Bricks.Count < 3)

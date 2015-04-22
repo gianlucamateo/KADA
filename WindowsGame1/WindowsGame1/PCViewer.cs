@@ -14,6 +14,8 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.Collections.Concurrent;
+using System.Windows.Forms;
+using Keys = Microsoft.Xna.Framework.Input.Keys;
 
 using KADA;
 using Point = KADA.Point;
@@ -53,7 +55,7 @@ namespace KADA
 
         public Vector3[,] NormalMap = new Vector3[640, 480];
 
-        
+
 
         Matrix RGBToYUV;
         Matrix YUVToRGB;
@@ -291,37 +293,38 @@ namespace KADA
                 }
 
                 this.outlierCenter = dataContainer.outlierCenter;
-                foreach (Point v in model.points)
-                {
-                    Matrix transform = brickRotation * brickTranslation;
-                    Vector3 pos = Vector3.Transform(v.position, transform);
-                    Matrix onlyRot = new Matrix();
-                    onlyRot.M11 = brickRotation.M11;
-                    onlyRot.M12 = brickRotation.M12;
-                    onlyRot.M13 = brickRotation.M13;
-                    onlyRot.M21 = brickRotation.M21;
-                    onlyRot.M22 = brickRotation.M22;
-                    onlyRot.M23 = brickRotation.M23;
-                    onlyRot.M31 = brickRotation.M31;
-                    onlyRot.M32 = brickRotation.M32;
-                    onlyRot.M33 = brickRotation.M33;
-                    float distZ = brickTranslation.M43 + brickRotation.M43;
-                    Vector3 transformedNormal = Vector3.Transform(v.normal, onlyRot);
-                    //if (i % 5 == 0)
-                    if (Vector3.Dot(transformedNormal, Vector3.UnitZ) > this.dataContainer.NORMAL_CULLING_LIMIT)//-0.1f)
+                if (model.points != null)
+                    foreach (Point v in model.points)
                     {
-                        instances[i].ScreenPos = pos;
-                        instances[i].Scale = 0.4f;
-                        instances[i].Color = new Vector3(0, 255, 100);
+                        Matrix transform = brickRotation * brickTranslation;
+                        Vector3 pos = Vector3.Transform(v.position, transform);
+                        Matrix onlyRot = new Matrix();
+                        onlyRot.M11 = brickRotation.M11;
+                        onlyRot.M12 = brickRotation.M12;
+                        onlyRot.M13 = brickRotation.M13;
+                        onlyRot.M21 = brickRotation.M21;
+                        onlyRot.M22 = brickRotation.M22;
+                        onlyRot.M23 = brickRotation.M23;
+                        onlyRot.M31 = brickRotation.M31;
+                        onlyRot.M32 = brickRotation.M32;
+                        onlyRot.M33 = brickRotation.M33;
+                        float distZ = brickTranslation.M43 + brickRotation.M43;
+                        Vector3 transformedNormal = Vector3.Transform(v.normal, onlyRot);
+                        //if (i % 5 == 0)
+                        if (Vector3.Dot(transformedNormal, Vector3.UnitZ) > this.dataContainer.NORMAL_CULLING_LIMIT)//-0.1f)
+                        {
+                            instances[i].ScreenPos = pos;
+                            instances[i].Scale = 0.4f;
+                            instances[i].Color = new Vector3(0, 255, 100);
+                        }
+                        else
+                        {
+                            instances[i].ScreenPos = pos;
+                            instances[i].Scale = 0.2f;
+                            instances[i].Color = new Vector3(255, 0, 100);
+                        }
+                        i++;
                     }
-                    else
-                    {
-                        instances[i].ScreenPos = pos;
-                        instances[i].Scale = 0.2f;
-                        instances[i].Color = new Vector3(255, 0, 100);
-                    }
-                    i++;
-                }
                 foreach (Point v in dataContainer.comparisonPoints)
                 {
                     instances[i].ScreenPos = v.position;
@@ -348,12 +351,12 @@ namespace KADA
                 {
                     instances[i].ScreenPos = center + dataContainer.g * segment;
                     instances[i].Scale = 1;
-                    Vector3 c = Vector3.Zero;                    
-                    c = new Vector3(0, 0, 255);                    
+                    Vector3 c = Vector3.Zero;
+                    c = new Vector3(0, 0, 255);
                     instances[i].Color = c;
                     i++;
                 }
-                
+
                 /*for (int o = 0; o < 3; o++)
                 {
                     if (container.NormalsList[o] != null)
@@ -565,7 +568,7 @@ namespace KADA
                     transformationUpdater.Start();
                 }
             }*/
-            this.Window.Title = manager.Recycle.Count+ " "+ Model.PointLists.Count + "   " + dataContainer.model.tentativeModels.Count + " - " + dataContainer.ModelsWorked + " - minICPRatio:" + dataContainer.currentMaxMSE + " views: " + dataContainer.differentViewCounter + " - " + dataContainer.backgroundEvaluator.ModificationInput.Count + " " + dataContainer.backgroundEvaluator.NormalOutput.Count + "" + dataContainer.backgroundEvaluator.NormalInput.Count + " | " + dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " + dataContainer.trackingConfidence + "Ratio: " + Math.Round(dataContainer.ICPMSE, 2) + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
+            this.Window.Title = manager.Recycle.Count + " " + Model.PointLists.Count + "   " + dataContainer.model.tentativeModels.Count + " - " + dataContainer.ModelsWorked + " - minICPRatio:" + dataContainer.currentMaxMSE + " views: " + dataContainer.differentViewCounter + " - " + dataContainer.backgroundEvaluator.ModificationInput.Count + " " + dataContainer.backgroundEvaluator.NormalOutput.Count + "" + dataContainer.backgroundEvaluator.NormalInput.Count + " | " + dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " + dataContainer.trackingConfidence + "Ratio: " + Math.Round(dataContainer.ICPMSE, 2) + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
 
             base.Update(gameTime);
         }
@@ -574,6 +577,24 @@ namespace KADA
         {
             View = Matrix.CreateLookAt(CameraPosition, CameraLookAt, CameraUp);
         }
+
+        private void pickFile()
+        {
+            OpenFileDialog diag = new OpenFileDialog();
+            diag.FileOk += addFile;
+            diag.ShowDialog();            
+
+
+        }
+
+        private void addFile(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            OpenFileDialog diag = (OpenFileDialog)sender;
+            String filename = diag.FileName;
+            string[] lines = System.IO.File.ReadAllLines(filename);
+
+        }
+        
 
         protected void HandleInput(KeyboardState kS, MouseState mS)
         {
@@ -591,6 +612,14 @@ namespace KADA
                 CameraUp = Vector3.Transform(CameraUp, rotX);
                 CameraLookAt = CameraPosition + CameraLookAtNew;
                 oldScroll = scroll;
+            }
+
+            if (kS.IsKeyDown(Keys.RightControl))
+            {
+                Thread d = new Thread(pickFile);
+                d.SetApartmentState(ApartmentState.STA);
+                d.Start();
+                Thread.Sleep(2000);
             }
 
             if (kS.IsKeyDown(Keys.A))
@@ -701,7 +730,12 @@ namespace KADA
             if (kS.IsKeyDown(Keys.Enter))
             {
                 this.dataContainer.Attach = true;
-                this.dataContainer.currentMaxMSE = dataContainer.ICPMSE+2;
+                this.dataContainer.currentMaxMSE = dataContainer.ICPMSE + 2;
+            }
+            if (kS.IsKeyDown(Keys.RightShift))
+            {
+                this.dataContainer.Removal = true;
+                this.dataContainer.currentMaxMSE = dataContainer.ICPMSE + 2;
             }
             if (kS.IsKeyDown(Keys.O))
             {
@@ -736,7 +770,7 @@ namespace KADA
             if (kS.IsKeyDown(Keys.NumPad0))
             {
                 this.dataContainer.RevertToOld = true;
-            } 
+            }
 
 
             UpdateView();
@@ -901,7 +935,7 @@ namespace KADA
                 }
             }
 
-            
+
             if (tentativeModels != null && dataContainer.EditMode)
             {
                 SortedDictionary<float, TentativeModel> cachedTentativeModels = new SortedDictionary<float, TentativeModel>(tentativeModels);

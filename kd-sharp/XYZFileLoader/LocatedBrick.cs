@@ -13,7 +13,7 @@ namespace KADA
         private Matrix Transformation;
         public bool rotated;
         public Vector3 voxelOffset;
-        private Brick brick;
+        public Brick brick;
         private Vector3 root = new Vector3(Model.DIMENSION / 2, Model.DIMENSION / 2, Model.DIMENSION / 2);
         private Vector3 voxelDimensions = new Vector3(64.0f / 4, 19.2f, 32.0f / 2);
         public Vector3 center;
@@ -57,7 +57,7 @@ namespace KADA
                     color = new Vector3(1, 0, 0);
                     break;
                 case BrickColor.GREEN:
-                    color = new Vector3(0, 1, 0);
+                    color = new Vector3(0, 1, 0.2f);
                     break;
                 case BrickColor.YELLOW:
                     color = new Vector3(1, 1, 0);
@@ -72,7 +72,11 @@ namespace KADA
         {
             if (tentative == null)
             {
-                tentative = new Brick[voxelGrid.GetLength(0), voxelGrid.GetLength(1), voxelGrid.GetLength(2)];
+                tentative = new Brick[Model.DIMENSION, Model.DIMENSION, Model.DIMENSION];
+            }
+            if (voxelGrid == null)
+            {
+                return false;
             }
             Array.Copy(voxelGrid, tentative, voxelGrid.GetLength(0) * voxelGrid.GetLength(1) * voxelGrid.GetLength(2));
 
@@ -267,5 +271,7 @@ namespace KADA
             return true;
 
         }
+
+        
     }
 }
