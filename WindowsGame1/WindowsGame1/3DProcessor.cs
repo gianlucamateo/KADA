@@ -392,6 +392,11 @@ namespace KADA
                     int iterations = 0;
                     bool skip = false;
                     XNAMatrix onlyRot = new XNAMatrix();
+                    ConcurrentDictionary<LocatedBrick, int> localMatchedPoints = new ConcurrentDictionary<LocatedBrick, int>();
+                    foreach (LocatedBrick b in Model.Bricks)
+                    {
+                        localMatchedPoints.GetOrAdd(b,0);
+                    }
                     for (int i = 0; i < ICPITERATIONS; i++)
                     {
                         skip = false;
@@ -431,6 +436,7 @@ namespace KADA
                             w.onlyRot = onlyRot;
                             w.RInv = RInv;
                             w.container = container;
+                            w.matchedPoints = localMatchedPoints;
                             // w.ICPTranslation = ICPTranslation;
                         }
 
@@ -490,6 +496,7 @@ namespace KADA
                         container.ICPMSE /= (container.ICPInliers + container.ICPOutliers);
                         Outliers.AddRange(container.OutlierPoints);
                         Vector3 outlierCenter = Vector3.Zero;
+                        DataContainer.matchedPoints = new ConcurrentDictionary<LocatedBrick, int>(localMatchedPoints);
 
                         if (totalWeight > 0)
                         {
@@ -737,7 +744,7 @@ namespace KADA
                 }*/
                 //container.Timings.Add(DateTime.Now);
                 Manager.ProcessingQueues[++container.Stage].Enqueue(container);
-                if ((DataContainer.Attach||DataContainer.Removal) && DataContainer.backgroundEvaluator.ModificationInput.Count == 0 && !DataContainer.backgroundEvaluator.ModificationRunning)
+                if (DataContainer.Attach && DataContainer.backgroundEvaluator.ModificationInput.Count == 0 && !DataContainer.backgroundEvaluator.ModificationRunning)
                 {
                     DataContainer.ModelsWorked = 0;
                     if ((Math.Abs(angleSum) > Math.PI / 6 && DataContainer.ICPMSE < DataContainer.currentMaxMSE) || Model.Bricks.Count < 3)

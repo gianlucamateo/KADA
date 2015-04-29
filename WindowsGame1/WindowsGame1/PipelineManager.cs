@@ -31,7 +31,7 @@ namespace KADA
             this.processor2D = new _2DProcessor(this, this.dataContainer);
             this.processor3D = new _3DProcessor(this,this.dataContainer);
             this.frameCreator = new FrameCreator(this.dataContainer,this);
-            for (int i = 0; i < 25; i++)
+            for (int i = 0; i < 17; i++)
             {
                 Recycle.Enqueue(new PipelineContainer(dataContainer));
             }

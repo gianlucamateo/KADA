@@ -9,17 +9,17 @@ namespace KDTree
     /// </summary>
     /// <typeparam name="T">The type of data this MinHeap stores.</typeparam>
     /// <remarks>This is based on this: https://bitbucket.org/rednaxela/knn-benchmark/src/tip/ags/utils/dataStructures/trees/thirdGenKD/ </remarks>
-    public class MinHeap<T>
+    public class MinHeap<Point>
     {
         /// <summary>
         /// The default size for a min heap.
         /// </summary>
-        private static int DEFAULT_SIZE = 64;
+        public static int DEFAULT_SIZE = 8;
 
         /// <summary>
         /// The data array.  This stores the data items in the heap.
         /// </summary>
-        private T[] tData;
+        private Point[] tData;
 
         /// <summary>
         /// The key array.  This determines how items are ordered. Smallest first.
@@ -39,7 +39,7 @@ namespace KDTree
         /// <param name="iCapacity"></param>
         public MinHeap(int iCapacity)
         {
-            this.tData = new T[iCapacity];
+            this.tData = new Point[iCapacity];
             this.tKeys = new double[iCapacity];
             this.Capacity = iCapacity;
             this.Size = 0;
@@ -60,7 +60,7 @@ namespace KDTree
         /// </summary>
         /// <param name="key">The key which represents its position in the priority queue (ie. distance).</param>
         /// <param name="value">The value to be stored at the key.</param>
-        public void Insert(double key, T value)
+        public void Insert(double key, Point value)
         {
             // If we need more room, double the space.
             if (Size >= Capacity)
@@ -69,7 +69,7 @@ namespace KDTree
                 Capacity *= 2;
 
                 // Copy the data array.
-                var newData = new T[Capacity];
+                var newData = new Point[Capacity];
                 Array.Copy(tData, newData, tData.Length);
                 tData = newData;
 
@@ -97,14 +97,14 @@ namespace KDTree
             Size--;
             tData[0] = tData[Size];
             tKeys[0] = tKeys[Size];
-            tData[Size] = default(T);
+            tData[Size] = default(Point);
             SiftDown(0);
         }
 
         /// <summary>
         /// Get the data stored at the minimum element.
         /// </summary>
-        public T Min
+        public Point Min
         {
             get
             {
@@ -140,7 +140,7 @@ namespace KDTree
                 iChild != 0 && tKeys[iChild] < tKeys[iParent]; 
                 iChild = iParent, iParent = (iChild - 1) / 2)
             {
-                T kData = tData[iParent];
+                Point kData = tData[iParent];
                 double dDist = tKeys[iParent];
 
                 tData[iParent] = tData[iChild];
@@ -168,7 +168,7 @@ namespace KDTree
                 if (tKeys[iParent] > tKeys[iChild])
                 {
                     // Swap the points
-                    T pData = tData[iParent];
+                    Point pData = tData[iParent];
                     double pDist = tKeys[iParent];
 
                     tData[iParent] = tData[iChild];

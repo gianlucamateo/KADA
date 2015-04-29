@@ -323,7 +323,7 @@ namespace KADA
 
             if (pixel.Position.Z != 0)
             {
-                int brickColorInteger = 1;
+                byte brickColorInteger = 1;
                 int maxval = 0;
 
                 foreach (IHistogram h in this.Histograms)
@@ -335,7 +335,7 @@ namespace KADA
                     }
                     if (val == 1)
                     {
-                        brickColorInteger *= (int)h.GetColor();
+                        brickColorInteger *= (byte)h.GetColor();
                     }
                 }
 

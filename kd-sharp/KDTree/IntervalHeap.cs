@@ -10,19 +10,19 @@ namespace KDTree
     /// A binary interval heap is double-ended priority queue is a priority queue that it allows
     /// for efficient removal of both the maximum and minimum element.
     /// </summary>
-    /// <typeparam name="T">The data type contained at each key.</typeparam>
+    /// <typeparam name="Point">The data type contained at each key.</typeparam>
     /// <remarks>This is based on this: https://bitbucket.org/rednaxela/knn-benchmark/src/tip/ags/utils/dataStructures/trees/thirdGenKD/ </remarks>
-    public class IntervalHeap<T>
+    public class IntervalHeap<Point>
     {
         /// <summary>
         /// The default size for a new interval heap.
         /// </summary>
-        private const int DEFAULT_SIZE = 16;
+        private const int DEFAULT_SIZE = 8;
 
         /// <summary>
         /// The internal data array which contains the stored objects.
         /// </summary>
-        private T[] tData;
+        private Point[] tData;
 
         /// <summary>
         /// The array of keys which 
@@ -42,7 +42,7 @@ namespace KDTree
         /// <param name="capacity"></param>
         public IntervalHeap(int capacity)
         {
-            this.tData = new T[capacity];
+            this.tData = new Point[capacity];
             this.tKeys = new double[capacity];
             this.Capacity = capacity;
             this.Size = 0;
@@ -61,7 +61,7 @@ namespace KDTree
         /// <summary>
         /// Get the data with the smallest key.
         /// </summary>
-        public T Min
+        public Point Min
         {
             get
             {
@@ -74,7 +74,7 @@ namespace KDTree
         /// <summary>
         /// Get the data with the largest key.
         /// </summary>
-        public T Max
+        public Point Max
         {
             get
             {
@@ -129,7 +129,7 @@ namespace KDTree
         /// </summary>
         /// <param name="key">The value which represents our data (i.e. a distance).</param>
         /// <param name="value">The data we want to store.</param>
-        public void Insert(double key, T value)
+        public void Insert(double key, Point value)
         {
             // If more room is needed, double the array size.
             if (Size >= Capacity)
@@ -138,7 +138,7 @@ namespace KDTree
                 Capacity *= 2;
 
                 // Expand the data array.
-                var newData = new T[Capacity];
+                var newData = new Point[Capacity];
                 Array.Copy(tData, newData, tData.Length);
                 tData = newData;
 
@@ -170,7 +170,7 @@ namespace KDTree
             Size--;
             tData[0] = tData[Size];
             tKeys[0] = tKeys[Size];
-            tData[Size] = default(T);
+            tData[Size] = default(Point);
             SiftDownMin(0);
         }
 
@@ -179,7 +179,7 @@ namespace KDTree
         /// </summary>
         /// <param name="key">The new minimum key.</param>
         /// <param name="value">The new minumum data value.</param>
-        public void ReplaceMin(double key, T value)
+        public void ReplaceMin(double key, Point value)
         {
             // Check for errors.
             if (Size == 0)
@@ -221,7 +221,7 @@ namespace KDTree
             Size--;
             tData[1] = tData[Size];
             tKeys[1] = tKeys[Size];
-            tData[Size] = default(T);
+            tData[Size] = default(Point);
             SiftDownMax(1);
         }
 
@@ -230,7 +230,7 @@ namespace KDTree
         /// </summary>
         /// <param name="key">The new key for the largest item.</param>
         /// <param name="value">The new data for the largest item.</param>
-        public void ReplaceMax(double key, T value)
+        public void ReplaceMax(double key, Point value)
         {
             if (Size == 0)
             {
@@ -262,7 +262,7 @@ namespace KDTree
         private int Swap(int x, int y)
         {
             // Store temp.
-            T yData = tData[y];
+            Point yData = tData[y];
             double yDist = tKeys[y];
 
             // Swap

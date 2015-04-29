@@ -19,13 +19,13 @@ namespace KADA
         public Vector3 center;
         private BrickColor color;
 
-        public LocatedBrick(bool rotated, Vector3 voxelOffset, BrickColor color)
+        public LocatedBrick(bool rotated, Vector3 voxelOffset, BrickColor color, bool templateBrick = false)
         {
             this.color = color;
             this.rotated = rotated;
             this.voxelOffset = voxelOffset;
             this.brick = new Brick(color);
-            if (rotated)
+            if (rotated&&!templateBrick)
             {
                 float save = this.voxelOffset.X;
                 this.voxelOffset.X = this.voxelOffset.Z;
@@ -42,7 +42,31 @@ namespace KADA
 
         public Matrix getTransformation()
         {
-            return this.Transformation;
+            if(this.Transformation != Matrix.Identity)
+                return this.Transformation;
+            else
+            {
+                this.Transformation = Matrix.Identity;
+                Vector3 translation = new Vector3();
+                translation.X = voxelDimensions.X * voxelOffset.X;
+                translation.Y = voxelDimensions.Y * voxelOffset.Y;
+                translation.Z = voxelDimensions.Z * voxelOffset.Z;
+
+                if (this.rotated)
+                {
+                    this.Transformation = Matrix.Multiply(this.Transformation, Matrix.CreateRotationY((float)Math.PI / 2));
+
+                    float save = translation.X;
+                    translation.X = translation.Z;
+                    translation.Z = save;
+                    //translation.X += 8 * voxelDimensions.X;
+                    translation.Z += 4 * voxelDimensions.Z;
+                }
+
+
+                this.Transformation = Matrix.Multiply(this.Transformation, Matrix.CreateTranslation(translation));
+                return this.Transformation;
+            }
         }
 
         public Vector3 getColor()
@@ -255,11 +279,11 @@ namespace KADA
                 pCopy.position += offset;
                 center += pCopy.position;
                 count++;
-
+                pCopy.Brick = this;
                 if (apply)
                 {
                     pCopy.brickColor = this.color;
-                    pCopy.brickColorInteger = (int)this.color;
+                    pCopy.brickColorInteger = (byte)this.color;
                     pointGrid[x, y, z].Add(pCopy);
                 }
 

@@ -16,9 +16,10 @@ namespace KADA
         public Vector3 normal;
         public bool ConsideredICP;
         //public double[] positionArr;
-        public int brickColorInteger;
+        public byte brickColorInteger;
         public BrickColor brickColor;
         public PointState state;
+        public LocatedBrick Brick;
 
         public Point(Vector3 pos, Vector3 nor)
         {
@@ -29,6 +30,7 @@ namespace KADA
             brickColor = BrickColor.NONE;
             brickColorInteger = 1;
             this.state = new PointState();
+            this.Brick = null;
         }
         public Point Copy()
         {

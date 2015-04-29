@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
@@ -53,7 +54,10 @@ namespace KADA
         public float currentMaxMSE;
         public int differentViewCounter = 0;
         public bool RevertToOld = false;
+        public bool removalInitiated = false;
         public List<Point> comparisonPoints;
+        public Queue<LocatedBrick> templateBricks,prevTemplateBricks;
+        public ConcurrentDictionary<LocatedBrick, int> matchedPoints;
 
         public float ICPThreshold = 200;
 
@@ -67,6 +71,8 @@ namespace KADA
             }
             //    generated = true;
             // }
+            this.templateBricks = new Queue<LocatedBrick>();
+            this.prevTemplateBricks = new Queue<LocatedBrick>();
             this.comparisonPoints = new List<Point>();
             this.BaseRotation = Matrix.Identity;
             this.Attach = false;
@@ -89,6 +95,7 @@ namespace KADA
             normalMappings[2] = 2;
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             GC.Collect();
+            this.matchedPoints = new ConcurrentDictionary<LocatedBrick, int>();
             
         }
 

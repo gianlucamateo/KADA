@@ -104,8 +104,57 @@ namespace KADA
         {
             List<Point> container;
             bool written = false;
+            
+            ConcurrentDictionary<LocatedBrick, int> localMatchedPoints = null;
+            
             while (this.dataContainer.Run)
             {
+
+                if (dataContainer.Removal)
+                {
+                    LocatedBrick removedBrick = null;
+                    if (dataContainer.removalInitiated&&localMatchedPoints!=null)
+                    {
+                        ConcurrentDictionary<LocatedBrick, int> temp = new ConcurrentDictionary<LocatedBrick, int>(dataContainer.matchedPoints);
+                        int maxDiff = 0;
+                        foreach (LocatedBrick b in temp.Keys)
+                        {
+                            temp[b] = localMatchedPoints[b] - temp[b];
+                            if (temp[b] > maxDiff)
+                            {
+                                maxDiff = temp[b];
+                                removedBrick = b;
+                            }
+                        }
+
+                        List<LocatedBrick> newBricks = new List<LocatedBrick>(dataContainer.model.Bricks);
+                        newBricks.Remove(removedBrick);
+                        Model newModel = new Model(true, Vector3.Zero, newBricks);
+                        this.oldModel.Recycle();
+                        this.oldModel = dataContainer.model;
+                        dataContainer.model = newModel;
+                        localMatchedPoints = null;
+                        dataContainer.removalInitiated = false;
+                        dataContainer.EditMode = false;
+                        dataContainer.Removal = false;
+                        continue;
+                    }
+                    else
+                    {
+                        localMatchedPoints = new ConcurrentDictionary<LocatedBrick, int>(dataContainer.matchedPoints);
+                        dataContainer.removalInitiated = true;
+                    }
+                    Thread.Sleep(300);
+                    dataContainer.Removal = false;
+                    /*float l = 1f;
+                    dict.Clear();
+                    foreach (Model m in dataContainer.model.removalModels)
+                    {
+                        l += 0.01f;
+                        dict.Add(l, new TentativeModel(m));
+                    }*/
+                }
+
                 if (this.dataContainer.RevertToOld)
                 {
                     if (oldModel != null)
@@ -113,6 +162,7 @@ namespace KADA
                         dataContainer.model.Recycle();
                         dataContainer.model = oldModel;
                         oldModel = null;
+                        dataContainer.templateBricks = new Queue<LocatedBrick>(dataContainer.prevTemplateBricks);
                         Thread.Sleep(1000);
                         if (written)
                         {
@@ -122,14 +172,14 @@ namespace KADA
                         dataContainer.RevertToOld = false;
                     }
                 }
-                if (this.dataContainer.WrongModel)
+                if (this.dataContainer.WrongModel && this.dataContainer.templateBricks.Count==0)
                 {
                     dataContainer.EditMode = true;
                     float tempKey = this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1);
                     Model temp = this.guesses[tempKey];
-
                     Model old = dataContainer.model;
-                    Model nextTry = new Model(false, temp.center, temp.Bricks,null, true);
+                    Model nextTry = new Model(false, temp.center, temp.Bricks, null, true);
+                    nextTry.TentativeBrick = temp.TentativeBrick;
                     dataContainer.model = nextTry;
                     old.Recycle();
                     dataContainer.comparisonPoints = dataContainer.model.points;
@@ -137,7 +187,7 @@ namespace KADA
                     Thread.Sleep(300);
                     this.dataContainer.WrongModel = false;
                     dataContainer.EditMode = false;
-                    
+
 
                 }
                 if (this.dataContainer.ApplyModel)
@@ -146,7 +196,7 @@ namespace KADA
                     GC.Collect();
                     LocatedBrick lb = dataContainer.model.TentativeBrick;
                     currentBuildFile.WriteLine("" + lb.voxelOffset.X + ";" + lb.voxelOffset.Y + ";" + lb.voxelOffset.Z + ";" + lb.rotated + ";" + (int)lb.brick.color);
-                    Model temp = new Model(true, Vector3.Zero, dataContainer.model.Bricks,null, false);
+                    Model temp = new Model(true, Vector3.Zero, dataContainer.model.Bricks, null, false);
                     dataContainer.model.Recycle();
                     dataContainer.model = temp;
                     Thread.Sleep(300);
@@ -162,10 +212,11 @@ namespace KADA
                 if (dataContainer.EditMode == false)
                 {
                     continue;
+                    
                 }
                 this.ModificationRunning = true;
                 this.dataContainer.Attach = false;
-                
+
 
                 while (this.ModificationInput.Count > 0)
                 {
@@ -173,7 +224,7 @@ namespace KADA
                     this.ModificationInput.TryDequeue(out dumpContainer);
                 }
                 Console.WriteLine("working");
-                if(oldModel != null)
+                if (oldModel != null)
                     oldModel.Recycle();
                 oldModel = dataContainer.model;
                 foreach (Model m in this.guesses.Values)
@@ -183,17 +234,8 @@ namespace KADA
                 this.guesses.Clear();
                 List<Point> qi = new List<Point>(container);
                 SortedDictionary<float, TentativeModel> dict = new SortedDictionary<float, TentativeModel>(dataContainer.tentativeModels);
+
                 
-                if (dataContainer.Removal)
-                {
-                    float l = 1f;
-                    dict.Clear();
-                    foreach (Model m in dataContainer.model.removalModels)
-                    {
-                        l += 0.01f;
-                        dict.Add(l, new TentativeModel(m));
-                    }
-                }
 
                 float maxRatio = float.MinValue;
                 int i = 0;
@@ -203,7 +245,7 @@ namespace KADA
                 Parallel.ForEach(dict.Keys, key =>
                 //foreach (float key in dict.Keys)
                 {
-                    
+
                     dataContainer.ModelsWorked = i;
                     if (i == 75)
                     {
@@ -216,7 +258,7 @@ namespace KADA
                                 maxKey = k;
                             }
                         }
-                        if (maxKey < 0.1f)
+                        if (maxKey > 0.1f)
                         {
                             skip = true;
                         }
@@ -275,24 +317,24 @@ namespace KADA
                             {
                                 inliers++;
                             }
-                            /*if (!foundMatch)
+                            if (!foundMatch)
                             {
                                 MSE += 40000;
-                            }*/
+                            }
                             count++;
-                            
+
                             {
                                 MSE += (float)neighbor.CurrentDistance;
                             }
-                           
+
                         }
                         MSE /= ((float)count + 1f);
-                        
+
                         model.Recycle();
                         model.kdTree = null;
                         model.points = null;
                         model.tentativeModels = null;
-                        model.voxelGrid = null;                        
+                        model.voxelGrid = null;
                         model.pointGrid = null;
 
                         /*if (ratio > maxRatio)
@@ -300,8 +342,8 @@ namespace KADA
                             maxRatio = ratio;
                             currentModel = model;
                         }*/
-                        
-                        while (!concurrentDict.TryAdd(1 / MSE, model) && MSE < 1000000)//concurrentDict.ContainsKey(ratio) && ratio < 1000000)
+
+                        while (!concurrentDict.TryAdd(1 / MSE, model) && MSE < 100000000)//concurrentDict.ContainsKey(ratio) && ratio < 1000000)
                         {
                             MSE += 0.01f;
                             //Console.WriteLine(ratio);
@@ -334,10 +376,34 @@ namespace KADA
                     while (!concurrentDict.TryGetValue(key, out m)) ;
                     this.guesses.Add(key, m);
                 }
-                currentModel = this.guesses[this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1)];
-                Model finalModel = new Model(true, currentModel.center, currentModel.Bricks,null, true);
+                currentModel = null;
+                if (dataContainer.templateBricks.Count > 0)
+                {
+                    LocatedBrick next = dataContainer.templateBricks.Peek();
+                    bool match = false;
+                    for (int c = 1; c < 6; c++)
+                    {
+                        float key = this.guesses.Keys.ElementAt(this.guesses.Keys.Count - c);
+                        if (this.guesses[key].TentativeBrick.voxelOffset == next.voxelOffset)
+                        {
+                            match = true;
+                        }
+                    }
+                    if (match)
+                    {
+                        currentModel = new TentativeModel(dataContainer.model.Bricks, next, dataContainer.model.center);
+                        dataContainer.prevTemplateBricks = new Queue<LocatedBrick>(dataContainer.templateBricks);
+                        dataContainer.templateBricks.Dequeue();
+                        dataContainer.ApplyModel = true;
+                    }
+                }
+                if (currentModel == null)
+                {
+                    currentModel = this.guesses[this.guesses.Keys.ElementAt(this.guesses.Keys.Count - 1)];
+                }
+                Model finalModel = new Model(true, currentModel.center, currentModel.Bricks, null, true);
                 finalModel.TentativeBrick = currentModel.TentativeBrick;
-                currentModel.Recycle();                
+                currentModel.Recycle();
                 dataContainer.model = finalModel;
                 dataContainer.comparisonPoints = finalModel.points;
                 dataContainer.EditMode = false;

@@ -33,7 +33,7 @@ namespace KADA
         public int Depth;
         public bool UpToDate;
         public Vector3 Position;
-        public int BrickColorInteger;
+        public byte BrickColorInteger;
 
         public DepthColor(int Depth, Vector3 Color)
         {
@@ -89,6 +89,7 @@ namespace KADA
 
 
         Effect effect;
+        float time = 0f;
         private Vector3 CameraPosition = new Vector3(0, 0, 0);
         private Vector3 CameraLookAt = new Vector3(0, 0, -370);
         private Vector3 CameraUp;
@@ -199,7 +200,7 @@ namespace KADA
                 }
                 if (container == null)
                 {
-                    break;
+                    continue;
                 }
 
 
@@ -230,7 +231,13 @@ namespace KADA
                     continue; //causes lockup
                 }*/
 
-
+                
+                time += 0.1f;
+                while (time > 1000)
+                {
+                    time -= 1000;
+                }
+                
                 DepthColor[,] depth = container.DC;
                 int i = 0;
                 for (int x = 0; x < depth.GetLength(0); x++)
@@ -578,23 +585,103 @@ namespace KADA
             View = Matrix.CreateLookAt(CameraPosition, CameraLookAt, CameraUp);
         }
 
+        bool OpenDiag = false;
         private void pickFile()
         {
-            OpenFileDialog diag = new OpenFileDialog();
-            diag.FileOk += addFile;
-            diag.ShowDialog();            
-
+            if (!OpenDiag)
+            {
+                OpenDiag = true;
+                OpenFileDialog diag = new OpenFileDialog();
+                diag.FileOk += processFile;
+                diag.Disposed += allowPicker;
+                diag.FileOk += allowPicker;
+                diag.Filter = "CSV Model files|*.csv";
+                diag.ShowDialog();
+                diag.Dispose();
+            }
 
         }
 
-        private void addFile(object sender, System.ComponentModel.CancelEventArgs e)
+        private void allowPicker(object sender, EventArgs e)
         {
+            Thread.Sleep(1000);
+            OpenDiag = true;
+        }
+
+
+        private void processFile(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            List<LocatedBrick> templateBricks = new List<LocatedBrick>();
             OpenFileDialog diag = (OpenFileDialog)sender;
             String filename = diag.FileName;
             string[] lines = System.IO.File.ReadAllLines(filename);
+            List<string> linesList = lines.ToList();
+            List<string> finalList = new List<string>();
+            for (int i = 0; i < linesList.Count; i++)
+            {
+                if (i < linesList.Count - 1)
+                {
+                    if (linesList[i + 1].CompareTo("REMOVE") != 0 && linesList[i].CompareTo("REMOVE") != 0)
+                    {
+                        finalList.Add(linesList[i]);
+                    }
+                    //remove "REMOVE", parse all the things
+                }
+                else if (linesList[i].CompareTo("REMOVE") != 0)
+                {
+                    finalList.Add(linesList[i]);
+                }
+            }
+
+            string[] splitArr = { ";" };
+            foreach (string s in finalList)
+            {
+                string[] parts = s.Split(splitArr, StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length != 5)
+                {
+                    System.Windows.Forms.MessageBox.Show("File is not a valid model file. Returning to free build mode", "Invalid model file",
+                    MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return;
+                }
+                int x, y, z;
+                bool rotated;
+                BrickColor color;
+                try
+                {
+                    x = int.Parse(parts[0]);
+                    y = int.Parse(parts[1]);
+                    z = int.Parse(parts[2]);
+
+                    if (parts[3].CompareTo("False") == 0)
+                    {
+                        rotated = false;
+                    }
+                    else
+                    {
+                        rotated = true;
+                    }
+
+                    color = (BrickColor)int.Parse(parts[4]);
+
+                    templateBricks.Add(new LocatedBrick(rotated, new Vector3(x, y, z), color, true));
+                }
+                catch (Exception exp)
+                {
+                    System.Windows.Forms.MessageBox.Show("File is not a valid model file. Returning to free build mode", "Invalid model file",
+                    MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return;
+                }
+
+            }
+            dataContainer.templateBricks = new Queue<LocatedBrick>(templateBricks);
+            List<LocatedBrick> l = new List<LocatedBrick>();
+            l.Add(dataContainer.templateBricks.Dequeue());
+            Model m = new Model(true, Vector3.Zero, l);
+            dataContainer.model = m;
 
         }
-        
+
 
         protected void HandleInput(KeyboardState kS, MouseState mS)
         {
@@ -873,6 +960,8 @@ namespace KADA
             this.dataContainer.Run = false;
         }
 
+
+
         /// <summary>
         /// This is called when the game should draw itself.
         /// </summary>
@@ -883,6 +972,10 @@ namespace KADA
             if (dataContainer.EditMode)
             {
                 GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.Orange);
+                if (dataContainer.removalInitiated)
+                {
+                    GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.LightGreen);
+                }
             }
             else if (dataContainer.ApplyModel)
             {
@@ -925,6 +1018,7 @@ namespace KADA
                         eff.DiffuseColor = b.getColor() * 0.7f;
                         eff.Alpha = 1;
                         eff.EnableDefaultLighting();
+                        eff.EmissiveColor = new Vector3(0, 0, 0);
                         eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * b.getTransformation() * Matrix.CreateTranslation(this.offset) * this.brickRotation * brickTranslation;// *
 
                         eff.View = View;
@@ -936,7 +1030,7 @@ namespace KADA
             }
 
 
-            if (tentativeModels != null && dataContainer.EditMode)
+            if (tentativeModels != null && dataContainer.EditMode && dataContainer.templateBricks.Count == 0)
             {
                 SortedDictionary<float, TentativeModel> cachedTentativeModels = new SortedDictionary<float, TentativeModel>(tentativeModels);
                 for (int i = 0; i < 10; i++)
@@ -955,6 +1049,7 @@ namespace KADA
                                     eff.TextureEnabled = false;
                                     eff.DiffuseColor = tentativeModel.TentativeBrick.getColor();
                                     eff.Alpha = 0.6f;
+                                    eff.EmissiveColor = new Vector3(0, 0, 0);
                                     eff.EnableDefaultLighting();
                                     eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * tentativeModel.TentativeBrick.getTransformation() * Matrix.CreateTranslation(this.offset) * this.brickRotation * brickTranslation;// *
 
@@ -967,6 +1062,29 @@ namespace KADA
                     }
                 }
             }
+            if (dataContainer.templateBricks.Count > 0)// && dataContainer.EditMode)
+            {
+
+                float emCol = (float)Math.Abs(Math.Sin(time));
+                LocatedBrick templateBrick = dataContainer.templateBricks.Peek();
+                foreach (ModelMesh mesh in secondaryBrick.Meshes)
+                {
+
+                    foreach (BasicEffect eff in mesh.Effects)
+                    {
+                        eff.TextureEnabled = false;
+                        eff.DiffuseColor = templateBrick.getColor();
+                        eff.Alpha = 1f;
+                        eff.EmissiveColor = new Vector3(emCol, emCol, emCol);
+                        eff.EnableDefaultLighting();
+                        eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * templateBrick.getTransformation() * Matrix.CreateTranslation(this.offset) * this.brickRotation * brickTranslation;// *
+
+                        eff.View = View;
+                        eff.Projection = Projection;
+                    }
+                    mesh.Draw();
+                }
+            }
 
             if (dataContainer.EditMode)
             {
@@ -977,6 +1095,7 @@ namespace KADA
                     {
                         eff.TextureEnabled = false;
                         eff.DiffuseColor = Vector3.One * 0.7f;
+                        eff.EmissiveColor = new Vector3(0, 0, 0);
                         eff.EnableDefaultLighting();
                         eff.World = transforms[mesh.ParentBone.Index] * Matrix.CreateScale(10f) * Matrix.CreateTranslation(this.offset) * Matrix.CreateTranslation(this.outlierCenter);// *
 

@@ -40,6 +40,7 @@ namespace KADA
         public ConcurrentQueue<Point> Outliers;
         public int OutlierCount = 0;
         public double sqDist = 0;
+        public ConcurrentDictionary<LocatedBrick, int> matchedPoints;
 
         Point q, firstGuess;
         Vector3 transformedNormal;
@@ -387,6 +388,14 @@ namespace KADA
                 {
                     this.ICPInliers++;
                     point.ConsideredICP = true;
+                    try
+                    {
+                        this.matchedPoints[q.Brick]++;
+                    }
+                    catch (KeyNotFoundException e)
+                    {
+
+                    }
                 }
                 /*else
                 {

@@ -199,6 +199,7 @@ namespace KADA
                 newBricks.Remove(b);
                 Model m = new Model(false, this.center, newBricks);
                 this.removalModels.Add(m);
+                m.Recycle();
             }
         }
 
