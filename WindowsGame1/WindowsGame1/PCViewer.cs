@@ -447,14 +447,19 @@ namespace KADA
 
         public static void Main(String[] args)
         {
+           
             Game g = new PCViewer();
             g.Run();
         }
 
-
-
+        private void errorPopup(object sender, UnhandledExceptionEventArgs e)
+        {
+            System.Windows.Forms.MessageBox.Show(e.ToString());
+        }
+        
         public PCViewer()
         {
+            AppDomain.CurrentDomain.UnhandledException += errorPopup;
             //transformationUpdater = new Task(() => this.UpdateInstanceInformation());
             this.RGBToYUV = new Matrix(0.299f, 0.587f, 0.144f, 0f, -0.14713f, -0.28886f, 0.436f, 0f, 0.615f, -0.51499f, -0.10001f, 0f, 0f, 0f, 0f, 1f);
             this.RGBToYUV = Matrix.Transpose(this.RGBToYUV);
@@ -496,6 +501,8 @@ namespace KADA
             Thread Stage6 = new Thread(new ThreadStart(() => UpdateInstanceInformation()));
             Stage6.Start();
         }
+
+
 
         public void setModel(Model m)
         {

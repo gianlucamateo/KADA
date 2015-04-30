@@ -28,7 +28,7 @@ namespace KADA
     {
         public const float POINTTOPOINTWEIGHT = 0.5f;
         public const float POINTTOPLANEWEIGHT = 0.5f;
-        public const float MAXROTATION = (float)Math.PI / 18;
+        public const float MAXROTATION = (float)Math.PI / 50;
         public const float TRANSLATIONWEIGHT = 1f;
         public const float MAX_INLIERDISTANCE = 12;
         private const int ICPITERATIONS = 1;
@@ -571,7 +571,7 @@ namespace KADA
                             float maxRotation = MAXROTATION;
                             if (DataContainer.EditMode)
                             {
-                                maxRotation /= 5;
+                                maxRotation /= 2;
                             }
                             double[] XArr = X.ToArray();
                             if (Model.Bricks.Count < 2 || (DataContainer.EditMode && Model.Bricks.Count < 3))
@@ -696,7 +696,7 @@ namespace KADA
                         }
                         if (container.ICPMSE < MINICPMSE)
                         {
-                            this.DataContainer.lastConfidentR = R;
+                            
                             this.DataContainer.trackingConfidence = TrackingConfidenceLevel.ICPFULL;
                             trackingLostCount = 0;
                         }
@@ -722,6 +722,10 @@ namespace KADA
                         }
                         PrevRKnown = true;
                         PrevR = R;
+                        if (this.DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL || this.DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL)
+                        {
+                            this.DataContainer.lastConfidentR = R;
+                        }
 
                     }
                     if (this.DataContainer.EditMode)
@@ -973,15 +977,17 @@ namespace KADA
         public void Reset()
         {
             System.Diagnostics.Debug.WriteLine("RESET");
+            DataContainer.lastConfidentR.Translation = Vector3.Zero;
+            PrevR = XNAMatrix.CreateTranslation(0,0,-15) * this.DataContainer.lastConfidentR;
             /*if (Math.Abs(this.DataContainer.lastConfidentR.Determinant() - 1) < 0.001f)
             {
-                PrevR = this.DataContainer.lastConfidentR;
+               
             }
             else
             {
                 PrevRKnown = false;
             }*/
-            PrevR = /*XNAMatrix.CreateTranslation(0,0,-15)**/DataContainer.BaseRotation;
+            //PrevR = /*XNAMatrix.CreateTranslation(0,0,-15)**/DataContainer.BaseRotation;
             //this.ICPTranslation = Vector3.Zero;
             this.OldCenter = Vector3.Zero;
         }

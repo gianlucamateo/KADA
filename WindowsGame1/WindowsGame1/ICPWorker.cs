@@ -146,6 +146,10 @@ namespace KADA
                 vArr[2] = p.Z;
                 maxDistance = dataContainer.ICPThreshold * dataContainer.ICPThreshold;
 
+                /*if (dataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL)
+                {
+                    maxDistance /=4;
+                }*/
 
                 /*if (dataContainer.model.Bricks.Count < 3 && dataContainer.editMode)
                 {
@@ -261,8 +265,8 @@ namespace KADA
                 HTemp[2, 2] = p.Z * q.position.Z;
 
 
-
-                float weight = Math.Abs(Vector3.Dot(transformedNormal, point.normal));
+                float dotPro = Vector3.Dot(transformedNormal, point.normal);
+                float weight = dotPro>0?dotPro:0.1f;
                 //weight = (1 - weight);
                 foundMatch = false;
                 foreach (BrickColor bc in possibleColors)
@@ -272,7 +276,7 @@ namespace KADA
                     {
                         if (q.brickColor == bc)
                         {
-                            weight *= 10f;
+                            weight *= 3f;
                             foundMatch = true;
                         }
                     }
@@ -281,9 +285,9 @@ namespace KADA
                 {
                     if (!foundMatch)
                     {
-                        weight = 0.01f;
+                        weight = 0f;
                         sqDist -= neighbour.CurrentDistance;
-                        if (point.brickColorInteger == (int)dataContainer.addColor && neighbour.CurrentDistance>100) //<-- last change, plus outlier from 150 to 200
+                        if (point.brickColorInteger == (int)dataContainer.addColor && neighbour.CurrentDistance>100) 
                         {
                             this.Outliers.Enqueue(point);// + new Vector3(dataContainer.R.M41, dataContainer.R.M42, dataContainer.R.M43));
                         }

@@ -70,6 +70,7 @@ namespace KADA
 
                 Matrix initialRot = Matrix.CreateFromAxisAngle(axis, angle);
                 dataContainer.BaseRotation = initialRot;
+                dataContainer.lastConfidentR = initialRot;
 
                 // this.kinect.AllFramesReady += this.KinectAllFramesReady;
                 frameCreator.Start();
