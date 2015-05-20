@@ -58,6 +58,7 @@ namespace KADA
         public List<Point> comparisonPoints;
         public Queue<LocatedBrick> templateBricks,prevTemplateBricks;
         public ConcurrentDictionary<LocatedBrick, int> matchedPoints;
+        public String hintString = "";
 
         public float ICPThreshold = 200;
 
@@ -96,13 +97,28 @@ namespace KADA
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             GC.Collect();
             this.matchedPoints = new ConcurrentDictionary<LocatedBrick, int>();
+
             
         }
 
+        Queue<float> frameTimes = new Queue<float>();
         public void recordTick()
         {
-            this.frameTime = (DateTime.Now - this.lastTick).Milliseconds + frameTime;
-            this.frameTime = frameTime / 2;
+            frameTimes.Enqueue((DateTime.Now - this.lastTick).Milliseconds);
+
+            float newFrameTime = 0;
+            foreach (float time in frameTimes)
+            {
+                newFrameTime += time;
+            }
+            newFrameTime /= frameTimes.Count;
+
+            this.frameTime = newFrameTime;
+            while (frameTimes.Count > 30)
+            {
+                frameTimes.Dequeue();
+            }
+
             this.lastTick = DateTime.Now;
         }
         public void recordGenerationTick()

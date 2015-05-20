@@ -56,7 +56,7 @@ namespace KADA
         public Vector3[,] NormalMap = new Vector3[640, 480];
 
 
-
+        DepthStencilState depthState;
         Matrix RGBToYUV;
         Matrix YUVToRGB;
         Int32 count = 640 * 480 + 100000;
@@ -431,7 +431,7 @@ namespace KADA
 
                 container.Timings.Add(DateTime.Now);
                 this.manager.Recycle.Enqueue(container);
-                this.dataContainer.recordTick();
+                //this.dataContainer.recordTick();
                 this.dataContainer.ICPInliers = container.ICPInliers;
                 this.dataContainer.ICPOutliers = container.ICPOutliers;
                 this.dataContainer.ICPMSE = container.ICPMSE;
@@ -521,7 +521,12 @@ namespace KADA
             World = Matrix.Identity;
             UpdateView();
             Projection = Matrix.CreatePerspectiveFieldOfView(43f / 180f * MathHelper.Pi, 640f / 480f, 10, 1500);
+
+            
+            
+
             base.Initialize();
+
         }
 
         /// <summary>
@@ -582,7 +587,10 @@ namespace KADA
                     transformationUpdater.Start();
                 }
             }*/
-            this.Window.Title = manager.Recycle.Count + " " + Model.PointLists.Count + "   " + dataContainer.model.tentativeModels.Count + " - " + dataContainer.ModelsWorked + " - minICPRatio:" + dataContainer.currentMaxMSE + " views: " + dataContainer.differentViewCounter + " - " + dataContainer.backgroundEvaluator.ModificationInput.Count + " " + dataContainer.backgroundEvaluator.NormalOutput.Count + "" + dataContainer.backgroundEvaluator.NormalInput.Count + " | " + dataContainer.normalMappings[0] + " " + dataContainer.normalMappings[1] + " " + dataContainer.normalMappings[2] + " " + dataContainer.trackingConfidence + "Ratio: " + Math.Round(dataContainer.ICPMSE, 2) + " Inliers: " + dataContainer.ICPInliers + ", Outliers: " + dataContainer.ICPOutliers + " Total Points: " + (dataContainer.ICPInliers + dataContainer.ICPOutliers) + ", Frametime: " + this.dataContainer.frameTime + "ms" + " Generation Time: " + this.dataContainer.generateTime + "ms";
+            this.Window.Title = "FPS:" + (int)(1000f/dataContainer.frameTime) + "     " + manager.Recycle.Count + " " + Model.PointLists.Count + "   " 
+                + dataContainer.model.tentativeModels.Count + " - " + dataContainer.ModelsWorked + " - minICPRatio:" 
+                + dataContainer.currentMaxMSE + " views: " + dataContainer.differentViewCounter + " - " 
+                + dataContainer.trackingConfidence + "Ratio: " + Math.Round(dataContainer.ICPMSE, 1) ;
 
             base.Update(gameTime);
         }
@@ -784,6 +792,9 @@ namespace KADA
             if (kS.IsKeyDown(Keys.I))
             {
                 this.dataContainer.DeNoiseAndICP = true;
+                Thread.Sleep(200);
+                this.manager.processor3D.Reset();
+                
             }
             if (kS.IsKeyDown(Keys.V))
             {
@@ -828,8 +839,11 @@ namespace KADA
             }
             if (kS.IsKeyDown(Keys.RightShift))
             {
-                this.dataContainer.Removal = true;
-                this.dataContainer.currentMaxMSE = dataContainer.ICPMSE + 2;
+                if (this.dataContainer.EditMode)
+                {
+                    this.dataContainer.Removal = true;
+                    this.dataContainer.currentMaxMSE = dataContainer.ICPMSE + 2;
+                }
             }
             if (kS.IsKeyDown(Keys.O))
             {
@@ -976,6 +990,10 @@ namespace KADA
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Viewport = PCViewport;
+            depthState = new DepthStencilState();
+            depthState.DepthBufferEnable = true;
+            depthState.DepthBufferWriteEnable = true;
+            GraphicsDevice.DepthStencilState = depthState;
             if (dataContainer.EditMode)
             {
                 GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.Orange);
@@ -1010,6 +1028,13 @@ namespace KADA
             base.Draw(gameTime);
 
             GraphicsDevice.Viewport = BrickViewport;
+
+            
+
+            depthState = new DepthStencilState();
+            depthState.DepthBufferEnable = true;
+            depthState.DepthBufferWriteEnable = true;
+            GraphicsDevice.DepthStencilState = depthState;
 
             Matrix[] transforms = new Matrix[brick.Bones.Count];
             brick.CopyAbsoluteBoneTransformsTo(transforms);
@@ -1113,7 +1138,16 @@ namespace KADA
                     mesh.Draw();
                 }
             }
+
+
+            spriteBatch.Begin();
+
+            // this being the line that answers your question
+            spriteBatch.DrawString(spriteFont, dataContainer.hintString, new Vector2(10, 10), Microsoft.Xna.Framework.Color.White);
+
+            spriteBatch.End();
             base.Draw(gameTime);
+            
 
         }
 

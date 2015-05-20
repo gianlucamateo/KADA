@@ -355,12 +355,48 @@ namespace KADA
                 }
 
 
-
+                this.DataContainer.recordTick();
                 this.DataContainer.ICPThreshold = Math.Max(2*Model.radius, 100);
 
                 //container.Timings.Add(DateTime.Now);
                 if (this.DataContainer.DeNoiseAndICP)
                 {
+                    if (!DataContainer.EditMode)
+                    {
+                        if (DataContainer.model.tentativeModels.Count > 0)
+                        {
+                            this.DataContainer.hintString = "'R' resets the tracking - \n'V' for viewer perspective, 'K' for kinect \n'M' activates edit mode";
+                        }
+                        else
+                        {
+                            this.DataContainer.hintString = "Is this the right model?\n'O' for more tries, 'NUMPAD-0' to abort \n'NUMPAD-5' accepts the addition";
+                        }
+                    }
+                    if (DataContainer.EditMode)
+                    {
+                        if (DataContainer.Attach)
+                        {
+                            DataContainer.hintString = "Rotate the model slowly - \nWorks best if the model is left on the desk";
+                        }
+                        else if (DataContainer.removalInitiated)
+                        {
+                            DataContainer.hintString = "Remove a brick - Do not move the model\nPress 'RIGHT-Shift' when done";
+                        }
+                        else
+                        {
+                            String hintString = "";
+                            if (DataContainer.model.Bricks.Count < 3)
+                            {
+                                hintString += "Tracking is locked below 3 bricks (Do not move the model) \n";
+                            }
+                            hintString += "Place new Brick well visible for kinect\nPress 'Enter' when you are done\n";
+                            if (DataContainer.model.Bricks.Count > 2)
+                            {
+                                hintString += "You can also initiate removal: Press 'RIGHT-Shift'";
+                            }
+                            this.DataContainer.hintString = hintString;
+                        }
+                    }
                     //Skip some frames if locked
                     if (DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL && !DataContainer.EditMode && container.Number % 3 < 2)
                     {
@@ -734,7 +770,7 @@ namespace KADA
                     }
 
 
-                    this.DataContainer.recordTick();
+                    
 
                 }
                 container.Qi.AddRange(backgroundData);
@@ -848,6 +884,7 @@ namespace KADA
                 //container.Timings.Add(DateTime.Now);
                 if (this.DataContainer.DeNoiseAndICP || work)
                 {
+                    
                     XNAMatrix temp;
                     if (this.DataContainer.backgroundEvaluator.NormalOutput.TryDequeue(out temp))
                     {
@@ -978,7 +1015,7 @@ namespace KADA
         {
             System.Diagnostics.Debug.WriteLine("RESET");
             DataContainer.lastConfidentR.Translation = Vector3.Zero;
-            PrevR = XNAMatrix.CreateTranslation(0,0,-15) * this.DataContainer.lastConfidentR;
+            PrevR = XNAMatrix.CreateTranslation(0, 0, -15) * DataContainer.BaseRotation;
             /*if (Math.Abs(this.DataContainer.lastConfidentR.Determinant() - 1) < 0.001f)
             {
                

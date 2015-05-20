@@ -134,6 +134,10 @@ namespace KADA
                 {
                     this.GenerateBackground(dPixels);
                 }
+                else if(background==null)
+                {
+                    DataContainer.hintString = "Press 'B' to remove Background";
+                }
                 if (background == null)
                 {
                     background = GetBackground();
@@ -417,6 +421,10 @@ namespace KADA
                             }
                         }
                     }
+                }
+                else if(this.BackgroundReady)
+                {
+                    DataContainer.hintString = "Press 'I' to initialize tracking";
                 }
                 //manager.enqueue(container);
                 AddToQueue(container);
