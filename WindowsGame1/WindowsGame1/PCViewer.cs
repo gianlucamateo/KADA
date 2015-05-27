@@ -164,11 +164,11 @@ namespace KADA
         {
             this.edgePositions = edges;
         }
-        //Stage 8
+        //Stage 6
         private void UpdateInstanceInformation()
         {
 
-            int stage = 8;
+            int stage = 6;
             int lastFrame = 0;
             bool fromOutOfOrder = false;
             SortedList<int, PipelineContainer> outOfOrder = new SortedList<int, PipelineContainer>();
@@ -294,7 +294,7 @@ namespace KADA
                 up.Normalize();
                 if (track)
                 {
-                    CameraPosition = this.brickTranslation.Translation + new Vector3(-400, 75, 340);
+                    CameraPosition = this.brickTranslation.Translation + new Vector3(70, 500, 20);
                     CameraLookAt = this.brickTranslation.Translation;
                     CameraUp = up;
                 }
@@ -354,7 +354,7 @@ namespace KADA
                 }
                 Vector3 center = Vector3.Transform(Vector3.One, brickTranslation);
 
-                for (int segment = 0; segment < 90; segment++)
+                /*for (int segment = 0; segment < 90; segment++)
                 {
                     instances[i].ScreenPos = center + dataContainer.g * segment;
                     instances[i].Scale = 1;
@@ -362,7 +362,7 @@ namespace KADA
                     c = new Vector3(0, 0, 255);
                     instances[i].Color = c;
                     i++;
-                }
+                }*/
 
                 /*for (int o = 0; o < 3; o++)
                 {
@@ -429,7 +429,7 @@ namespace KADA
                 instances[i].Scale = 1;
                 instances[i].Color = new Vector3(0, 255, 0);
 
-                container.Timings.Add(DateTime.Now);
+                //container.Timings.Add(DateTime.Now);
                 this.manager.Recycle.Enqueue(container);
                 //this.dataContainer.recordTick();
                 this.dataContainer.ICPInliers = container.ICPInliers;
@@ -792,7 +792,7 @@ namespace KADA
             if (kS.IsKeyDown(Keys.I))
             {
                 this.dataContainer.DeNoiseAndICP = true;
-                Thread.Sleep(200);
+                Thread.Sleep(1000);
                 this.manager.processor3D.Reset();
                 
             }

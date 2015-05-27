@@ -19,7 +19,7 @@ namespace KADA
         {
             this.Recycle = new ConcurrentQueue<PipelineContainer>();           
 
-            this.ProcessingQueues = new ConcurrentQueue<PipelineContainer>[9];
+            this.ProcessingQueues = new ConcurrentQueue<PipelineContainer>[7];
 
             
             

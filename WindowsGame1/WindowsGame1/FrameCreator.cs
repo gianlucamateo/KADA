@@ -155,25 +155,19 @@ namespace KADA
         {
             int stage = 0;
             TimeSpan current;
-            DateTime previous = DateTime.MinValue;
+            
             if (DataContainer.DeNoiseAndICP)
             {
-                for(int i = 0; i<8;i++){
+                /*for(int i = 0; i<8;i++){
                     this.File2.Write(Manager.ProcessingQueues[i].Count + ";");
-                }
+                }*/
                 this.File2.WriteLine("");
-                this.File.Write(container.Number + " ");
-                for (int i = 0; i < container.Timings.Count - 1; i+=2)
+                this.File.Write(container.Number + " ");             
+                for (int i = 1; i < container.Timings.Count; i+=2)
                 {
                     DateTime t = container.Timings[i];
-                    current = t.Subtract(previous);
-                    this.File.Write("; Stage: " + stage++ + ";  " + current);
-                    previous = t;
-                    t = container.Timings[i+1];
-                    current = t.Subtract(previous);
-                    previous = t;
-                    this.File.Write("; "+ current);
-                    
+                    current = t - container.Timings[i-1];
+                    this.File.Write(current.Milliseconds + ";");                                      
                 }
                 if (container.Timings.Count > 1)
                 {

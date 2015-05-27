@@ -118,6 +118,7 @@ namespace KADA
             int stage = 1;
             while (this.DataContainer.Run)
             {
+
                 PipelineContainer container = null;
                 container = PollContainer(stage, container);
                 if (container == null)
@@ -125,6 +126,7 @@ namespace KADA
                     break;
                 }
                 // generate or get background
+                container.Timings.Add(DateTime.Now);
                 DepthImagePixel[] dPixels = container.DepthPixels;
                 
                 DepthColor[,] depth = container.DC;
@@ -152,7 +154,7 @@ namespace KADA
 
         private void AddToQueue(PipelineContainer container)
         {
-            //container.Timings.Add(DateTime.Now);
+            container.Timings.Add(DateTime.Now);
 
             Manager.ProcessingQueues[++container.Stage].Enqueue(container);
         }
@@ -259,7 +261,7 @@ namespace KADA
                         //Array.Sort(depthValues);
                         short localDepth = (short)(DepthValues[1] + DepthValues[2] + DepthValues[3]);
                         localDepth /= 3;
-                        localDepth = (short)(localDepth * 0.988f);
+                        localDepth = (short)(localDepth * 0.980f);
                         Background[i].Depth = (short)(localDepth);
                     }
                 }
@@ -304,6 +306,7 @@ namespace KADA
                 }
                 if (this.DataContainer.DeNoiseAndICP || work)
                 {
+                    container.Timings.Add(DateTime.Now);
                     DepthColor[,] dc = container.DC;
                     for (int x = 0; x < dc.GetLength(0); x++)
                     {
@@ -373,9 +376,10 @@ namespace KADA
                 }
                 if (this.DataContainer.DeNoiseAndICP || work)
                 {
+                    container.Timings.Add(DateTime.Now);
                     work = true;
                     DepthColor[,] dc = container.DC;
-                    //initialize
+                    
                     for (int x = 0; x < width; x++)
                     {
                         for (int y = 0; y < height; y++)
