@@ -324,7 +324,7 @@ namespace KADA
                             count++;
 
                             {
-                                MSE += (float)neighbor.CurrentDistance;
+                                MSE += (float)Math.Min(neighbor.CurrentDistance,3600);
                             }
 
                         }
@@ -543,9 +543,15 @@ namespace KADA
                     int Y = (int)Math.Floor(p.position.Y / 10) + grid.GetLength(1) / 2;
                     if (p.brickColorInteger < 8)
                         colors[p.brickColorInteger]++;
-
-                    grid[X, Y]++;
-                    zVals[X, Y] += p.position.Z;
+                    try
+                    {
+                        grid[X, Y]++;
+                        zVals[X, Y] += p.position.Z;
+                    }
+                    catch (IndexOutOfRangeException e)
+                    {
+                        continue;
+                    }
                     if (p.ConsideredICP)
                     {
                         excludeFromErosion[X, Y] = true;

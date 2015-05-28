@@ -13,7 +13,7 @@ namespace KADA
 
     public class Model
     {
-
+        public bool computingTentative = false;
         public List<Point> points;
         public const int DIMENSION = 26;
         public Brick[, ,] voxelGrid = new Brick[DIMENSION, DIMENSION, DIMENSION];
@@ -24,7 +24,7 @@ namespace KADA
         public Vector3 center;
         public List<TentativeModel> tentativeModels;
         public List<Model> removalModels;
-        static bool generated = false;
+        //static bool generated = false;
         private bool destroyed = false;
         public LocatedBrick TentativeBrick;
         public static ConcurrentQueue<List<Point>> PointLists = new ConcurrentQueue<List<Point>>();
@@ -124,6 +124,7 @@ namespace KADA
         }
         public void ComputeTentativeBricks()
         {
+            this.computingTentative = true;
             ConcurrentBag<TentativeModel> tModels = new ConcurrentBag<TentativeModel>();
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             GC.Collect();
@@ -187,6 +188,7 @@ namespace KADA
             ComputeRemovalModels();
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             GC.Collect();
+            this.computingTentative = false;
 
         }
 

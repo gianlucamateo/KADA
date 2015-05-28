@@ -147,7 +147,7 @@ namespace KADA
                 GC.Collect();
             }
             DataContainer.recordGenerationTick();
-            //container.Timings.Add(DateTime.Now);
+            container.Timings.Add(DateTime.Now);
             Manager.ProcessingQueues[++container.Stage].Enqueue(container);
         }
 
@@ -162,8 +162,8 @@ namespace KADA
                     this.File2.Write(Manager.ProcessingQueues[i].Count + ";");
                 }*/
                 this.File2.WriteLine("");
-                this.File.Write(container.Number + " ");             
-                for (int i = 1; i < container.Timings.Count; i+=2)
+                this.File.Write("Bricks: ;" + DataContainer.model.Bricks.Count + ";");             
+                for (int i = 2; i < container.Timings.Count; i+=2)
                 {
                     DateTime t = container.Timings[i];
                     current = t - container.Timings[i-1];

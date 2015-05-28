@@ -85,6 +85,7 @@ namespace KADA
         private Matrix brickTranslation = Matrix.CreateTranslation(new Vector3(0, 0, 0));
         private Matrix brickRotation = Matrix.CreateTranslation(Vector3.Zero);
 
+        private Vector3 ViewerPos = new Vector3(500, 100, 75);
 
 
 
@@ -164,11 +165,11 @@ namespace KADA
         {
             this.edgePositions = edges;
         }
-        //Stage 6
+        //Stage 7
         private void UpdateInstanceInformation()
         {
 
-            int stage = 6;
+            int stage = 7;
             int lastFrame = 0;
             bool fromOutOfOrder = false;
             SortedList<int, PipelineContainer> outOfOrder = new SortedList<int, PipelineContainer>();
@@ -294,7 +295,7 @@ namespace KADA
                 up.Normalize();
                 if (track)
                 {
-                    CameraPosition = this.brickTranslation.Translation + new Vector3(70, 500, 20);
+                    CameraPosition = this.brickTranslation.Translation + ViewerPos;
                     CameraLookAt = this.brickTranslation.Translation;
                     CameraUp = up;
                 }
@@ -588,9 +589,9 @@ namespace KADA
                 }
             }*/
             this.Window.Title = "FPS:" + (int)(1000f/dataContainer.frameTime) + "     " + manager.Recycle.Count + " " + Model.PointLists.Count + "   " 
-                + dataContainer.model.tentativeModels.Count + " - " + dataContainer.ModelsWorked + " - minICPRatio:" 
+                + dataContainer.model.tentativeModels.Count + " - " + dataContainer.ModelsWorked + " - maxMSE: " 
                 + dataContainer.currentMaxMSE + " views: " + dataContainer.differentViewCounter + " - " 
-                + dataContainer.trackingConfidence + "Ratio: " + Math.Round(dataContainer.ICPMSE, 1) ;
+                + dataContainer.trackingConfidence + " MSE: " + Math.Round(dataContainer.ICPMSE, 1) ;
 
             base.Update(gameTime);
         }
@@ -777,23 +778,26 @@ namespace KADA
                 rot = Matrix.CreateFromAxisAngle(direction, 0.02f);
                 CameraUp = Vector3.Transform(CameraUp, rot);
             }
-            if (kS.IsKeyDown(Keys.Space))
+            /*if (kS.IsKeyDown(Keys.Space))
             {
                 this.freeze = true;
             }
             if (kS.IsKeyDown(Keys.R))
             {
                 this.freeze = false;
-            }
+            }*/
             if (kS.IsKeyDown(Keys.B))
-            {
+            {               
                 this.dataContainer.GenerateBackground = true;
             }
             if (kS.IsKeyDown(Keys.I))
             {
-                this.dataContainer.DeNoiseAndICP = true;
-                Thread.Sleep(1000);
-                this.manager.processor3D.Reset();
+                if (!this.dataContainer.DeNoiseAndICP)
+                {
+                    this.dataContainer.DeNoiseAndICP = true;
+                    Thread.Sleep(1000);
+                    this.manager.processor3D.Reset();
+                }
                 
             }
             if (kS.IsKeyDown(Keys.V))
@@ -819,10 +823,10 @@ namespace KADA
                 this.dataContainer.prevNormalR = Matrix.Identity;
             }
 
-            if (kS.IsKeyDown(Keys.L))
+            /*if (kS.IsKeyDown(Keys.L))
             {
                 this.manager.processor3D.NormalAligner = true;
-            }
+            }*/
 
             if (kS.IsKeyDown(Keys.M))
             {
@@ -830,12 +834,16 @@ namespace KADA
             }
             if (kS.IsKeyDown(Keys.N))
             {
-                this.dataContainer.EditMode = false;
+                if(!this.dataContainer.Attach)
+                    this.dataContainer.EditMode = false;
             }
             if (kS.IsKeyDown(Keys.Enter))
             {
-                this.dataContainer.Attach = true;
-                this.dataContainer.currentMaxMSE = dataContainer.ICPMSE + 2;
+                if (this.dataContainer.EditMode)
+                {
+                    this.dataContainer.Attach = true;
+                    this.dataContainer.currentMaxMSE = dataContainer.ICPMSE + 2;
+                }
             }
             if (kS.IsKeyDown(Keys.RightShift))
             {

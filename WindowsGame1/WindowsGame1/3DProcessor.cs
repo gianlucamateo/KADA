@@ -28,7 +28,7 @@ namespace KADA
     {
         public const float POINTTOPOINTWEIGHT = 0.5f;
         public const float POINTTOPLANEWEIGHT = 0.5f;
-        public const float MAXROTATION = (float)Math.PI /36;
+        public const float MAXROTATION = (float)Math.PI /18;
         public const float TRANSLATIONWEIGHT = 1f;
         public const float MAX_INLIERDISTANCE = 12;
         private const int ICPITERATIONS = 3;
@@ -55,7 +55,7 @@ namespace KADA
         private DotNumerics.LinearAlgebra.SingularValueDecomposition SVD;
         LinearEquations LE;
 
-        private Thread Stage51;
+        private Thread Stage6;
 
 
 
@@ -85,18 +85,20 @@ namespace KADA
                 workers1.Enqueue(w);
             }
 
-            Stage51 = new Thread(new ThreadStart(() => PtPlaneICP(workers1)));
-            Stage51.Start();
+            Stage6 = new Thread(new ThreadStart(() => PtPlaneICP(workers1)));
+            Stage6.Start();
 
 
 
-            /*Thread Stage5 = new Thread(new ThreadStart(() => scanNormals()));
+            Thread Stage5 = new Thread(new ThreadStart(() => scanNormals()));
             Stage5.Start();
+            /*Thread Stage51 = new Thread(new ThreadStart(() => scanNormals()));
+            Stage51.Start();
             Thread Stage52 = new Thread(new ThreadStart(() => scanNormals()));
             Stage52.Start();
             Thread Stage53 = new Thread(new ThreadStart(() => scanNormals()));
-            Stage53.Start();
-            */
+            Stage53.Start();*/
+            
             List<Thread> Stage7 = new List<Thread>();
             /*
             for (int i = 0; i < 1; i++)
@@ -277,7 +279,7 @@ namespace KADA
                 
                 Manager.ProcessingQueues[++container.Stage].Enqueue(container);
             }
-            this.Stage51.Abort();
+            this.Stage6.Abort();
 
         }
 
@@ -315,10 +317,10 @@ namespace KADA
             return center;
         }
 
-        //Stage 5;        
+        //Stage 6;        
         public void PtPlaneICP(ConcurrentQueue<ICPWorker> workers)
         {
-            int stage = 5;
+            int stage = 6;
             int icpCount = 0;
             float total = 0;
             Matrix H;
@@ -615,6 +617,10 @@ namespace KADA
                             float maxRotation = MAXROTATION;
                             if (DataContainer.EditMode)
                             {
+                                if (DataContainer.model.tentativeModels.Count == 0 && DataContainer.model.computingTentative == false)
+                                {
+                                    DataContainer.model.ComputeTentativeBricks();
+                                }
                                 maxRotation /= 2;
                             }
                             double[] XArr = X.ToArray();
@@ -780,7 +786,7 @@ namespace KADA
                         }
                         if (trackingLostCount > 100)
                         {
-                            this.Reset();
+                            //this.Reset();
                             trackingLostCount = 0;
                         }
                         PrevRKnown = true;
@@ -1039,12 +1045,19 @@ namespace KADA
 
 
         }*/
-
+        Thread t;
         public void Reset()
         {
             System.Diagnostics.Debug.WriteLine("RESET");
-            DataContainer.lastConfidentR.Translation = Vector3.Zero;
-            Thread t = new Thread(ResetRoutine);
+            //DataContainer.lastConfidentR.Translation = Vector3.Zero;
+            if (t != null)
+            {
+                if (t.ThreadState == ThreadState.Running)
+                {
+                    t.Abort();
+                }
+            }
+            t = new Thread(ResetRoutine);
             t.Start();
             
             /*if (Math.Abs(this.DataContainer.lastConfidentR.Determinant() - 1) < 0.001f)
@@ -1064,6 +1077,7 @@ namespace KADA
         {
             beingReset = true;
             int count = 0;
+            this.DataContainer.lastConfidentR = this.DataContainer.lastConfidentR;// * XNAMatrix.CreateTranslation(-this.DataContainer.g * 10);
             while (count++ < 1500)
             {
                 PrevR = this.DataContainer.lastConfidentR;//XNAMatrix.CreateTranslation(0, 0, -50) * DataContainer.BaseRotation;
@@ -1166,8 +1180,8 @@ namespace KADA
             //norm.Save("normals_clustered.png");
             return estimatedNormals;
         }
-        //WAS stage 5
-        /*public void scanNormals()
+        //Stage 5
+        public void scanNormals()
         {
             int stage = 5;
             DepthColor[,] dc;
@@ -1179,7 +1193,7 @@ namespace KADA
             Vector3 verticalAvg, horizontalAvg;
             while (this.DataContainer.Run)
             {
-                DateTime start = DateTime.Now;
+                //DateTime start = DateTime.Now;
                 PipelineContainer container = null;
                 while (container == null && this.DataContainer.Run)
                 {
@@ -1204,7 +1218,7 @@ namespace KADA
                 {
                     break;
                 }
-                //container.Timings.Add(DateTime.Now);
+                container.Timings.Add(DateTime.Now);
                 if (this.DataContainer.DeNoiseAndICP)
                 {
                     dc = container.DC;
@@ -1230,13 +1244,13 @@ namespace KADA
                                 if (verticalAvg.Length() > 0 && horizontalAvg.Length() > 0 && normal.Length() > 0)
                                 {
 
-                                    normal = -normal;
+                                    //normal = -normal;
                                     container.Normals[639 - x, 479 - y] = normal;
                                 }
                             }
                         }
                     }
-                    container.NormalsList = this.KMeans(container.Normals);
+                    //container.NormalsList = this.KMeans(container.Normals);
                 }
                 container.Timings.Add(DateTime.Now);
                 Manager.ProcessingQueues[++container.Stage].Enqueue(container);
@@ -1244,7 +1258,7 @@ namespace KADA
 
             }
         }
-       */
+       
     }
 }
 

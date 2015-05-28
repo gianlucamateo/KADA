@@ -261,7 +261,7 @@ namespace KADA
                         //Array.Sort(depthValues);
                         short localDepth = (short)(DepthValues[1] + DepthValues[2] + DepthValues[3]);
                         localDepth /= 3;
-                        localDepth = (short)(localDepth * 0.980f);
+                        localDepth = (short)(localDepth * 0.980f);//980
                         Background[i].Depth = (short)(localDepth);
                     }
                 }
@@ -374,6 +374,8 @@ namespace KADA
                 {
                     break;
                 }
+                //AddToQueue(container);
+                //continue;
                 if (this.DataContainer.DeNoiseAndICP || work)
                 {
                     container.Timings.Add(DateTime.Now);

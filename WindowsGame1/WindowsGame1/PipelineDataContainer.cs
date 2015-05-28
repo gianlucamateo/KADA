@@ -32,7 +32,7 @@ namespace KADA
         public bool GenerateBackground = false;
         public bool DeNoiseAndICP = false;
         public int SLEEPTIME = 1;
-        public int MINFRAMESINCONTAINER = 1;
+        public int MINFRAMESINCONTAINER = 0;
         public bool Run = true;
         public Matrix lastConfidentR = Matrix.Identity;
         public TrackingConfidenceLevel trackingConfidence = TrackingConfidenceLevel.NONE;
