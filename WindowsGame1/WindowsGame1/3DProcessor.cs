@@ -18,6 +18,7 @@ using XNAMatrix = Microsoft.Xna.Framework.Matrix;
 using Model = KADA.Model;
 
 using System.Threading.Tasks;
+using System.IO;
 
 
 
@@ -26,8 +27,8 @@ namespace KADA
 {
     public class _3DProcessor
     {
-        public const float POINTTOPOINTWEIGHT = 0.5f;
-        public const float POINTTOPLANEWEIGHT = 0.5f;
+        public const float POINTTOPOINTWEIGHT = 0.75f;
+        public const float POINTTOPLANEWEIGHT = 0.25f;
         public const float MAXROTATION = (float)Math.PI /18;
         public const float TRANSLATIONWEIGHT = 1f;
         public const float MAX_INLIERDISTANCE = 12;
@@ -115,7 +116,7 @@ namespace KADA
         }
 
 
-
+        int stage1Counter = 0;
         //Stage 4
         public void GenerateCenter()
         {
@@ -125,6 +126,9 @@ namespace KADA
             int stage = 4;
             int lastFrame = 0;
             bool fromOutOfOrder = false;
+            StreamWriter File;
+            DateTime start = DateTime.Now;
+            File = new StreamWriter("4 " + stage1Counter++ + ".csv");
             while (this.DataContainer.Run)
             {
                 PipelineContainer container = null;
@@ -204,8 +208,10 @@ namespace KADA
                 }
                 //container.Timings.Add(DateTime.Now);
             #endregion
+                start = DateTime.Now;
                 if (this.DataContainer.DeNoiseAndICP)
                 {
+                    
                     container.Timings.Add(DateTime.Now);
                     DepthColor[,] dc = container.DC;
                     List<Point> qi = container.Qi;
@@ -274,11 +280,13 @@ namespace KADA
                         CompensateVector = EditModeCenter - center;
                     }
                     container.Timings.Add(DateTime.Now);
+                    File.WriteLine((DateTime.Now - start).Milliseconds.ToString());
                 }
 
                 
                 Manager.ProcessingQueues[++container.Stage].Enqueue(container);
             }
+            File.Close();
             this.Stage6.Abort();
 
         }
@@ -325,7 +333,10 @@ namespace KADA
             float total = 0;
             Matrix H;
             List<Point> Outliers = new List<Point>();
-           
+
+            StreamWriter File;
+            DateTime start1 = DateTime.Now;
+            File = new StreamWriter("6 " + stage1Counter++ + ".csv");
 
             double angleSum = 0;
             List<Point> backgroundData = new List<Point>();
@@ -365,7 +376,7 @@ namespace KADA
                 
                 this.DataContainer.recordTick();
                 this.DataContainer.ICPThreshold = Math.Max(2*Model.radius, 100);
-
+                start = DateTime.Now;
                 //container.Timings.Add(DateTime.Now);
                 if (this.DataContainer.DeNoiseAndICP)
                 {
@@ -407,13 +418,13 @@ namespace KADA
                         }
                     }
                     //Skip some frames if locked
-                    if (DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL && !DataContainer.EditMode && container.Number % 3 < 2)
+                    /*if (DataContainer.trackingConfidence == TrackingConfidenceLevel.ICPFULL && !DataContainer.EditMode && container.Number % 3 < 2)
                     {
                         container.Timings.Add(DateTime.Now);
                         Manager.ProcessingQueues[++container.Stage].Enqueue(container);
                         container.R = PrevR;
                         continue;
-                    }
+                    }*/
                     
                     DateTime now = DateTime.Now;
                     DepthColor[,] dc = container.DC;
@@ -548,7 +559,7 @@ namespace KADA
                         {
                             //A.MultiplyInplace(1f / totalWeight);
                             //B.MultiplyInplace(1f / totalWeight);
-                            //H.MultiplyInplace(1f / totalWeight);
+                            H.MultiplyInplace(1f / totalWeight);
                         }
 
                         for (int row = 0; row < 6; row++)
@@ -612,7 +623,10 @@ namespace KADA
                             float currentWeight = 1;//0.2f + Math.Min(0.8f, 1f / container.ICPRatio);
 
 
-                            X = X.Multiply(POINTTOPLANEWEIGHT * currentWeight);
+                            //X = X.Multiply(POINTTOPLANEWEIGHT * currentWeight);
+                            X[0] *= POINTTOPLANEWEIGHT * currentWeight;
+                            X[1] *= POINTTOPLANEWEIGHT * currentWeight;
+                            X[2] *= POINTTOPLANEWEIGHT * currentWeight;
 
                             float maxRotation = MAXROTATION;
                             if (DataContainer.EditMode)
@@ -624,6 +638,7 @@ namespace KADA
                                 maxRotation /= 2;
                             }
                             double[] XArr = X.ToArray();
+                            Vector3 trans = new Vector3((float)(XArr[3]), (float)(XArr[4]), (float)(XArr[5]));
                             if (Model.Bricks.Count < 2 || (DataContainer.EditMode && Model.Bricks.Count < 3))
                             {
                                 XArr[0] = 0;
@@ -646,7 +661,7 @@ namespace KADA
 
                             angleSum += add;//((XArr[0]) + (XArr[1]) + (XArr[2])) * POINTTOPLANEWEIGHT;
 
-                            Vector3 trans = new Vector3((float)(XArr[3]), (float)(XArr[4]), (float)(XArr[5]));
+                            
                             trans *= TRANSLATIONWEIGHT;
                             trans *= Model.radius;
                             float maxTrans = 5;
@@ -692,11 +707,16 @@ namespace KADA
                             RTemp.M42 = 0;
                             RTemp.M43 = 0;
                             RTemp.M44 = 1;
-
-                            double pointThetaX = -Math.Atan2(pointR.M32, pointR.M33);
-                            double pointThetaY = -Math.Atan2(-pointR.M31, Math.Sqrt(pointR.M32 * pointR.M32 + pointR.M33 * pointR.M33));
-                            double pointThetaZ = -Math.Atan2(pointR.M21, pointR.M11);
-
+                            
+                            //Console.WriteLine(pointR);
+                            pointR = XNAMatrix.Transpose(pointR);
+                            /*double pointThetaX = Math.Atan2(pointR.M32, pointR.M33);
+                            double pointThetaY = Math.Atan2(-pointR.M31, Math.Sqrt(pointR.M32 * pointR.M32 + pointR.M33 * pointR.M33));
+                            double pointThetaZ = Math.Atan2(pointR.M21, pointR.M11);*/
+                            double pointThetaX = Math.Atan(pointR.M32 / pointR.M33);
+                            double pointThetaY = -Math.Asin(pointR.M31);
+                            double pointThetaZ = Math.Atan(pointR.M21 / pointR.M11);
+                            pointR = XNAMatrix.Transpose(pointR);
                             if (Model.Bricks.Count < 2 || (DataContainer.EditMode && Model.Bricks.Count < 3))
                             {
                                 pointThetaX = 0;
@@ -704,9 +724,9 @@ namespace KADA
                             }
 
 
-                            pointThetaX = Math.Min(pointThetaX*currentWeight*POINTTOPLANEWEIGHT, maxRotation);
-                            pointThetaY = Math.Min(pointThetaX*currentWeight * POINTTOPLANEWEIGHT, maxRotation);
-                            pointThetaZ = Math.Min(pointThetaX*currentWeight * POINTTOPLANEWEIGHT, maxRotation);
+                            pointThetaX = Math.Min(pointThetaX * currentWeight*POINTTOPOINTWEIGHT, maxRotation);
+                            pointThetaY = Math.Min(pointThetaY * currentWeight * POINTTOPOINTWEIGHT, maxRotation);
+                            pointThetaZ = Math.Min(pointThetaZ * currentWeight * POINTTOPOINTWEIGHT, maxRotation);
 
 
                             Max = (float)Math.Max(Math.Max((pointThetaX), (pointThetaY)), (pointThetaZ));
@@ -723,7 +743,7 @@ namespace KADA
 
                             XRot = XNAMatrix.CreateRotationX((float)pointThetaX);
                             pointR = ZRot * YRot * XRot;
-
+                            
                             this.ICPTranslation = this.ICPTranslation + trans;
 
 
@@ -818,6 +838,7 @@ namespace KADA
                     }
                 }*/
                 container.Timings.Add(DateTime.Now);
+                File.WriteLine((DateTime.Now - start).Milliseconds.ToString());
                 Manager.ProcessingQueues[++container.Stage].Enqueue(container);
                 if (DataContainer.Attach && DataContainer.backgroundEvaluator.ModificationInput.Count == 0 && !DataContainer.backgroundEvaluator.ModificationRunning)
                 {
@@ -858,6 +879,7 @@ namespace KADA
                     if (DataContainer.differentViewCounter > 2 || Model.Bricks.Count < 3 || DataContainer.ICPMSE > 3*Math.Max(DataContainer.currentMaxMSE,25))
                     {
                         DataContainer.backgroundEvaluator.ModificationInput.Enqueue(new List<Point>(backgroundData));
+                        
                         backgroundData.Clear();
 
                         DataContainer.Attach = false;
@@ -882,6 +904,7 @@ namespace KADA
                     this.DataContainer.backgroundEvaluator.PointsInput.Enqueue(new List<Point>(Outliers));
                 }
             }
+            File.Close();
 
 
         }
@@ -1186,6 +1209,10 @@ namespace KADA
             int stage = 5;
             DepthColor[,] dc;
 
+            StreamWriter File;
+            DateTime start = DateTime.Now;
+            File = new StreamWriter("5 " + stage1Counter++ + ".csv");
+
             Vector3 up, down, left, right;
 
             Vector3 position;
@@ -1218,6 +1245,7 @@ namespace KADA
                 {
                     break;
                 }
+                start = DateTime.Now;
                 container.Timings.Add(DateTime.Now);
                 if (this.DataContainer.DeNoiseAndICP)
                 {
@@ -1239,12 +1267,12 @@ namespace KADA
                                 horizontalAvg = left - right;
                                 normal = Vector3.Cross(horizontalAvg, verticalAvg);
                                 normal.Normalize();
-
+                                //dc[x, y].Color = -normal;
 
                                 if (verticalAvg.Length() > 0 && horizontalAvg.Length() > 0 && normal.Length() > 0)
                                 {
 
-                                    //normal = -normal;
+                                    normal = -normal;
                                     container.Normals[639 - x, 479 - y] = normal;
                                 }
                             }
@@ -1252,11 +1280,13 @@ namespace KADA
                     }
                     //container.NormalsList = this.KMeans(container.Normals);
                 }
+                File.WriteLine((DateTime.Now - start).Milliseconds.ToString());
                 container.Timings.Add(DateTime.Now);
                 Manager.ProcessingQueues[++container.Stage].Enqueue(container);
 
 
             }
+            File.Close();
         }
        
     }

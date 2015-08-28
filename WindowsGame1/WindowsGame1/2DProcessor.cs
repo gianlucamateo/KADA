@@ -10,6 +10,7 @@ using System.Drawing;
 using System.Collections;
 using System.Threading;
 using Image = System.Drawing.Image;
+using System.IO;
 
 namespace KADA
 {
@@ -112,8 +113,12 @@ namespace KADA
         }
 
         // Stage 1
+        private int stage1Counter = 0;
         private void UpdateDepthData()
-        {
+        { 
+            StreamWriter File;
+            DateTime start = DateTime.Now;
+            File = new StreamWriter("1 " + stage1Counter++ + ".csv");
             DepthImagePixel[] background = null;
             int stage = 1;
             while (this.DataContainer.Run)
@@ -127,6 +132,7 @@ namespace KADA
                 }
                 // generate or get background
                 container.Timings.Add(DateTime.Now);
+                start = DateTime.Now;
                 DepthImagePixel[] dPixels = container.DepthPixels;
                 
                 DepthColor[,] depth = container.DC;
@@ -149,7 +155,9 @@ namespace KADA
 
 
                 AddToQueue(container);
+                File.WriteLine((DateTime.Now - start).Milliseconds.ToString());
             }
+            File.Close();
         }
 
         private void AddToQueue(PipelineContainer container)
@@ -294,6 +302,9 @@ namespace KADA
         {
             int stage = 2;
             bool work = false;
+            StreamWriter File;
+            DateTime start = DateTime.Now;
+            File = new StreamWriter("2 " + stage1Counter++ + ".csv");
             while (this.DataContainer.Run)
             {
                 PipelineContainer container = null;
@@ -306,6 +317,7 @@ namespace KADA
                 }
                 if (this.DataContainer.DeNoiseAndICP || work)
                 {
+                    start = DateTime.Now;
                     container.Timings.Add(DateTime.Now);
                     DepthColor[,] dc = container.DC;
                     for (int x = 0; x < dc.GetLength(0); x++)
@@ -317,8 +329,10 @@ namespace KADA
                     }
                 }
                 AddToQueue(container);
+                File.WriteLine((DateTime.Now - start).Milliseconds.ToString());
                 
             }
+            File.Close();
 
 
         }
@@ -366,6 +380,9 @@ namespace KADA
             int width = 640, height = 480;
             int[,] grid = new int[width, height];
             int[,] outputGrid = new int[width, height];
+            StreamWriter File;
+            DateTime start = DateTime.Now;
+            File = new StreamWriter("3 " + stage1Counter++ + ".csv");
             while (this.DataContainer.Run)
             {
                 PipelineContainer container = null;
@@ -379,6 +396,7 @@ namespace KADA
                 if (this.DataContainer.DeNoiseAndICP || work)
                 {
                     container.Timings.Add(DateTime.Now);
+                    start = DateTime.Now;
                     work = true;
                     DepthColor[,] dc = container.DC;
                     
@@ -434,8 +452,10 @@ namespace KADA
                 }
                 //manager.enqueue(container);
                 AddToQueue(container);
+                File.WriteLine((DateTime.Now - start).Milliseconds.ToString());
                 
             }
+            File.Close();
 
         }
 

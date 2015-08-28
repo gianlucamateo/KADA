@@ -1,3 +1,5 @@
+// contains code from http://www.float4x4.net/index.php/2011/07/hardware-instancing-for-pc-in-xna-4-with-textures/
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +23,7 @@ using KADA;
 using Point = KADA.Point;
 using XNAModel = Microsoft.Xna.Framework.Graphics.Model;
 using Model = KADA.Model;
+using System.IO;
 
 
 namespace KADA
@@ -117,7 +120,9 @@ namespace KADA
         Task transformationUpdater;
 
         #endregion
-
+        StreamWriter File;
+        
+        
         struct InstanceInfo
         {
             public Vector3 ScreenPos;
@@ -436,6 +441,8 @@ namespace KADA
                 this.dataContainer.ICPInliers = container.ICPInliers;
                 this.dataContainer.ICPOutliers = container.ICPOutliers;
                 this.dataContainer.ICPMSE = container.ICPMSE;
+                if(container.ICPMSE>0)
+                    File.WriteLine(container.ICPMSE);
                 //System.Diagnostics.Debug.WriteLine(container.number);
                 Thread.Sleep(5);
                 //this.manager.enqueue(container);
@@ -467,6 +474,8 @@ namespace KADA
             this.YUVToRGB = Matrix.Invert(RGBToYUV);
             this.dataContainer = new PipelineDataContainer();
             this.manager = new PipelineManager(this.dataContainer);
+
+            File = new StreamWriter("MSE.csv");
 
             PCViewport = new Viewport();
             PCViewport.X = 0;
@@ -986,6 +995,7 @@ namespace KADA
         protected override void OnExiting(Object sender, EventArgs args)
         {
             base.OnExiting(sender, args);
+            File.Close();
             this.dataContainer.Run = false;
         }
 

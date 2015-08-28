@@ -176,7 +176,7 @@ namespace KADA
                 //sqDist += neighbour.CurrentDistance;
                 q = neighbour.Current;
                 bool foundMatch = false;
-                int outsiderThreshold = 250;//<-- 200 was the most successful number up till now
+                int outsiderThreshold = 250;
 
                 if (neighbour.CurrentDistance > outsiderThreshold)
                 {
@@ -214,7 +214,7 @@ namespace KADA
                     continue;
                 }
                 bool found = true;
-                if (dataContainer.trackingConfidence != TrackingConfidenceLevel.NONE)
+                //if (dataContainer.trackingConfidence != TrackingConfidenceLevel.NONE)
                 {
                     transformedNormal = Vector3.Transform(neighbour.Current.normal, onlyRot);
                     while (Vector3.Dot(transformedNormal, Vector3.UnitZ) < this.dataContainer.NORMAL_CULLING_LIMIT)//-0.1f)
@@ -265,8 +265,9 @@ namespace KADA
                 HTemp[2, 2] = p.Z * q.position.Z;
 
 
-                float dotPro = Vector3.Dot(transformedNormal, point.normal);
-                float weight = dotPro>0?dotPro:0.1f;
+                float dotPro = Math.Abs(Vector3.Dot(transformedNormal, point.normal));
+                float weight = dotPro>0?dotPro:0.2f;
+                //Console.WriteLine(weight);
                 //weight = (1 - weight);
                 foundMatch = false;
                 foreach (BrickColor bc in possibleColors)
@@ -319,49 +320,7 @@ namespace KADA
                 //System.Diagnostics.Debug.WriteLine(weight);
                 tmA.MultiplyInplace(weight);
 
-                /*tmAPoint[0, 0] = p.Y * p.Y + p.Z * p.Z;
-                tmAPoint[0, 1] = -p.Y * p.X;
-                tmAPoint[0, 2] = -p.Z * p.X;
-                tmAPoint[0, 3] = 0;
-                tmAPoint[0, 4] = -p.Z;
-                tmAPoint[0, 5] = p.Y;
-
-                tmAPoint[1, 0] = -p.X*p.Y;
-                tmAPoint[1, 1] = p.Z*p.Z +p.X*p.X;
-                tmAPoint[1, 2] = -p.Z * p.Y;
-                tmAPoint[1, 3] = p.Z;
-                tmAPoint[1, 4] = 0;
-                tmAPoint[1, 5] = -p.X;
-
-                tmAPoint[2, 0] = -p.X*p.Z;
-                tmAPoint[2, 1] = -p.Y * p.Z;
-                tmAPoint[2, 2] = p.Y*p.Y+p.X*p.X;
-                tmAPoint[2, 3] = -p.Y;
-                tmAPoint[2, 4] = p.X;
-                tmAPoint[2, 5] = 0;
-
-                tmAPoint[3, 0] = 0;
-                tmAPoint[3, 1] = p.Z;
-                tmAPoint[3, 2] = -p.Y;
-                tmAPoint[3, 3] = 1;
-                tmAPoint[3, 4] = 0;
-                tmAPoint[3, 5] = 0;
-
-                tmAPoint[4, 0] = -p.Z;
-                tmAPoint[4, 1] = 0;
-                tmAPoint[4, 2] = p.X;
-                tmAPoint[4, 3] = 0;
-                tmAPoint[4, 4] = 1;
-                tmAPoint[4, 5] = 0;
-
-                tmAPoint[5, 0] = p.Y;
-                tmAPoint[5, 1] = -p.X;
-                tmAPoint[5, 2] = 0;
-                tmAPoint[5, 3] = 0;
-                tmAPoint[5, 4] = 0;
-                tmAPoint[5, 5] = 1;*/
-                //double[] tempB = new double[6];
-                //tmAPoint.MultiplyInplace(weight);
+                
                 float pMinqTimesN = Vector3.Dot(pos - p, n);
 
                 tempB[0] = pMinqTimesN * c.X;

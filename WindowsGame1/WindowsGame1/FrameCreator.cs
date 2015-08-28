@@ -18,6 +18,7 @@ namespace KADA
         private StreamWriter File, File2;
         private Queue<DepthImagePixel[]> DepthQueue = new Queue<DepthImagePixel[]>();
 
+        
         public FrameCreator(PipelineDataContainer dataContainer, PipelineManager manager)
         {
             this.File = new StreamWriter("timings.csv");

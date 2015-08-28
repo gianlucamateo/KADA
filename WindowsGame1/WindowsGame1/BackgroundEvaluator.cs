@@ -581,7 +581,7 @@ namespace KADA
                         maxVal = colors[i];
                     }
                 }
-                if (maxVal > 50)
+                if (maxVal > 100)
                     dataContainer.addColor = (BrickColor)finalColor;
                 _2DProcessor.Erode(grid.GetLength(0), grid.GetLength(1), grid, outputGrid);
                 for (int X = 0; X < grid.GetLength(0); X++)
